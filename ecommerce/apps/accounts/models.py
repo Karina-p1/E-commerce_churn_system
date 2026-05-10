@@ -1,28 +1,46 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
-# The User model extends Django's AbstractUser to include additional fields such as email, phone number, profile image, and timestamps for creation and updates.
-
-
+# Create your models here.
 class User(AbstractUser):
-    # The email field is defined as an EmailField and is set to be unique, ensuring that no two users can have the same email address. useful for login retention campaigns recommendations
+    """
+    Custom user model extending Django's AbstractUser.
+
+    Always use this instead of Django's default User model because:
+    - It is flexible for future extensions
+    - Avoids painful migrations later if you need custom fields
+    """
+
+    # Email is unique to support login identification, retention campaigns, and recommendations
     email = models.EmailField(unique=True)
-# The phone_number field is defined as a CharField with a maximum length of 20 characters. It is optional, allowing users to leave it blank or null if they choose not to provide a phone number.Future use: SMS offers retention notifications
+
+    # Optional phone number for future SMS-based notifications, offers, and retention campaigns
     phone_number = models.CharField(
         max_length=20,
         blank=True,
         null=True
     )
-# The profile_image field is defined as an ImageField, which allows users to upload a profile picture. The uploaded images will be stored in the 'profiles/' directory. This field is also optional, allowing users to leave it blank or null if they choose not to upload a profile image.
+
+    # Optional profile image stored in MEDIA_ROOT/profiles/
     profile_image = models.ImageField(
         upload_to='profiles/',
         blank=True,
         null=True
     )
-# The created_at field is a DateTimeField that automatically sets the current date and time when a new user is created. This allows you to track when each user account was created.
+
+    # Automatically stores when the user account was created (useful for analytics & churn tracking)
     created_at = models.DateTimeField(auto_now_add=True)
-# The updated_at field is a DateTimeField that automatically updates to the current date and time whenever the user object is saved. This allows you to track when each user account was last updated.
+
+    # Automatically updates whenever the user record is modified
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.username
+
+    @property
+    def full_name(self):
+        """
+        Returns full name if available, otherwise falls back to username.
+        Useful for dashboards, emails, and personalization.
+        """
+        return f"{self.first_name} {self.last_name}".strip() or self.username
