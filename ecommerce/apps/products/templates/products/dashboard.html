@@ -1,0 +1,159 @@
+{% extends "base.html" %} {% block extra_head %}
+<style>
+  .product-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    overflow: hidden;
+    width: 100%;
+  }
+  .product-img-wrap {
+    position: relative;
+    background: #f9fafb;
+    height: 220px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .product-img-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .product-img-placeholder {
+    color: #9ca3af;
+    font-size: 14px;
+  }
+  .badge-stock {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: #dcfce7;
+    color: #15803d;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 6px;
+  }
+  .badge-stock.out {
+    background: #fee2e2;
+    color: #b91c1c;
+  }
+  .badge-discount {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #fee2e2;
+    color: #b91c1c;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 6px;
+  }
+  .btn-wishlist {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 50%;
+    width: 34px;
+    height: 34px;
+    cursor: pointer;
+    font-size: 16px;
+  }
+  .product-info {
+    padding: 14px 16px;
+  }
+  .product-brand {
+    font-size: 11px;
+    color: #6b7280;
+    margin: 0 0 4px;
+  }
+  .product-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: #111827;
+    margin: 0 0 6px;
+  }
+  .product-rating {
+    font-size: 12px;
+    color: #6b7280;
+    margin: 0 0 10px;
+  }
+  .product-price {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .price-main {
+    font-size: 18px;
+    font-weight: 700;
+    color: #111827;
+  }
+  .price-original {
+    font-size: 13px;
+    color: #9ca3af;
+    text-decoration: line-through;
+  }
+  .btn-cart {
+    width: 100%;
+    padding: 9px;
+    background: #0e3a5c;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-cart:hover {
+    background: #1e5a8a;
+  }
+</style>
+{% endblock %} {% block start %}
+<!-- Products -->
+<div
+  style="
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px;
+  "
+>
+  {% for p in products %}
+  <div class="product-card">
+    <div class="product-img-wrap">
+      {% if p.image %}
+      <img src="{{ p.image.url }}" alt="{{ p.name }}" />
+      {% else %}
+      <div class="product-img-placeholder">No Image</div>
+      {% endif %} {% if p.stock > 0 %}
+      <span class="badge-stock">In Stock</span>
+      {% else %}
+      <span class="badge-stock out">Out of Stock</span>
+      {% endif %} {% if p.discount_percent %}
+      <span class="badge-discount">{{ p.discount_percent }}% off</span>
+      {% endif %}
+
+      <button class="btn-wishlist">&#9825;</button>
+    </div>
+
+    <div class="product-info">
+      <p class="product-brand">{{ p.brand.name|default:"" }}</p>
+      <p class="product-name">{{ p.name }}</p>
+      <p class="product-rating">⭐ {{ p.rating }} ({{ p.review_count }})</p>
+
+      <div class="product-price">
+        <span class="price-main">Rs. {{ p.effective_price }}</span>
+        {% if p.discount_price %}
+        <span class="price-original">Rs. {{ p.price }}</span>
+        {% endif %}
+      </div>
+
+      <button class="btn-cart">🛒 Add to Cart</button>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}
