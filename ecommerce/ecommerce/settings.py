@@ -143,11 +143,6 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-
-# Redirect after login/logout
-LOGIN_URL = '/accounts/login/'
-LOGIN_REDIRECT_URL = '/'
-LOGOUT_REDIRECT_URL = '/'
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # URL to access static files in browser
@@ -160,3 +155,9 @@ STATICFILES_DIRS = [
 
 # Folder where Django collects all static files for production (after running collectstatic)
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Redirect after login/logout
+LOGIN_URL = '/accounts/login/'
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'
+
