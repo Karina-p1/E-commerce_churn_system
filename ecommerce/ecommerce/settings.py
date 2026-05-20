@@ -155,3 +155,9 @@ STATICFILES_DIRS = [
 
 # Folder where Django collects all static files for production (after running collectstatic)
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+
+# Redirect after login/logout
+LOGIN_URL = '/accounts/login/'
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'
