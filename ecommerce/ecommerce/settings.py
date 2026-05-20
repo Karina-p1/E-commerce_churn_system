@@ -75,6 +75,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'apps.products.context_processors.navbar_data',
             ],
         },
     },
@@ -141,6 +142,19 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+# URL to access static files in browser
+STATIC_URL = '/static/'
+
+# Folder where YOU put your CSS, JS, images during development
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+]
+
+# Folder where Django collects all static files for production (after running collectstatic)
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 
 # Redirect after login/logout
