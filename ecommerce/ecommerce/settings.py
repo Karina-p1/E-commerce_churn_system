@@ -11,6 +11,15 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 import os
+import cloudinary
+
+cloudinary.config(
+    cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
+    api_key=os.getenv('CLOUDINARY_API_KEY'),
+    api_secret=os.getenv('CLOUDINARY_API_SECRET'),
+)
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -52,6 +61,9 @@ INSTALLED_APPS = [
     'apps.churn',
     'apps.orders',
     'apps.products',
+
+    'cloudinary_storage',
+    'cloudinary',
 
 ]
 
@@ -148,9 +160,7 @@ STATICFILES_DIRS = [
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
