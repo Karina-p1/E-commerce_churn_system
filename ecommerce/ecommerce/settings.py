@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 import os
 from pathlib import Path
+from dotenv import load_dotenv
+load_dotenv()
 
 from dotenv import load_dotenv
 
@@ -42,13 +44,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'apps.activity.apps.ActivityConfig',
 
     # Third-party apps
     'rest_framework',
 
     # Local apps
     'apps.accounts',
-    'apps.activity',
     'apps.churn',
     'apps.orders',
     'apps.products',
@@ -63,6 +65,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # 'apps.activity.middleware.UserActivityMiddleware',
 ]
 
 ROOT_URLCONF = 'ecommerce.urls'
