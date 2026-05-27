@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block title %}My Orders{% endblock %}
+{% block content %}
+<h3>My Orders</h3>
+{% for order in orders %}
+<div class="card mb-3 p-3">
+    <div class="d-flex justify-content-between">
+        <strong>Order #{{ order.id }}</strong>
+        <span class="badge bg-secondary">{{ order.status }}</span>
+    </div>
+    <p class="text-muted mb-1">{{ order.created_at|date:"F j, Y" }}</p>
+    <p class="fw-bold">Total: ${{ order.total_price }}</p>
+    <a href="{% url 'order_detail' order.id %}" class="btn btn-sm btn-outline-primary">View</a>
+</div>
+{% empty %}
+<p class="text-muted">No orders yet.</p>
+{% endfor %}
+{% endblock %}

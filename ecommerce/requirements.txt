@@ -12,8 +12,10 @@ numpy==2.0.2
 packaging==26.2
 pandas==2.3.3
 pillow==11.3.0
+psycopg2-binary==2.9.12
 pyparsing==3.3.2
 python-dateutil==2.9.0.post0
+python-dotenv==1.2.1
 pytz==2026.2
 scikit-learn==1.6.1
 scipy==1.13.1
