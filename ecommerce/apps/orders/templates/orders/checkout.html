@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block title %}Checkout{% endblock %}
+{% block content %}
+<h3>Checkout</h3>
+<div class="card p-4 mb-3">
+    {% for item in cart.items.all %}
+    <p>{{ item.product.name }} × {{ item.quantity }} = ${{ item.subtotal }}</p>
+    {% endfor %}
+    <hr>
+    <p class="fw-bold">Total: ${{ cart.total_price }}</p>
+</div>
+<form method="post">
+    {% csrf_token %}
+    <button class="btn btn-success btn-lg">Confirm Order</button>
+    <a href="{% url 'cart' %}" class="btn btn-outline-secondary ms-2">Back to Cart</a>
+</form>
+{% endblock %}
