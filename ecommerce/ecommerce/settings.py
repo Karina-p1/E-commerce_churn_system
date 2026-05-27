@@ -21,6 +21,9 @@ cloudinary.config(
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
 from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from dotenv import load_dotenv
 
@@ -179,4 +182,3 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
-
