@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+{% load product_extras %}
+{% load static %}
+
+{% block extra_head %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+  :root { --gold: #e89b2a; --radius: 12px; }
+  body { background: #f8f9fa; }
+  .main-img-wrap { aspect-ratio:1; background:#fff; border:1px solid #e5e7eb; border-radius:var(--radius); overflow:hidden; display:flex; align-items:center; justify-content:center; }
+  .main-img-wrap img { width:100%; height:100%; object-fit:cover; }
+  .main-img-wrap .no-img { font-size:5rem; color:#d1d5db; }
+  .thumb-row { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+  .thumb { width:60px; height:60px; border:2px solid #e5e7eb; border-radius:8px; overflow:hidden; cursor:pointer; background:#fff; display:flex; align-items:center; justify-content:center; transition:border-color .15s; }
+  .thumb img { width:100%; height:100%; object-fit:cover; }
+  .thumb.active, .thumb:hover { border-color:var(--gold); }
+  .badge-stock { background:#dcfce7; color:#166534; font-size:11px; font-weight:600; padding:3px 10px; border-radius:6px; }
+  .badge-out { background:#fee2e2; color:#991b1b; font-size:11px; font-weight:600; padding:3px 10px; border-radius:6px; }
+  .badge-discount { background:#fee2e2; color:#b91c1c; font-size:11px; font-weight:600; padding:3px 10px; border-radius:6px; }
+  .star-filled { color:var(--gold); }
+  .star-empty { color:#d1d5db; }
+  .price-main { font-size:1.75rem; font-weight:700; color:#111; }
+  .price-orig { font-size:1rem; color:#9ca3af; text-decoration:line-through; }
+  .qty-wrap { display:inline-flex; align-items:center; border:1px solid #e5e7eb; border-radius:8px; overflow:hidden; }
+  .qty-wrap button { width:36px; height:36px; border:none; background:#f9fafb; font-size:1rem; cursor:pointer; }
+  .qty-wrap button:hover { background:#f3f4f6; }
+  .qty-num { min-width:44px; text-align:center; font-weight:600; font-size:.95rem; padding:0 4px; }
+  .btn-cart { background:#fff; border:1px solid #d1d5db; border-radius:8px; font-weight:500; padding:10px 20px; }
+  .btn-cart:hover { background:#f9fafb; }
+  .btn-buy { background:#111; color:#fff; border:none; border-radius:8px; font-weight:500; padding:10px 20px; }
+  .btn-buy:hover { background:#374151; color:#fff; }
+  .big-num { font-size:3.5rem; font-weight:700; line-height:1; }
+  .bar-track { height:7px; background:#f3f4f6; border-radius:4px; overflow:hidden; flex:1; }
+  .bar-fill { height:100%; border-radius:4px; background:var(--gold); }
+  .review-form-wrap { background:#fff; border:1px solid #e5e7eb; border-radius:var(--radius); padding:1.5rem; }
+  .star-select .s { font-size:1.75rem; cursor:pointer; color:#d1d5db; transition:color .1s; user-select:none; }
+  .star-select .s.lit { color:var(--gold); }
+  .review-card { background:#fff; border:1px solid #e5e7eb; border-radius:var(--radius); padding:1.25rem; }
+  .avatar { width:40px; height:40px; border-radius:50%; background:#dbeafe; color:#1d4ed8; display:flex; align-items:center; justify-content:center; font-size:.8rem; font-weight:700; flex-shrink:0; }
+  .divider { border-top:1px solid #e5e7eb; margin:2rem 0; }
+</style>
+{% endblock %}
+
+{% block start %}
+<div class="container py-4 py-md-5" style="max-width:1000px">
+
+  <div class="row g-4 g-md-5">
+
+    <!-- Left: images -->
+    <div class="col-12 col-md-5">
+      <div class="main-img-wrap">
+        {% if product.image %}
+          <img id="mainImg" src="{{ product.image.url }}" alt="{{ product.name }}">
+        {% else %}
+          <span class="no-img">📦</span>
+        {% endif %}
+      </div>
+      {% if product.images.all %}
+      <div class="thumb-row">
+        {% if product.image %}
+          <div class="thumb active" onclick="setMain('{{ product.image.url }}', this)">
+            <img src="{{ product.image.url }}" alt="Main">
+          </div>
+        {% endif %}
+        {% for img in product.images.all %}
+          <div class="thumb" onclick="setMain('{{ img.image.url }}', this)">
+            <img src="{{ img.image.url }}" alt="View {{ forloop.counter }}">
+          </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Right: details -->
+    <div class="col-12 col-md-7">
+
+      {% if product.stock > 0 %}
+        <span class="badge-stock">In stock</span>
+      {% else %}
+        <span class="badge-out">Out of stock</span>
+      {% endif %}
+
+      <h1 class="mt-2 mb-1 fs-4 fw-semibold">{{ product.name }}</h1>
+      <p class="text-muted small mb-3">
+        by <strong>{% if product.brand %}{{ product.brand.name }}{% else %}Unknown{% endif %}</strong>
+        &nbsp;·&nbsp; {{ product.category.name }}
+      </p>
+
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <div class="d-flex">
+          {% for filled in product_stars %}
+            <span class="{% if filled %}star-filled{% else %}star-empty{% endif %}">★</span>
+          {% endfor %}
+        </div>
+        <span class="fw-semibold small">{{ product.rating }}</span>
+        <span class="text-muted small">{{ product.review_count }} review{{ product.review_count|pluralize }}</span>
+      </div>
+
+      <div class="d-flex align-items-baseline gap-2 mb-3">
+        {% if product.discount_price %}
+          <span class="price-main">${{ product.discount_price }}</span>
+          <span class="price-orig">${{ product.price }}</span>
+          <span class="badge-discount">{{ product.discount_percent }}% off</span>
+        {% else %}
+          <span class="price-main">${{ product.price }}</span>
+        {% endif %}
+      </div>
+
+      <p class="text-muted small lh-lg mb-3">{{ product.description }}</p>
+
+      <div class="d-flex gap-2 align-items-center small mb-1">
+        <span class="text-muted" style="min-width:65px">Stock</span>
+        <span class="fw-semibold">
+          {% if product.stock > 0 %}
+            <span style="display:inline-block;width:8px;height:8px;background:#16a34a;border-radius:50%;margin-right:4px;"></span>
+            {{ product.stock }} units left
+          {% else %}
+            Unavailable
+          {% endif %}
+        </span>
+      </div>
+      <div class="d-flex gap-2 align-items-center small mb-3">
+        <span class="text-muted" style="min-width:65px">SKU</span>
+        <span class="fw-semibold">{{ product.slug|upper }}</span>
+      </div>
+
+      {% if product.stock > 0 %}
+      <form method="post" action="" class="mt-2">
+        {% csrf_token %}
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="qty-wrap">
+            <button type="button" onclick="changeQty(-1)">−</button>
+            <span class="qty-num" id="qty">1</span>
+            <button type="button" onclick="changeQty(1)">+</button>
+          </div>
+          <input type="hidden" name="quantity" id="qtyInput" value="1">
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+          <button type="submit" name="action" value="cart" class="btn-cart flex-fill">🛒 Add to cart</button>
+          <button type="submit" name="action" value="buy" class="btn-buy flex-fill">Buy now</button>
+        </div>
+      </form>
+      {% endif %}
+
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <h2 class="fs-5 fw-semibold mb-4">Ratings &amp; reviews</h2>
+
+  <div class="row g-4 align-items-center mb-4">
+    <div class="col-auto text-center">
+      <div class="big-num">{{ product.rating }}</div>
+      <div class="d-flex justify-content-center gap-1 my-1">
+        {% for filled in product_stars %}
+          <span class="{% if filled %}star-filled{% else %}star-empty{% endif %}">★</span>
+        {% endfor %}
+      </div>
+      <div class="text-muted small">{{ product.review_count }} review{{ product.review_count|pluralize }}</div>
+    </div>
+    <div class="col">
+      {% for dist in rating_distribution %}
+      <div class="d-flex align-items-center gap-2 mb-1 small">
+        <span class="text-muted" style="min-width:28px">{{ dist.label }} ★</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:{{ dist.pct }}%"></div>
+        </div>
+        <span class="text-muted" style="min-width:18px;text-align:right">{{ dist.count }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {% if user.is_authenticated %}
+  <div class="review-form-wrap mb-4">
+    <p class="fw-semibold mb-3">Write a review</p>
+    <form method="post" action="">
+      {% csrf_token %}
+      <div class="star-select d-flex gap-1 mb-3" id="starSelect">
+        <span class="s" data-v="1">★</span>
+        <span class="s" data-v="2">★</span>
+        <span class="s" data-v="3">★</span>
+        <span class="s" data-v="4">★</span>
+        <span class="s" data-v="5">★</span>
+      </div>
+      <input type="hidden" name="rating" id="ratingInput" value="">
+      <textarea name="comment" class="form-control mb-3" rows="3" placeholder="Share your experience..." required></textarea>
+      <button type="submit" class="btn-buy px-4 py-2">Post review</button>
+    </form>
+  </div>
+  {% else %}
+  <div class="alert alert-light border mb-4 small">
+    <a href="">Log in</a> to write a review.
+  </div>
+  {% endif %}
+
+  <div class="d-flex flex-column gap-3">
+    {% for review in reviews %}
+    <div class="review-card">
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <div class="avatar">{{ review.customer.get_full_name|default:review.customer.username|slice:":2"|upper }}</div>
+        <div>
+          <div class="fw-semibold small">{{ review.customer.get_full_name|default:review.customer.username }}</div>
+          <div class="text-muted" style="font-size:.75rem">{{ review.created_at|date:"M j, Y" }}</div>
+        </div>
+      </div>
+      <div class="d-flex gap-1 mb-2">
+        {% for filled in review_stars|get_item:review.id %}
+          <span class="{% if filled %}star-filled{% else %}star-empty{% endif %}" style="font-size:.85rem">★</span>
+        {% endfor %}
+      </div>
+      <p class="text-muted small lh-lg mb-0">{{ review.comment }}</p>
+    </div>
+    {% empty %}
+    <p class="text-muted small">No reviews yet. Be the first to review this product!</p>
+    {% endfor %}
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  let qty = 1;
+  function changeQty(d) {
+    const max = {{ product.stock }};
+    qty = Math.min(max, Math.max(1, qty + d));
+    document.getElementById('qty').textContent = qty;
+    document.getElementById('qtyInput').value = qty;
+  }
+  function setMain(url, thumb) {
+    const img = document.getElementById('mainImg');
+    if (img) img.src = url;
+    document.querySelectorAll('.thumb').forEach(t => t.classList.remove('active'));
+    thumb.classList.add('active');
+  }
+  let selectedRating = 0;
+  const stars = document.querySelectorAll('#starSelect .s');
+  stars.forEach(s => {
+    s.addEventListener('mouseenter', () => {
+      const v = +s.dataset.v;
+      stars.forEach(x => x.classList.toggle('lit', +x.dataset.v <= v));
+    });
+    s.addEventListener('click', () => {
+      selectedRating = +s.dataset.v;
+      document.getElementById('ratingInput').value = selectedRating;
+      stars.forEach(x => x.classList.toggle('lit', +x.dataset.v <= selectedRating));
+    });
+  });
+  document.getElementById('starSelect')?.addEventListener('mouseleave', () => {
+    stars.forEach(x => x.classList.toggle('lit', +x.dataset.v <= selectedRating));
+  });
+</script>
+{% endblock %}
