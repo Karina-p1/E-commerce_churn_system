@@ -1,17 +1,45 @@
 {% extends 'base.html' %}
 {% block title %}Checkout{% endblock %}
-{% block content %}
-<h3>Checkout</h3>
-<div class="card p-4 mb-3">
-    {% for item in cart.items.all %}
-    <p>{{ item.product.name }} × {{ item.quantity }} = ${{ item.subtotal }}</p>
-    {% endfor %}
-    <hr>
-    <p class="fw-bold">Total: ${{ cart.total_price }}</p>
+{% block start %}
+
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <h3 class="fw-bold mb-4">Checkout</h3>
+
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body p-4">
+                <h5 class="fw-semibold mb-3">Order Summary</h5>
+                <hr>
+                {% for item in cart.items.all %}
+                <div class="d-flex justify-content-between mb-2">
+                    <span>
+                        {{ item.product.name }}
+                        <span class="text-muted">× {{ item.quantity }}</span>
+                    </span>
+                    <span class="fw-semibold">Rs. {{ item.subtotal }}</span>
+                </div>
+                {% endfor %}
+                <hr>
+                <div class="d-flex justify-content-between">
+                    <strong>Total</strong>
+                    <strong class="text-primary fs-5">
+                        Rs. {{ cart.total_price }}
+                    </strong>
+                </div>
+            </div>
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            <button class="btn btn-dark w-100 py-2 fw-semibold btn-lg">
+                Confirm Order
+            </button>
+            <a href="{% url 'cart' %}"
+               class="btn btn-outline-secondary w-100 mt-2">
+                Back to Cart
+            </a>
+        </form>
+    </div>
 </div>
-<form method="post">
-    {% csrf_token %}
-    <button class="btn btn-success btn-lg">Confirm Order</button>
-    <a href="{% url 'cart' %}" class="btn btn-outline-secondary ms-2">Back to Cart</a>
-</form>
+
 {% endblock %}

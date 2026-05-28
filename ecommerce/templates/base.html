@@ -3,14 +3,12 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>ShopMart</title>
+    <title>{% block title %}ShopMart{% endblock %}</title>
 
-    <!-- Bootstrap CSS -->
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
       rel="stylesheet"
     />
-    <!-- Google Font -->
     <link
       href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap"
       rel="stylesheet"
@@ -20,14 +18,13 @@
       * {
         box-sizing: border-box;
       }
-
       body {
         font-family: "DM Sans", sans-serif;
         font-optical-sizing: auto;
-        padding-top: 128px; /* 32 + 60 + 36 */
+        padding-top: 128px;
       }
 
-      /* ── TOP BAR ── */
+      /* TOP BAR */
       .top-bar {
         position: fixed;
         top: 0;
@@ -55,7 +52,7 @@
         color: #7dd3fc;
       }
 
-      /* ── MAIN NAVBAR ── */
+      /* MAIN NAVBAR */
       .main-nav {
         position: fixed;
         top: 32px;
@@ -153,36 +150,6 @@
         background: #0284c7;
       }
 
-      .btn-upload {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        background: #ef4444;
-        color: #fff;
-        border: none;
-        border-radius: 9px;
-        padding: 7px 14px;
-        font-size: 13px;
-        font-weight: 700;
-        cursor: pointer;
-        font-family: "DM Sans", sans-serif;
-        transition: background 0.2s;
-        white-space: nowrap;
-        line-height: 1.3;
-        text-decoration: none;
-        flex-shrink: 0;
-      }
-      .btn-upload:hover {
-        background: #dc2626;
-        color: #fff;
-      }
-      .btn-upload small {
-        display: block;
-        font-size: 10px;
-        font-weight: 500;
-        opacity: 0.85;
-      }
-
       .nav-divider {
         width: 1px;
         height: 32px;
@@ -239,11 +206,11 @@
         stroke: #0ea5e9;
       }
 
-      .cart-badge,
-      .wish-badge {
+      .cart-badge {
         position: absolute;
         top: 4px;
         right: 6px;
+        background: #0ea5e9;
         color: #fff;
         font-size: 9px;
         font-weight: 700;
@@ -253,17 +220,11 @@
         text-align: center;
         border: 1.5px solid #fff;
       }
-      .cart-badge {
-        background: #0ea5e9;
-      }
-      .wish-badge {
-        background: #ef4444;
-      }
 
-      /* ── CATEGORIES STRIP ── */
+      /* CATEGORIES STRIP */
       .cat-bar {
         position: fixed;
-        top: 92px; /* 32 + 60 */
+        top: 92px;
         left: 0;
         width: 100%;
         z-index: 999;
@@ -303,48 +264,30 @@
         border-bottom-color: #0ea5e9;
       }
 
-      /* ── PAGE CONTAINER ── */
       .page-container {
         padding: 24px 16px;
       }
 
-      /* ── TABLET (max 992px) ── */
-      @media (max-width: 992px) {
-        .btn-upload {
-          display: none;
-        }
-      }
-
-      /* ── MOBILE (max 768px) ── */
       @media (max-width: 768px) {
         body {
           padding-top: 108px;
-        } /* 32 + 56 + 20 (no cat-bar label text) */
-
+        }
         .main-nav {
           padding: 0 12px;
           gap: 8px;
           height: 56px;
         }
-
         .nav-logo {
           font-size: 18px;
         }
-
         .btn-categories span {
           display: none;
         }
         .btn-categories {
           padding: 8px 10px;
         }
-
-        .btn-upload,
         .nav-divider {
           display: none;
-        }
-
-        .search-wrap {
-          max-width: 100%;
         }
         .search-wrap input {
           padding: 8px 10px;
@@ -353,31 +296,26 @@
         .btn-search {
           padding: 8px 12px;
         }
-
         .icon-btn span {
           display: none;
         }
         .icon-btn {
           padding: 6px 7px;
         }
-
         .cat-bar {
-          top: 88px; /* 32 + 56 */
+          top: 88px;
           padding: 0 12px;
           height: 32px;
         }
-
         .cat-link {
           font-size: 12px;
           padding: 0 10px;
         }
-
         .page-container {
           padding: 16px 12px;
         }
       }
 
-      /* ── SMALL MOBILE (max 480px) ── */
       @media (max-width: 480px) {
         .top-bar {
           font-size: 10px;
@@ -397,7 +335,7 @@
   </head>
 
   <body>
-    <!-- ① TOP ANNOUNCEMENT BAR -->
+    <!-- TOP ANNOUNCEMENT BAR -->
     <div class="top-bar">
       <span>🚚 Free delivery on orders above</span>
       <strong>Rs. 999</strong>
@@ -407,9 +345,11 @@
       <span>for extra Rs.50 off</span>
     </div>
 
-    <!-- ② MAIN NAVBAR -->
+    <!-- MAIN NAVBAR -->
     <nav class="main-nav">
-      <a href="/" class="nav-logo">Shop<span>Mart</span></a>
+      <a href="{% url 'products:view_products' %}" class="nav-logo">
+        Shop<span>Mart</span>
+      </a>
 
       <!-- Categories Dropdown -->
       <div class="nav-item dropdown" style="list-style: none">
@@ -433,10 +373,16 @@
           </svg>
           <span>Categories</span>
         </button>
-
         <ul class="dropdown-menu">
           {% for cat in all_categories %}
-          <li><a class="dropdown-item" href="">{{ cat.name }}</a></li>
+          <li>
+            <a
+              class="dropdown-item"
+              href="{% url 'products:view_products' %}?category={{ cat.slug }}"
+            >
+              {{ cat.name }}
+            </a>
+          </li>
           {% empty %}
           <li>
             <a class="dropdown-item disabled" href="#">No categories found</a>
@@ -445,7 +391,12 @@
         </ul>
       </div>
 
-      <form class="search-wrap" method="GET" action="">
+      <!-- Search -->
+      <form
+        class="search-wrap"
+        method="GET"
+        action="{% url 'products:view_products' %}"
+      >
         <input
           type="search"
           name="q"
@@ -470,8 +421,9 @@
       <div class="nav-divider"></div>
 
       <div class="nav-right">
-        <!-- My Account -->
-        <a href="" class="icon-btn">
+        <!-- Account / Profile -->
+        {% if request.user.is_authenticated %}
+        <a href="{% url 'profile' %}" class="icon-btn">
           <svg
             width="20"
             height="20"
@@ -482,10 +434,10 @@
             <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
             <circle cx="12" cy="7" r="4" />
           </svg>
+          <span>{{ request.user.username }}</span>
         </a>
-
-        <!-- Wishlist -->
-        <a href="" class="icon-btn">
+        {% else %}
+        <a href="{% url 'login' %}" class="icon-btn">
           <svg
             width="20"
             height="20"
@@ -493,15 +445,15 @@
             fill="none"
             stroke-width="2"
           >
-            <path
-              d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"
-            />
+            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
           </svg>
-          <span>Wishlist</span>
+          <span>Login</span>
         </a>
+        {% endif %}
 
         <!-- Cart -->
-        <a href="" class="icon-btn">
+        <a href="{% url 'cart' %}" class="icon-btn">
           <svg
             width="20"
             height="20"
@@ -515,13 +467,42 @@
               d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"
             />
           </svg>
-          <a class="nav-link" href="{% url 'cart' %}">Cart</a>
+          <span>Cart</span>
+         {% if request.user.is_authenticated %}
+    {% with cart_count=request.user.cart.total_items %}
+        {% if cart_count %}
+            <span class="cart-badge">{{ cart_count }}</span>
+        {% endif %}
+    {% endwith %}
+{% endif %}
         </a>
+
+        <!-- Orders -->
+        {% if request.user.is_authenticated %}
+        <a href="{% url 'order_list' %}" class="icon-btn">
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke-width="2"
+          >
+            <path
+              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"
+            />
+            <rect x="9" y="3" width="6" height="4" rx="2" />
+            <line x1="9" y1="12" x2="15" y2="12" />
+            <line x1="9" y1="16" x2="13" y2="16" />
+          </svg>
+          <span>Orders</span>
+        </a>
+        {% endif %}
 
         <div class="nav-divider"></div>
 
+        <!-- Login / Logout / Register -->
         {% if request.user.is_authenticated %}
-        <form action="" method="post" style="display: inline">
+        <form action="{% url 'logout' %}" method="post" style="display: inline">
           {% csrf_token %}
           <button type="submit" class="icon-btn active-link">
             <svg
@@ -539,7 +520,7 @@
           </button>
         </form>
         {% else %}
-        <a href="" class="icon-btn active-link">
+        <a href="{% url 'login' %}" class="icon-btn active-link">
           <svg
             width="20"
             height="20"
@@ -554,7 +535,7 @@
           </svg>
           <span>Login</span>
         </a>
-        <a href="" class="icon-btn">
+        <a href="{% url 'register' %}" class="icon-btn">
           <svg
             width="20"
             height="20"
@@ -569,20 +550,68 @@
           </svg>
           <span>Register</span>
         </a>
+        {% endif %} {% if request.user.is_staff %}
+        <div class="nav-divider"></div>
+        <a href="/admin/" class="icon-btn" style="color: #f59e0b">
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#f59e0b"
+            stroke-width="2"
+          >
+            <circle cx="12" cy="12" r="3" />
+            <path
+              d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"
+            />
+          </svg>
+          <span>Admin</span>
+        </a>
         {% endif %}
       </div>
     </nav>
 
-    <!-- ③ BRAND STRIP -->
+    <!-- BRAND STRIP -->
     <div class="cat-bar">
       {% for brand in all_brands %}
       <a
-        href=""
+        href="{% url 'products:view_products' %}?brand={{ brand.slug }}"
         class="cat-link {% if active_brand == brand.slug %}active{% endif %}"
-        >{{ brand.name }}</a
       >
+        {{ brand.name }}
+      </a>
       {% endfor %}
     </div>
+
+    <!-- FLASH MESSAGES -->
+    {% if messages %}
+    <div
+      style="
+        position: fixed;
+        top: 135px;
+        right: 16px;
+        z-index: 9999;
+        min-width: 280px;
+      "
+    >
+      {% for message in messages %}
+      <div
+        class="alert alert-{{ message.tags }} alert-dismissible fade show
+                  shadow-sm"
+        role="alert"
+        style="font-size: 13.5px"
+      >
+        {{ message }}
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="alert"
+        ></button>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
 
     <!-- PAGE CONTENT -->
     <div class="container page-container">{% block start %}{% endblock %}</div>
