@@ -1,5 +1,12 @@
 from django.urls import path
 
-urlpatterns = [
+from .views import log_click
 
+
+urlpatterns=[
+
+    path(
+        'click/<int:product_id>/',
+        log_click
+    )
 ]
