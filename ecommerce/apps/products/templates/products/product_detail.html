@@ -8,7 +8,7 @@
   :root { --gold: #e89b2a; --radius: 12px; }
   body { background: #f8f9fa; }
   .main-img-wrap { aspect-ratio:1; background:#fff; border:1px solid #e5e7eb; border-radius:var(--radius); overflow:hidden; display:flex; align-items:center; justify-content:center; }
-  .main-img-wrap img { width:100%; height:100%; object-fit:cover; }
+  .main-img-wrap img { width:100%; height:100%; object-fit:cover; transition: opacity .2s; }
   .main-img-wrap .no-img { font-size:5rem; color:#d1d5db; }
   .thumb-row { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
   .thumb { width:60px; height:60px; border:2px solid #e5e7eb; border-radius:8px; overflow:hidden; cursor:pointer; background:#fff; display:flex; align-items:center; justify-content:center; transition:border-color .15s; }
@@ -38,6 +38,7 @@
   .review-card { background:#fff; border:1px solid #e5e7eb; border-radius:var(--radius); padding:1.25rem; }
   .avatar { width:40px; height:40px; border-radius:50%; background:#dbeafe; color:#1d4ed8; display:flex; align-items:center; justify-content:center; font-size:.8rem; font-weight:700; flex-shrink:0; }
   .divider { border-top:1px solid #e5e7eb; margin:2rem 0; }
+  .no-thumb-text { font-size:.65rem; color:#9ca3af; text-align:center; padding:4px; }
 </style>
 {% endblock %}
 
@@ -48,6 +49,8 @@
 
     <!-- Left: images -->
     <div class="col-12 col-md-5">
+
+      <!-- Main image -->
       <div class="main-img-wrap">
         {% if product.image %}
           <img id="mainImg" src="{{ product.image.url }}" alt="{{ product.name }}">
@@ -55,20 +58,30 @@
           <span class="no-img">📦</span>
         {% endif %}
       </div>
-      {% if product.images.all %}
+
+      <!-- Thumbnails: main image + all gallery images -->
+      {% with gallery=product.images.all %}
+      {% if product.image or gallery %}
       <div class="thumb-row">
+
+        <!-- Main image thumb (always first) -->
         {% if product.image %}
-          <div class="thumb active" onclick="setMain('{{ product.image.url }}', this)">
-            <img src="{{ product.image.url }}" alt="Main">
-          </div>
+        <div class="thumb active" onclick="setMain('{{ product.image.url }}', this)">
+          <img src="{{ product.image.url }}" alt="Main">
+        </div>
         {% endif %}
-        {% for img in product.images.all %}
-          <div class="thumb" onclick="setMain('{{ img.image.url }}', this)">
-            <img src="{{ img.image.url }}" alt="View {{ forloop.counter }}">
-          </div>
+
+        <!-- Gallery image thumbs -->
+        {% for img in gallery %}
+        <div class="thumb" onclick="setMain('{{ img.image.url }}', this)">
+          <img src="{{ img.image.url }}" alt="View {{ forloop.counter }}">
+        </div>
         {% endfor %}
+
       </div>
       {% endif %}
+      {% endwith %}
+
     </div>
 
     <!-- Right: details -->
@@ -98,11 +111,11 @@
 
       <div class="d-flex align-items-baseline gap-2 mb-3">
         {% if product.discount_price %}
-          <span class="price-main">${{ product.discount_price }}</span>
-          <span class="price-orig">${{ product.price }}</span>
+          <span class="price-main">Rs{{ product.discount_price }}</span>
+          <span class="price-orig">Rs{{ product.price }}</span>
           <span class="badge-discount">{{ product.discount_percent }}% off</span>
         {% else %}
-          <span class="price-main">${{ product.price }}</span>
+          <span class="price-main">Rs{{ product.price }}</span>
         {% endif %}
       </div>
 
@@ -175,8 +188,9 @@
   {% if user.is_authenticated %}
   <div class="review-form-wrap mb-4">
     <p class="fw-semibold mb-3">Write a review</p>
-    <form method="post" action="">
+    <form method="post" action="{% url 'products:post_review' slug=product.slug %}">
       {% csrf_token %}
+      <input type="hidden" name="action" value="review">
       <div class="star-select d-flex gap-1 mb-3" id="starSelect">
         <span class="s" data-v="1">★</span>
         <span class="s" data-v="2">★</span>
@@ -191,7 +205,7 @@
   </div>
   {% else %}
   <div class="alert alert-light border mb-4 small">
-    <a href="">Log in</a> to write a review.
+    <a href="{% url 'login' %}">Log in</a> to write a review.
   </div>
   {% endif %}
 
@@ -228,12 +242,17 @@
     document.getElementById('qty').textContent = qty;
     document.getElementById('qtyInput').value = qty;
   }
+
   function setMain(url, thumb) {
     const img = document.getElementById('mainImg');
-    if (img) img.src = url;
+    if (img) {
+      img.style.opacity = '0';
+      setTimeout(() => { img.src = url; img.style.opacity = '1'; }, 150);
+    }
     document.querySelectorAll('.thumb').forEach(t => t.classList.remove('active'));
     thumb.classList.add('active');
   }
+
   let selectedRating = 0;
   const stars = document.querySelectorAll('#starSelect .s');
   stars.forEach(s => {

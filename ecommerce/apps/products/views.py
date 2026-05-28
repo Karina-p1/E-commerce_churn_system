@@ -57,16 +57,18 @@ def product_detail(request, slug):
     })
 
 
-@login_required
+# @login_required
 def post_review(request, slug):
     product = get_object_or_404(Product, slug=slug, is_active=True)
 
-    # Prevent duplicate reviews
-    if Review.objects.filter(product=product, customer=request.user).exists():
-        messages.warning(request, 'You have already reviewed this product.')
-        return redirect('products:product_detail', slug=slug)
-
     if request.method == 'POST':
+
+        # Prevent duplicate reviews
+        if Review.objects.filter(product=product, customer=request.user).exists():
+            messages.warning(
+                request, 'You have already reviewed this product.')
+            return redirect('products:product_detail', slug=slug)
+
         rating = request.POST.get('rating')
         comment = request.POST.get('comment', '').strip()
 
@@ -76,14 +78,20 @@ def post_review(request, slug):
                 request, 'Please provide both a rating and a comment.')
             return redirect('products:product_detail', slug=slug)
 
-        if not (1 <= int(rating) <= 5):
+        try:
+            rating = int(rating)
+        except ValueError:
+            messages.error(request, 'Invalid rating value.')
+            return redirect('products:product_detail', slug=slug)
+
+        if not (1 <= rating <= 5):
             messages.error(request, 'Rating must be between 1 and 5.')
             return redirect('products:product_detail', slug=slug)
 
         Review.objects.create(
             product=product,
             customer=request.user,
-            rating=int(rating),
+            rating=rating,
             comment=comment
         )
         messages.success(request, 'Your review has been posted.')
