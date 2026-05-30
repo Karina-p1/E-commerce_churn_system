@@ -12,7 +12,7 @@ def register_view(request):
     Registration timestamp = customer lifetime start for churn calculation.
     """
     if request.user.is_authenticated:
-        return redirect('home')
+        return redirect('products:view_products')
 
     if request.method == 'POST':
         form = RegisterForm(request.POST)
