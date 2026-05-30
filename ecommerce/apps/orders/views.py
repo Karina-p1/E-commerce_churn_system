@@ -6,7 +6,7 @@ from apps.products.models import Product
 from apps.activity.models import UserEvent
 
 from .models import Cart, CartItem, Order, OrderItem
-
+from .models import Order
 
 @login_required
 def cart_view(request):
