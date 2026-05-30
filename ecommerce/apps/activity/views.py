@@ -1,28 +1,32 @@
-from django.shortcuts import render
 from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
+from django.views.decorators.http import require_GET
+
 from .models import UserEvent
 from apps.products.models import Product
 
-# Create your views here.
 
-def log_click(
-    request,
-    product_id
-):
+@require_GET
+def log_click(request, product_id):
+    if not request.user.is_authenticated:
+        return JsonResponse({
+            "success": False,
+            "message": "User not authenticated"
+        }, status=401)
 
-    if request.user.is_authenticated:
+    product = get_object_or_404(
+        Product,
+        id=product_id,
+        is_active=True
+    )
 
-        product=Product.objects.get(
-            id=product_id
-        )
-
-        UserEvent.objects.create(
-
-            user=request.user,
-            product=product,
-            event_type='CLICK'
-        )
+    UserEvent.objects.create(
+        user=request.user,
+        product=product,
+        event_type='CLICK'
+    )
 
     return JsonResponse({
-        "success":True
+        "success": True,
+        "message": "Click logged successfully"
     })
