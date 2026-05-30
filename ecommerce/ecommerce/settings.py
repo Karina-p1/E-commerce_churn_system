@@ -48,7 +48,7 @@ INSTALLED_APPS = [
     # Local apps
     "apps.accounts",
     "apps.churn",
-    "apps.activity",
+    'apps.activity.apps.ActivityConfig',
     "apps.orders",
     "apps.products",
 ]

@@ -3,10 +3,12 @@ from django.urls import path
 from .views import log_click
 
 
-urlpatterns=[
+app_name = 'activity'
 
+urlpatterns = [
     path(
         'click/<int:product_id>/',
-        log_click
-    )
+        log_click,
+        name='log_click'
+    ),
 ]
