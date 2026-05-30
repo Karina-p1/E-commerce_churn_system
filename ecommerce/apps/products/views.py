@@ -7,7 +7,8 @@ from django.db.models import Q
 from django.db.models import Count
 from django.utils import timezone
 
-from apps.products.models import Category, Brand, Product, Review
+from apps.products.models import Category, Brand, Product, Review, Wishlist
+
 from apps.activity.models import UserEvent
 
 
@@ -206,3 +207,37 @@ def post_review(request, slug):
         'products:product_detail',
         slug=slug
     )
+
+
+@login_required
+def add_to_wishlist(request, product_id):
+    product = get_object_or_404(Product, id=product_id)
+
+    obj, created = Wishlist.objects.get_or_create(
+        user=request.user,
+        product=product
+    )
+
+    if created:
+        messages.success(request, "Added to wishlist ❤️")
+    else:
+        messages.info(request, "Already in wishlist")
+
+    return redirect(request.META.get('HTTP_REFERER', 'products:view_products'))
+
+
+@login_required
+def wishlist_view(request):
+    items = Wishlist.objects.filter(
+        user=request.user).select_related('product')
+    return render(request, 'products/wishlist.html', {'items': items})
+
+
+@login_required
+def remove_from_wishlist(request, product_id):
+    Wishlist.objects.filter(
+        user=request.user,
+        product_id=product_id
+    ).delete()
+
+    return redirect('products:wishlist_view')
