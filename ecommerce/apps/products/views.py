@@ -240,4 +240,4 @@ def remove_from_wishlist(request, product_id):
         product_id=product_id
     ).delete()
 
-    return redirect('products:wishlist_view')
+    return redirect('products:wishlist')
