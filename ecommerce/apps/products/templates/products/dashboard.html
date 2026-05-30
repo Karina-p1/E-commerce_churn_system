@@ -1,16 +1,33 @@
 {% extends "base.html" %} {% block extra_head %}
 <style>
+  .product-card-wrapper {
+    position: relative;
+    height: 100%;
+  }
+
+  .card-link-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: block;
+  }
+
   .product-card {
     background: #fff;
     border: 1px solid #e5e7eb;
     border-radius: 12px;
     overflow: hidden;
     width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
   }
+
   .product-img-wrap {
     position: relative;
     background: #f9fafb;
     height: 220px;
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -34,6 +51,7 @@
     font-weight: 600;
     padding: 3px 8px;
     border-radius: 6px;
+    z-index: 1;
   }
   .badge-stock.out {
     background: #fee2e2;
@@ -49,6 +67,7 @@
     font-weight: 600;
     padding: 3px 8px;
     border-radius: 6px;
+    z-index: 1;
   }
   .btn-wishlist {
     position: absolute;
@@ -61,9 +80,12 @@
     height: 34px;
     cursor: pointer;
     font-size: 16px;
+    z-index: 2;
   }
+
   .product-info {
-    padding: 14px 16px;
+    padding: 14px 16px 0;
+    flex: 1;
   }
   .product-brand {
     font-size: 11px;
@@ -85,7 +107,7 @@
     display: flex;
     align-items: baseline;
     gap: 8px;
-    margin-bottom: 14px;
+    margin-bottom: 0;
   }
   .price-main {
     font-size: 18px;
@@ -96,6 +118,12 @@
     font-size: 13px;
     color: #9ca3af;
     text-decoration: line-through;
+  }
+
+  .cart-form {
+    padding: 14px 16px 16px;
+    position: relative;
+    z-index: 2;
   }
   .btn-cart {
     width: 100%;
@@ -111,48 +139,80 @@
   .btn-cart:hover {
     background: #1e5a8a;
   }
+
+  .empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 80px 20px;
+  }
+  .empty-state svg {
+    display: block;
+    margin: 0 auto 16px;
+  }
+  .empty-state h4 {
+    color: #6b7280;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .empty-state p {
+    color: #9ca3af;
+    font-size: 14px;
+    margin-bottom: 20px;
+  }
+  .empty-state a {
+    background: #0ea5e9;
+    color: #fff;
+    text-decoration: none;
+    padding: 9px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .empty-state a:hover {
+    background: #0284c7;
+    color: #fff;
+  }
 </style>
 {% endblock %} {% block start %}
-<!-- Products -->
-<div
-  style="
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 16px;
-  "
->
+
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px;">
   {% for p in products %}
-  <a href="{% url 'products:product_detail' p.slug %}" style="text-decoration: none">
+
+  <div class="product-card-wrapper">
+    <a href="{% url 'products:product_detail' p.slug %}" class="card-link-overlay" aria-label="View {{ p.name }}"></a>
+
     <div class="product-card">
+
       <div class="product-img-wrap">
         {% if p.image %}
-        <img src="{{ p.image.url }}" alt="{{ p.name }}" />
+          <img src="{{ p.image.url }}" alt="{{ p.name }}" />
         {% else %}
-        <div class="product-img-placeholder">No Image</div>
-        {% endif %} {% if p.stock > 0 %}
-        <span class="badge-stock">In Stock</span>
-        {% else %}
-        <span class="badge-stock out">Out of Stock</span>
-        {% endif %} {% if p.discount_percent %}
-        <span class="badge-discount">{{ p.discount_percent }}% off</span>
+          <div class="product-img-placeholder">No Image</div>
         {% endif %}
 
-        <button class="btn-wishlist">&#9825;</button>
+        {% if p.stock > 0 %}
+          <span class="badge-stock">In Stock</span>
+        {% else %}
+          <span class="badge-stock out">Out of Stock</span>
+        {% endif %}
+
+        {% if p.discount_percent %}
+          <span class="badge-discount">{{ p.discount_percent }}% off</span>
+        {% endif %}
+
+        <button class="btn-wishlist" type="button" aria-label="Add to wishlist">&#9825;</button>
       </div>
 
       <div class="product-info">
         <p class="product-brand">{{ p.brand.name|default:"" }}</p>
         <p class="product-name">{{ p.name }}</p>
         <p class="product-rating">⭐ {{ p.rating }} ({{ p.review_count }})</p>
-
         <div class="product-price">
           <span class="price-main">Rs. {{ p.effective_price }}</span>
           {% if p.discount_price %}
-          <span class="price-original">Rs. {{ p.price }}</span>
+            <span class="price-original">Rs. {{ p.price }}</span>
           {% endif %}
         </div>
-
-       
       </div>
 <form method="post" action="{% url 'add_to_cart' p.id %}">
     {% csrf_token %}
@@ -161,7 +221,31 @@
     </button>
 </form>
     </div>
-  </a>
+  </div>
+
+  {% empty %}
+
+  <div class="empty-state">
+    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5">
+      <circle cx="11" cy="11" r="8"/>
+      <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </svg>
+    <h4>No products found</h4>
+    <p>
+      {% if request.GET.brand %}
+        No products available for this brand yet.
+      {% elif request.GET.category %}
+        No products available in this category yet.
+      {% elif request.GET.q %}
+        No results for "<strong>{{ request.GET.q }}</strong>". Try a different search.
+      {% else %}
+        No products available at the moment.
+      {% endif %}
+    </p>
+    <a href="{% url 'products:view_products' %}">View All Products</a>
+  </div>
+
   {% endfor %}
 </div>
+
 {% endblock %}

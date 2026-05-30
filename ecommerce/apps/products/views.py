@@ -3,6 +3,7 @@ from datetime import timedelta
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.db.models import Q
 from django.db.models import Count
 from django.utils import timezone
 
@@ -21,10 +22,32 @@ def view_products(request):
         'brand'
     )
 
+    # Filter by brand
+    brand_slug = request.GET.get('brand')
+    if brand_slug:
+        products = products.filter(brand__slug=brand_slug)
+
+    # Filter by category
+    category_slug = request.GET.get('category')
+    if category_slug:
+        products = products.filter(category__slug=category_slug)
+
+    # Search by name, brand name, category name, and description
+    q = request.GET.get('q')
+    if q:
+        products = products.filter(
+            Q(name__icontains=q) |
+            Q(description__icontains=q) |
+            Q(brand__name__icontains=q) |
+            Q(category__name__icontains=q)
+        )
+
     return render(request, "products/dashboard.html", {
-        "categories": categories,
-        "brands": brands,
         "products": products,
+        "all_brands": brands,
+        "all_categories": categories,
+        "active_brand": brand_slug,
+        "active_category": category_slug,
     })
 
 
