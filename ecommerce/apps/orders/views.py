@@ -29,21 +29,41 @@ def add_to_cart(request, product_id):
         user=request.user
     )
 
+    quantity = request.POST.get('quantity', 1)
+    action = request.POST.get('action', 'cart')
+
+    try:
+        quantity = int(quantity)
+    except ValueError:
+        quantity = 1
+
+    if quantity < 1:
+        quantity = 1
+
     item, created = CartItem.objects.get_or_create(
         cart=cart,
         product=product
     )
 
-    if not created:
-        item.quantity += 1
-        item.save()
+    if created:
+        item.quantity = quantity
+    else:
+        item.quantity += quantity
 
-    # Activity tracking: Add to cart
+    item.save()
+
     UserEvent.objects.create(
         user=request.user,
         product=product,
         event_type='CART'
     )
+
+    if action == 'buy':
+        messages.success(
+            request,
+            f"'{product.name}' added to cart. Continue checkout."
+        )
+        return redirect('checkout')
 
     messages.success(
         request,
