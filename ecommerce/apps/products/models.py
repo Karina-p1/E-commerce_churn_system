@@ -3,6 +3,7 @@ from django.utils.text import slugify
 
 from django.conf import settings
 
+
 class Brand(models.Model):
     name = models.CharField(max_length=100)
     slug = models.SlugField(unique=True, blank=True)
@@ -50,7 +51,8 @@ class Product(models.Model):
     discount_price = models.DecimalField(
         max_digits=10, decimal_places=2, null=True, blank=True)
     stock = models.IntegerField(default=0)
-    image = models.ImageField(upload_to='products/main/', blank=True, null=True)
+    image = models.ImageField(
+        upload_to='products/main/', blank=True, null=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -88,7 +90,8 @@ class Product(models.Model):
 class ProductImage(models.Model):
     product = models.ForeignKey(
         Product, on_delete=models.CASCADE, related_name='images')
-    image = models.ImageField(upload_to='products/gallery/', blank=True, null=True)
+    image = models.ImageField(
+        upload_to='products/gallery/', blank=True, null=True)
     is_primary = models.BooleanField(default=False)
 
     def __str__(self):
@@ -103,3 +106,22 @@ class Review(models.Model):
     rating = models.IntegerField()
     comment = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+class Wishlist(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name="wishlist"
+    )
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name="wishlisted_by"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'product')  # prevents duplicates
+
+    def __str__(self):
+        return f"{self.user.username} - {self.product.name}"
