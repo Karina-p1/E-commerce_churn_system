@@ -250,6 +250,13 @@
             <span>{{ request.user.username }}</span>
           </a>
 
+          <a href="{% url 'products:wishlist' %}" class="icon-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke-width="2">
+              <path d="M20.8 4.6c-1.5-1.4-4-1.4-5.5 0L12 7.9 8.7 4.6c-1.5-1.4-4-1.4-5.5 0-1.5 1.5-1.5 4 0 5.5L12 20l8.8-9.9c1.5-1.5 1.5-4 0-5.5z"/>
+            </svg>
+            <span>Wishlist</span>
+          </a>
+
           <a href="{% url 'cart' %}" class="icon-btn">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke-width="2">
               <circle cx="9" cy="21" r="1"/>

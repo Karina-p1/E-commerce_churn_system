@@ -73,7 +73,8 @@
     position: absolute;
     bottom: 10px;
     right: 10px;
-    background: #fff;
+    background: #fee2e2;
+    color: #b91c1c;
     border: 1px solid #e5e7eb;
     border-radius: 50%;
     width: 34px;
@@ -175,82 +176,81 @@
 </style>
 {% endblock %} {% block start %}
 
-<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px;">
-  {% for p in products %}
+<h3 style="margin-bottom: 16px;">Your Wishlist ❤️</h3>
 
+<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px;">
+
+  {% for item in items %}
   <div class="product-card-wrapper">
-    <a href="{% url 'products:product_detail' p.slug %}" class="card-link-overlay" aria-label="View {{ p.name }}"></a>
+
+    <!-- LINK OVERLAY -->
+    <a href="{% url 'products:product_detail' item.product.slug %}" class="card-link-overlay" aria-label="View {{ item.product.name }}"></a>
 
     <div class="product-card">
 
+      <!-- IMAGE -->
       <div class="product-img-wrap">
-        {% if p.image %}
-          <img src="{{ p.image.url }}" alt="{{ p.name }}" />
+        {% if item.product.image %}
+          <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}">
         {% else %}
           <div class="product-img-placeholder">No Image</div>
         {% endif %}
 
-        {% if p.stock > 0 %}
+        {% if item.product.stock > 0 %}
           <span class="badge-stock">In Stock</span>
         {% else %}
           <span class="badge-stock out">Out of Stock</span>
         {% endif %}
 
-        {% if p.discount_percent %}
-          <span class="badge-discount">{{ p.discount_percent }}% off</span>
+        {% if item.product.discount_percent %}
+          <span class="badge-discount">{{ item.product.discount_percent }}% off</span>
         {% endif %}
 
-        <form method="post" action="{% url 'products:add_to_wishlist' p.id %}">
-            {% csrf_token %}
-            <button class="btn-wishlist" type="submit" aria-label="Add to wishlist">
-                &#9825;
-            </button>
+        <!-- REMOVE FROM WISHLIST -->
+        <form method="post"
+              action="{% url 'products:remove_from_wishlist' item.product.id %}"
+              style="position:absolute; bottom:10px; right:10px; z-index:2;">
+          {% csrf_token %}
+          <button type="submit" class="btn-wishlist" aria-label="Remove from wishlist">
+            ♥
+          </button>
         </form>
+
       </div>
 
+      <!-- INFO -->
       <div class="product-info">
-        <p class="product-brand">{{ p.brand.name|default:"" }}</p>
-        <p class="product-name">{{ p.name }}</p>
-        <p class="product-rating">⭐ {{ p.rating }} ({{ p.review_count }})</p>
+        <p class="product-brand">{{ item.product.brand.name|default:"" }}</p>
+        <p class="product-name">{{ item.product.name }}</p>
+        <p class="product-rating">⭐ {{ item.product.rating }} ({{ item.product.review_count }})</p>
+
         <div class="product-price">
-          <span class="price-main">Rs. {{ p.effective_price }}</span>
-          {% if p.discount_price %}
-            <span class="price-original">Rs. {{ p.price }}</span>
+          <span class="price-main">Rs. {{ item.product.effective_price }}</span>
+          {% if item.product.discount_price %}
+            <span class="price-original">Rs. {{ item.product.price }}</span>
           {% endif %}
         </div>
       </div>
-<form method="post" action="{% url 'add_to_cart' p.id %}">
-    {% csrf_token %}
-    <button type="submit" class="btn btn-dark w-100">
-        🛒 Add to Cart
-    </button>
-</form>
+
+      <!-- ADD TO CART -->
+      <form method="post" action="{% url 'add_to_cart' item.product.id %}" class="cart-form">
+        {% csrf_token %}
+        <button type="submit" class="btn-cart">
+          🛒 Add to Cart
+        </button>
+      </form>
+
     </div>
   </div>
 
   {% empty %}
-
-  <div class="empty-state">
-    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5">
-      <circle cx="11" cy="11" r="8"/>
-      <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-    </svg>
-    <h4>No products found</h4>
-    <p>
-      {% if request.GET.brand %}
-        No products available for this brand yet.
-      {% elif request.GET.category %}
-        No products available in this category yet.
-      {% elif request.GET.q %}
-        No results for "<strong>{{ request.GET.q }}</strong>". Try a different search.
-      {% else %}
-        No products available at the moment.
-      {% endif %}
-    </p>
-    <a href="{% url 'products:view_products' %}">View All Products</a>
-  </div>
-
+    <div class="empty-state">
+      <h4>No items in wishlist ❤️</h4>
+      <p>Start adding products you like</p>
+      <a href="{% url 'products:view_products' %}">Browse Products</a>
+    </div>
   {% endfor %}
+
 </div>
 
 {% endblock %}
