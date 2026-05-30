@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from apps.products.models import Product
 from .models import Cart, CartItem, Order, OrderItem
-
+from .models import Order
 
 @login_required
 # Views for handling cart and order operations, including viewing the cart, adding/removing items, checking out, and viewing order history and details.
@@ -60,13 +60,22 @@ def checkout_view(request):
     return render(request, 'orders/checkout.html', {'cart': cart})
 
 @login_required
-# View to display a list of the user's past orders. It retrieves all orders associated with the logged-in user and renders them in the 'order_list.html' template.
-def order_list_view(request):
-    orders = Order.objects.filter(user=request.user)
-    return render(request, 'orders/order_list.html', {'orders': orders})
+def order_list(request):
+    orders = Order.objects.filter(user=request.user).order_by('-created_at')
+
+    return render(request, 'orders/order_list.html', {
+        'orders': orders
+    })
+
 
 @login_required
-# View to display details of a specific order. It retrieves the order associated with the logged-in user and renders it in the 'order_detail.html' template. If the order does not exist or does not belong to the user, it returns a 404 error.
-def order_detail_view(request, order_id):
-    order = get_object_or_404(Order, id=order_id, user=request.user)
-    return render(request, 'orders/order_detail.html', {'order': order})
+def order_detail(request, order_id):
+    order = get_object_or_404(
+        Order,
+        id=order_id,
+        user=request.user
+    )
+
+    return render(request, 'orders/order_detail.html', {
+        'order': order
+    })

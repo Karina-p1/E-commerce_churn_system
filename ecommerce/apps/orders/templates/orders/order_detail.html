@@ -1,22 +1,64 @@
 {% extends 'base.html' %}
 {% block title %}Order #{{ order.id }}{% endblock %}
-{% block content %}
-<h3>Order #{{ order.id }}</h3>
-<p>Status: <strong>{{ order.get_status_display }}</strong></p>
-<p>Placed: {{ order.created_at|date:"F j, Y" }}</p>
-<table class="table">
-    <thead><tr><th>Product</th><th>Price</th><th>Qty</th><th>Subtotal</th></tr></thead>
-    <tbody>
-    {% for item in order.items.all %}
-    <tr>
-        <td>{{ item.product_name }}</td>
-        <td>${{ item.price }}</td>
-        <td>{{ item.quantity }}</td>
-        <td>${{ item.subtotal }}</td>
-    </tr>
-    {% endfor %}
-    </tbody>
-</table>
-<p class="fw-bold">Order Total: ${{ order.total_price }}</p>
-<a href="{% url 'order_list' %}" class="btn btn-outline-secondary">Back to Orders</a>
+{% block start %}
+
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="fw-bold mb-0">Order #{{ order.id }}</h3>
+            <span class="badge
+                {% if order.status == 'delivered' %}bg-success
+                {% elif order.status == 'cancelled' %}bg-danger
+                {% elif order.status == 'shipped' %}bg-info
+                {% else %}bg-warning text-dark{% endif %} px-3 py-2">
+                {{ order.get_status_display }}
+            </span>
+        </div>
+
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body p-4">
+                <p class="text-muted small mb-3">
+                    Placed on {{ order.created_at|date:"F j, Y" }}
+                </p>
+                <table class="table table-borderless mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Product</th>
+                            <th class="text-center">Qty</th>
+                            <th class="text-end">Price</th>
+                            <th class="text-end">Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for item in order.items.all %}
+                    <tr>
+                        <td>{{ item.product_name }}</td>
+                        <td class="text-center">{{ item.quantity }}</td>
+                        <td class="text-end">Rs. {{ item.price }}</td>
+                        <td class="text-end fw-semibold">
+                            Rs. {{ item.subtotal }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="3" class="text-end fw-bold">
+                                Total
+                            </td>
+                            <td class="text-end fw-bold text-primary fs-5">
+                                Rs. {{ order.total_price }}
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <a href="{% url 'order_list' %}" class="btn btn-outline-dark">
+            Back to Orders
+        </a>
+    </div>
+</div>
+
 {% endblock %}
