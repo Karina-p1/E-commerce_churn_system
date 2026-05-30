@@ -23,7 +23,7 @@ def register_view(request):
                 request,
                 f"Welcome {user.username}! Account created successfully."
             )
-            return redirect('home')
+            return redirect('products:view_products')
         else:
             messages.error(request, "Please fix the errors below.")
     else:
@@ -49,7 +49,7 @@ def login_view(request):
             messages.success(request, f"Welcome back, {user.username}!")
 
             # Redirect to next page if exists
-            next_url = request.GET.get('next', 'home')
+            next_url = request.POST.get('next') or request.GET.get('next') or 'products:view_products'
             return redirect(next_url)
         else:
             messages.error(request, "Invalid username or password.")
@@ -60,13 +60,9 @@ def login_view(request):
 
 
 def logout_view(request):
-    """
-    User logout.
-    """
     logout(request)
     messages.info(request, "You have been logged out.")
-    return redirect('home')
-
+    return render(request, 'accounts/logout.html')
 
 @login_required
 def profile_view(request):
