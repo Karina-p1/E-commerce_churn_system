@@ -1,16 +1,26 @@
+from datetime import timedelta
+
 from django.shortcuts import render, get_object_or_404, redirect
-from apps.products.models import Category, Brand, Product, ProductImage, Review
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.db.models import Avg, Count
 from django.db.models import Q
+from django.db.models import Count
+from django.utils import timezone
+
+from apps.products.models import Category, Brand, Product, Review
+from apps.activity.models import UserEvent
 
 
 def view_products(request):
     categories = Category.objects.all()
     brands = Brand.objects.all()
+
     products = Product.objects.filter(
-        is_active=True).select_related('category', 'brand')
+        is_active=True
+    ).select_related(
+        'category',
+        'brand'
+    )
 
     # Filter by brand
     brand_slug = request.GET.get('brand')
@@ -40,23 +50,58 @@ def view_products(request):
         "active_category": category_slug,
     })
 
-# views.py
-
 
 def build_stars(rating):
-    """Returns list of booleans: True = filled star, False = empty"""
+    """
+    Returns list of booleans:
+    True = filled star
+    False = empty star
+    """
     return [i < round(rating) for i in range(5)]
 
 
 def product_detail(request, slug):
-    product = get_object_or_404(Product, slug=slug, is_active=True)
+    product = get_object_or_404(
+        Product,
+        slug=slug,
+        is_active=True
+    )
+
+    # Activity tracking: product view
+    # Logs VIEW only once per product per user within 5 minutes.
+    if request.user.is_authenticated:
+        recent_view_exists = UserEvent.objects.filter(
+            user=request.user,
+            product=product,
+            event_type='VIEW',
+            created_at__gte=timezone.now() - timedelta(minutes=5)
+        ).exists()
+
+        if not recent_view_exists:
+            UserEvent.objects.create(
+                user=request.user,
+                product=product,
+                event_type='VIEW'
+            )
 
     reviews_qs = product.reviews.select_related(
-        'customer').order_by('-created_at')
+        'customer'
+    ).order_by(
+        '-created_at'
+    )
+
     total = reviews_qs.count()
 
-    dist_raw = reviews_qs.values('rating').annotate(count=Count('rating'))
-    dist_map = {d['rating']: d['count'] for d in dist_raw}
+    dist_raw = reviews_qs.values(
+        'rating'
+    ).annotate(
+        count=Count('rating')
+    )
+
+    dist_map = {
+        d['rating']: d['count']
+        for d in dist_raw
+    }
 
     rating_distribution = [
         {
@@ -67,9 +112,12 @@ def product_detail(request, slug):
         for star in range(5, 0, -1)
     ]
 
-    # Pre-build star lists so templates don't need float comparisons
     product_stars = build_stars(product.rating)
-    review_stars = {r.id: build_stars(r.rating) for r in reviews_qs}
+
+    review_stars = {
+        review.id: build_stars(review.rating)
+        for review in reviews_qs
+    }
 
     return render(request, 'products/product_detail.html', {
         'product': product,
@@ -80,36 +128,67 @@ def product_detail(request, slug):
     })
 
 
-# @login_required
+@login_required
 def post_review(request, slug):
-    product = get_object_or_404(Product, slug=slug, is_active=True)
+    product = get_object_or_404(
+        Product,
+        slug=slug,
+        is_active=True
+    )
 
     if request.method == 'POST':
 
-        # Prevent duplicate reviews
-        if Review.objects.filter(product=product, customer=request.user).exists():
+        if Review.objects.filter(
+            product=product,
+            customer=request.user
+        ).exists():
             messages.warning(
-                request, 'You have already reviewed this product.')
-            return redirect('products:product_detail', slug=slug)
+                request,
+                'You have already reviewed this product.'
+            )
+
+            return redirect(
+                'products:product_detail',
+                slug=slug
+            )
 
         rating = request.POST.get('rating')
         comment = request.POST.get('comment', '').strip()
 
-        # Validate inputs
         if not rating or not comment:
             messages.error(
-                request, 'Please provide both a rating and a comment.')
-            return redirect('products:product_detail', slug=slug)
+                request,
+                'Please provide both a rating and a comment.'
+            )
+
+            return redirect(
+                'products:product_detail',
+                slug=slug
+            )
 
         try:
             rating = int(rating)
         except ValueError:
-            messages.error(request, 'Invalid rating value.')
-            return redirect('products:product_detail', slug=slug)
+            messages.error(
+                request,
+                'Invalid rating value.'
+            )
+
+            return redirect(
+                'products:product_detail',
+                slug=slug
+            )
 
         if not (1 <= rating <= 5):
-            messages.error(request, 'Rating must be between 1 and 5.')
-            return redirect('products:product_detail', slug=slug)
+            messages.error(
+                request,
+                'Rating must be between 1 and 5.'
+            )
+
+            return redirect(
+                'products:product_detail',
+                slug=slug
+            )
 
         Review.objects.create(
             product=product,
@@ -117,6 +196,13 @@ def post_review(request, slug):
             rating=rating,
             comment=comment
         )
-        messages.success(request, 'Your review has been posted.')
 
-    return redirect('products:product_detail', slug=slug)
+        messages.success(
+            request,
+            'Your review has been posted.'
+        )
+
+    return redirect(
+        'products:product_detail',
+        slug=slug
+    )

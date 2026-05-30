@@ -214,12 +214,12 @@
           {% endif %}
         </div>
       </div>
-
-      <form method="post" action="{% url 'add_to_cart' p.id %}" class="cart-form">
-        {% csrf_token %}
-        <button type="submit" class="btn-cart">🛒 Add to Cart</button>
-      </form>
-
+<form method="post" action="{% url 'add_to_cart' p.id %}">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-dark w-100">
+        🛒 Add to Cart
+    </button>
+</form>
     </div>
   </div>
 

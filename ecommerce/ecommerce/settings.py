@@ -48,7 +48,7 @@ INSTALLED_APPS = [
     # Local apps
     "apps.accounts",
     "apps.churn",
-    "apps.activity",
+    'apps.activity.apps.ActivityConfig',
     "apps.orders",
     "apps.products",
 ]
@@ -170,4 +170,4 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Login/logout redirects
 LOGIN_URL = "/accounts/login/"
 LOGIN_REDIRECT_URL = "/"
-LOGOUT_REDIRECT_URL = "/"
+# LOGOUT_REDIRECT_URL = "/"
