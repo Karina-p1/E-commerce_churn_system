@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.db import transaction
 
 from apps.products.models import Product
 from apps.activity.models import UserEvent
@@ -25,6 +26,16 @@ def add_to_cart(request, product_id):
         is_active=True
     )
 
+    if product.stock <= 0:
+        messages.error(
+            request,
+            f"'{product.name}' is out of stock."
+        )
+
+        return redirect(
+            request.META.get('HTTP_REFERER', 'cart')
+        )
+
     cart, _ = Cart.objects.get_or_create(
         user=request.user
     )
@@ -40,16 +51,35 @@ def add_to_cart(request, product_id):
     if quantity < 1:
         quantity = 1
 
+    if quantity > product.stock:
+        messages.error(
+            request,
+            f"Only {product.stock} unit(s) of '{product.name}' are available."
+        )
+
+        return redirect(
+            request.META.get('HTTP_REFERER', 'cart')
+        )
+
     item, created = CartItem.objects.get_or_create(
         cart=cart,
         product=product
     )
 
-    if created:
-        item.quantity = quantity
-    else:
-        item.quantity += quantity
+    existing_quantity = 0 if created else item.quantity
+    new_quantity = existing_quantity + quantity
 
+    if new_quantity > product.stock:
+        messages.error(
+            request,
+            f"You already have {existing_quantity} in cart. Only {product.stock} unit(s) available."
+        )
+
+        return redirect(
+            request.META.get('HTTP_REFERER', 'cart')
+        )
+
+    item.quantity = new_quantity
     item.save()
 
     UserEvent.objects.create(
@@ -63,6 +93,7 @@ def add_to_cart(request, product_id):
             request,
             f"'{product.name}' added to cart. Continue checkout."
         )
+
         return redirect('checkout')
 
     messages.success(
@@ -121,36 +152,78 @@ def checkout_view(request):
         )
 
     if request.method == 'POST':
-        order = Order.objects.create(
-            user=request.user,
-            total_price=cart.total_price
-        )
 
-        for cart_item in cart.items.all():
-            OrderItem.objects.create(
-                order=order,
-                product=cart_item.product,
-                product_name=cart_item.product.name,
-                price=cart_item.product.price,
-                quantity=cart_item.quantity
+        try:
+            with transaction.atomic():
+
+                cart_items = cart.items.select_related('product')
+
+                # Check stock before creating order
+                for cart_item in cart_items:
+                    product = cart_item.product
+
+                    if product.stock <= 0:
+                        messages.error(
+                            request,
+                            f"'{product.name}' is out of stock."
+                        )
+                        return redirect('cart')
+
+                    if cart_item.quantity > product.stock:
+                        messages.error(
+                            request,
+                            f"Only {product.stock} unit(s) of '{product.name}' are available."
+                        )
+                        return redirect('cart')
+
+                order = Order.objects.create(
+                    user=request.user,
+                    total_price=cart.total_price
+                )
+
+                # Create order items and reduce stock
+                for cart_item in cart_items:
+                    product = cart_item.product
+
+                    OrderItem.objects.create(
+                        order=order,
+                        product=product,
+                        product_name=product.name,
+                        price=product.price,
+                        quantity=cart_item.quantity
+                    )
+
+                    product.stock -= cart_item.quantity
+
+                    if product.stock < 0:
+                        product.stock = 0
+
+                    product.save()
+
+                UserEvent.objects.create(
+                    user=request.user,
+                    event_type='ORDER'
+                )
+
+                cart.items.all().delete()
+
+                messages.success(
+                    request,
+                    f"Order #{order.id} placed successfully!"
+                )
+
+                return redirect(
+                    'order_detail',
+                    order_id=order.id
+                )
+
+        except Exception as e:
+            messages.error(
+                request,
+                f"Something went wrong while placing your order: {e}"
             )
 
-        UserEvent.objects.create(
-            user=request.user,
-            event_type='ORDER'
-        )
-
-        cart.items.all().delete()
-
-        messages.success(
-            request,
-            f"Order #{order.id} placed successfully!"
-        )
-
-        return redirect(
-            'order_detail',
-            order_id=order.id
-        )
+            return redirect('checkout')
 
     return render(request, 'orders/checkout.html', {
         'cart': cart
