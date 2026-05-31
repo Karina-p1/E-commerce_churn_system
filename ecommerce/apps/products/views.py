@@ -197,6 +197,12 @@ def post_review(request, slug):
             rating=rating,
             comment=comment
         )
+        
+        UserEvent.objects.create(
+            user=request.user,
+            product=product,
+            event_type='REVIEW'
+        )
 
         messages.success(
             request,
@@ -211,7 +217,11 @@ def post_review(request, slug):
 
 @login_required
 def add_to_wishlist(request, product_id):
-    product = get_object_or_404(Product, id=product_id)
+    product = get_object_or_404(
+        Product,
+        id=product_id,
+        is_active=True
+    )
 
     obj, created = Wishlist.objects.get_or_create(
         user=request.user,
@@ -219,12 +229,28 @@ def add_to_wishlist(request, product_id):
     )
 
     if created:
-        messages.success(request, "Added to wishlist ❤️")
+        UserEvent.objects.create(
+            user=request.user,
+            product=product,
+            event_type='WISHLIST'
+        )
+
+        messages.success(
+            request,
+            f"'{product.name}' added to wishlist ❤️"
+        )
     else:
-        messages.info(request, "Already in wishlist")
+        messages.info(
+            request,
+            f"'{product.name}' is already in your wishlist."
+        )
 
-    return redirect(request.META.get('HTTP_REFERER', 'products:view_products'))
-
+    return redirect(
+        request.META.get(
+            'HTTP_REFERER',
+            'products:view_products'
+        )
+    )
 
 @login_required
 def wishlist_view(request):
@@ -235,9 +261,30 @@ def wishlist_view(request):
 
 @login_required
 def remove_from_wishlist(request, product_id):
-    Wishlist.objects.filter(
+    wishlist_item = Wishlist.objects.filter(
         user=request.user,
         product_id=product_id
-    ).delete()
+    ).select_related('product').first()
+
+    if wishlist_item:
+        product = wishlist_item.product
+
+        wishlist_item.delete()
+
+        UserEvent.objects.create(
+            user=request.user,
+            product=product,
+            event_type='REMOVE_WISHLIST'
+        )
+
+        messages.info(
+            request,
+            f"'{product.name}' removed from wishlist."
+        )
+    else:
+        messages.warning(
+            request,
+            "This product was not in your wishlist."
+        )
 
     return redirect('products:wishlist')

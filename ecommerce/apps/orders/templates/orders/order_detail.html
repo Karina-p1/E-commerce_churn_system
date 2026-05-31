@@ -1,11 +1,15 @@
 {% extends 'base.html' %}
+
 {% block title %}Order #{{ order.id }}{% endblock %}
+
 {% block start %}
 
 <div class="row justify-content-center">
     <div class="col-lg-7">
+
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h3 class="fw-bold mb-0">Order #{{ order.id }}</h3>
+
             <span class="badge
                 {% if order.status == 'delivered' %}bg-success
                 {% elif order.status == 'cancelled' %}bg-danger
@@ -17,9 +21,11 @@
 
         <div class="card border-0 shadow-sm mb-3">
             <div class="card-body p-4">
+
                 <p class="text-muted small mb-3">
                     Placed on {{ order.created_at|date:"F j, Y" }}
                 </p>
+
                 <table class="table table-borderless mb-0">
                     <thead class="table-light">
                         <tr>
@@ -29,6 +35,7 @@
                             <th class="text-end">Subtotal</th>
                         </tr>
                     </thead>
+
                     <tbody>
                     {% for item in order.items.all %}
                     <tr>
@@ -41,6 +48,7 @@
                     </tr>
                     {% endfor %}
                     </tbody>
+
                     <tfoot>
                         <tr>
                             <td colspan="3" class="text-end fw-bold">
@@ -52,12 +60,27 @@
                         </tr>
                     </tfoot>
                 </table>
+
             </div>
         </div>
 
-        <a href="{% url 'order_list' %}" class="btn btn-outline-dark">
-            Back to Orders
-        </a>
+        <div class="d-flex gap-2 flex-wrap">
+
+            <a href="{% url 'order_list' %}" class="btn btn-outline-dark">
+                Back to Orders
+            </a>
+
+            {% if order.status == 'pending' or order.status == 'processing' %}
+            <form method="post" action="{% url 'cancel_order' order.id %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">
+                    Cancel Order
+                </button>
+            </form>
+            {% endif %}
+
+        </div>
+
     </div>
 </div>
 
