@@ -114,6 +114,12 @@ def checkout_view(request):
 
         return redirect('cart')
 
+    if request.method == 'GET':
+        UserEvent.objects.create(
+            user=request.user,
+            event_type='CHECKOUT_STARTED'
+        )
+
     if request.method == 'POST':
         order = Order.objects.create(
             user=request.user,
@@ -129,7 +135,6 @@ def checkout_view(request):
                 quantity=cart_item.quantity
             )
 
-        # Activity tracking: Order placed
         UserEvent.objects.create(
             user=request.user,
             event_type='ORDER'
@@ -174,3 +179,49 @@ def order_detail(request, order_id):
     return render(request, 'orders/order_detail.html', {
         'order': order
     })
+
+@login_required
+def cancel_order(request, order_id):
+    order = get_object_or_404(
+        Order,
+        id=order_id,
+        user=request.user
+    )
+
+    if order.status in ['pending', 'processing']:
+        order.status = 'cancelled'
+        order.save()
+
+        UserEvent.objects.create(
+            user=request.user,
+            event_type='ORDER_CANCELLED'
+        )
+
+        messages.success(
+            request,
+            f"Order #{order.id} cancelled successfully."
+        )
+    else:
+        messages.warning(
+            request,
+            "This order cannot be cancelled."
+        )
+
+    return redirect(
+        'order_detail',
+        order_id=order.id
+    )
+
+@login_required
+def payment_failed(request):
+    UserEvent.objects.create(
+        user=request.user,
+        event_type='PAYMENT_FAILED'
+    )
+
+    messages.error(
+        request,
+        "Payment failed. Please try again."
+    )
+
+    return redirect('checkout')
