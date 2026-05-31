@@ -32,7 +32,13 @@ def view_products(request):
     category_slug = request.GET.get('category')
     if category_slug:
         products = products.filter(category__slug=category_slug)
-
+    # Get wishlist product IDs for current user
+    wishlist_ids = set()
+    if request.user.is_authenticated:
+        wishlist_ids = set(
+            Wishlist.objects.filter(user=request.user)
+            .values_list('product_id', flat=True)
+        )
     # Search by name, brand name, category name, and description
     q = request.GET.get('q')
     if q:
@@ -49,6 +55,7 @@ def view_products(request):
         "all_categories": categories,
         "active_brand": brand_slug,
         "active_category": category_slug,
+        "wishlist_ids": wishlist_ids,
     })
 
 

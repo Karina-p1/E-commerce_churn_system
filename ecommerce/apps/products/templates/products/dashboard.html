@@ -172,9 +172,13 @@
     background: #0284c7;
     color: #fff;
   }
+  .btn-wishlist.wishlisted {
+    background: #fee2e2;
+    color: #b91c1c;
+    border-color: #fca5a5;
+  }
 </style>
 {% endblock %} {% block start %}
-
 <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px;">
   {% for p in products %}
 
@@ -202,8 +206,10 @@
 
         <form method="post" action="{% url 'products:add_to_wishlist' p.id %}">
             {% csrf_token %}
-            <button class="btn-wishlist" type="submit" aria-label="Add to wishlist">
-                &#9825;
+            <button class="btn-wishlist {% if p.id in wishlist_ids %}wishlisted{% endif %}"
+                    type="submit"
+                    aria-label="Add to wishlist">
+                {% if p.id in wishlist_ids %}♥{% else %}♡{% endif %}
             </button>
         </form>
       </div>
