@@ -375,16 +375,71 @@
 
           <div class="nav-divider"></div>
 
-          {% if request.user.is_staff %}
-          <a href="/admin/" class="icon-btn" style="color: #f59e0b">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2">
-              <circle cx="12" cy="12" r="3"/>
-              <path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/>
-            </svg>
-            <span>Admin</span>
-          </a>
-          <div class="nav-divider"></div>
-          {% endif %}
+{% if request.user.is_staff %}
+<div style="position:relative;" id="admin-dropdown-wrap">
+
+  <button onclick="toggleAdminMenu()" class="icon-btn"
+          style="color:#f59e0b; border:none; cursor:pointer; background:transparent;">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/>
+    </svg>
+    <span>Admin ▾</span>
+  </button>
+
+  <div id="admin-menu" style="
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 52px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    min-width: 185px;
+    z-index: 9999;
+    overflow: hidden;
+  ">
+    <!-- Django Admin -->
+    <a href="/admin/" style="
+      display: flex; align-items: center; gap: 10px;
+      padding: 11px 16px; font-size: 13px; font-weight: 500;
+      color: #374151; text-decoration: none;
+      border-bottom: 1px solid #f3f4f6;
+      font-family: 'DM Sans', sans-serif;
+    "
+    onmouseenter="this.style.background='#f9fafb'"
+    onmouseleave="this.style.background=''">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2">
+        <rect x="3" y="3" width="7" height="7"/>
+        <rect x="14" y="3" width="7" height="7"/>
+        <rect x="14" y="14" width="7" height="7"/>
+        <rect x="3" y="14" width="7" height="7"/>
+      </svg>
+      Django Admin
+    </a>
+
+    <!-- Churn Dashboard -->
+    <a href="{% url 'churn:dashboard' %}" style="
+      display: flex; align-items: center; gap: 10px;
+      padding: 11px 16px; font-size: 13px; font-weight: 500;
+      color: #374151; text-decoration: none;
+      font-family: 'DM Sans', sans-serif;
+    "
+    onmouseenter="this.style.background='#f9fafb'"
+    onmouseleave="this.style.background=''">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2">
+        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+      </svg>
+      Churn Dashboard
+    </a>
+  </div>
+
+</div>
+<div class="nav-divider"></div>
+{% endif %}
 
           <form action="{% url 'logout' %}" method="post" style="display: inline">
             {% csrf_token %}
@@ -594,6 +649,21 @@
               behavior: 'smooth'
           });
       }
+
+      // Admin dropdown toggle
+function toggleAdminMenu() {
+  const menu = document.getElementById('admin-menu');
+  menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+}
+
+// Close admin dropdown when clicking outside
+document.addEventListener('click', function(e) {
+  const wrap = document.getElementById('admin-dropdown-wrap');
+  if (wrap && !wrap.contains(e.target)) {
+    const menu = document.getElementById('admin-menu');
+    if (menu) menu.style.display = 'none';
+  }
+});
     </script>
 
     {% block extra_js %}{% endblock %}
