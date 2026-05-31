@@ -6,15 +6,27 @@ from apps.products.models import Product
 class UserEvent(models.Model):
 
     EVENT_CHOICES = (
-        ('LOGIN', 'Login'),
-        ('LOGOUT', 'Logout'),
-        ('VIEW', 'View'),
-        ('CLICK', 'Click'),
-        ('CART', 'Cart'),
-        ('REMOVE_CART', 'Remove Cart'),
-        ('WISHLIST', 'Wishlist'),
-        ('ORDER', 'Order'),
-    )
+    ('LOGIN', 'Login'),
+    ('LOGOUT', 'Logout'),
+
+    ('VIEW', 'Product View'),
+    ('CLICK', 'Product Click'),
+
+    ('CART', 'Add To Cart'),
+    ('REMOVE_CART', 'Remove From Cart'),
+
+    ('WISHLIST', 'Add To Wishlist'),
+    ('REMOVE_WISHLIST', 'Remove From Wishlist'),
+
+    ('CHECKOUT_STARTED', 'Checkout Started'),
+    ('CART_ABANDONED', 'Cart Abandoned'),
+
+    ('ORDER', 'Order Placed'),
+    ('ORDER_CANCELLED', 'Order Cancelled'),
+    ('PAYMENT_FAILED', 'Payment Failed'),
+
+    ('REVIEW', 'Review'),
+)
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
