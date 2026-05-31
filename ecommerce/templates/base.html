@@ -15,21 +15,9 @@
         font-optical-sizing: auto;
         padding-top: 128px;
       }
-
-      /* TOP BAR */
-      .top-bar {
-        position: fixed; top: 0; left: 0; width: 100%; z-index: 1100;
-        background: #0e3a5c; color: #fff; font-size: 12px; font-weight: 500;
-        display: flex; align-items: center; justify-content: center;
-        padding: 6px 20px; Gap: 6px; letter-spacing: 0.3px;
-        height: 32px; white-space: nowrap; overflow: hidden;
-      }
-      .top-bar span { opacity: 0.75; }
-      .top-bar strong { color: #7dd3fc; }
-
       /* MAIN NAVBAR */
       .main-nav {
-        position: fixed; top: 32px; left: 0; width: 100%; z-index: 1000;
+        position: fixed; top: 0; left: 0; width: 100%; z-index: 1000;
         background: #fff; border-bottom: 1px solid #e8eaed;
         box-shadow: 0 2px 12px rgba(0,0,0,0.07);
         padding: 0 24px; display: flex; align-items: center; gap: 14px; height: 60px;
@@ -87,28 +75,124 @@
       }
 
       /* BRAND STRIP */
-      .cat-bar {
-        position: fixed; top: 92px; left: 0; width: 100%; z-index: 999;
-        background: #fff; border-bottom: 1px solid #e8eaed;
-        display: flex; align-items: center; padding: 0 24px;
-        overflow-x: auto; overflow-y: visible;
-        scrollbar-width: none; height: 36px;
-        -webkit-overflow-scrolling: touch;
+      .brand-strip-wrapper {
+          position: fixed;
+          top: 60px;
+          left: 0;
+          width: 100%;
+          z-index: 999;
       }
-      .cat-bar::-webkit-scrollbar { display: none; }
+
+      .cat-bar {
+          background: #fff;
+          border-bottom: 1px solid #e8eaed;
+
+          display: flex;
+          align-items: center;
+
+          overflow-x: auto;
+          overflow-y: hidden;
+
+          white-space: nowrap;
+          scroll-behavior: smooth;
+
+          padding: 0 42px;
+
+          height: 42px;
+
+          scrollbar-width: thin;
+          scrollbar-color: #0ea5e9 transparent;
+      }
+
+      .cat-bar::-webkit-scrollbar {
+          height: 4px;
+      }
+
+      .cat-bar::-webkit-scrollbar-thumb {
+          background: #0ea5e9;
+          border-radius: 50px;
+      }
 
       .brand-wrap {
-        position: relative; display: inline-flex; flex-shrink: 0;
+          flex: 0 0 auto;
+      }
+
+      .brand-item {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+      }
+
+      .brand-item img {
+          width: 22px;
+          height: 22px;
+          object-fit: contain;
+          flex-shrink: 0;
       }
 
       .cat-link {
-        font-size: 12.5px; font-weight: 600; color: #374151;
-        text-decoration: none; white-space: nowrap; padding: 0 14px;
-        height: 36px; display: flex; align-items: center;
-        border-bottom: 2px solid transparent;
-        transition: color 0.15s, border-color 0.15s; flex-shrink: 0;
+          display: flex;
+          align-items: center;
+
+          flex: 0 0 auto;
+
+          height: 42px;
+
+          padding: 0 16px;
+
+          text-decoration: none;
+
+          font-size: 12.5px;
+          font-weight: 600;
+
+          color: #374151;
+
+          border-bottom: 2px solid transparent;
+
+          transition: all .2s ease;
       }
-      .cat-link:hover, .cat-link.active { color: #0ea5e9; border-bottom-color: #0ea5e9; }
+
+      .cat-link:hover,
+      .cat-link.active {
+          color: #0ea5e9;
+          border-bottom-color: #0ea5e9;
+      }
+
+      .brand-scroll-btn {
+          position: absolute;
+
+          top: 50%;
+          transform: translateY(-50%);
+
+          width: 30px;
+          height: 30px;
+
+          border: none;
+          border-radius: 50%;
+
+          background: #fff;
+
+          box-shadow: 0 2px 10px rgba(0,0,0,.15);
+
+          cursor: pointer;
+
+          z-index: 1001;
+
+          transition: all .2s ease;
+      }
+
+      .brand-scroll-btn:hover {
+          background: #0ea5e9;
+          color: white;
+      }
+
+      .brand-scroll-btn.left {
+          left: 6px;
+      }
+
+      .brand-scroll-btn.right {
+          right: 6px;
+      }
 
       /* BRAND POPUP — fixed, positioned by JS */
       .brand-popup {
@@ -118,7 +202,7 @@
         border-radius: 14px;
         border: 1px solid #e5e7eb;
         box-shadow: 0 8px 32px rgba(14,58,92,0.15);
-        width: 260px;
+        width: min(260px, calc(100vw - 20px));
         overflow: hidden;
         opacity: 0;
         pointer-events: none;
@@ -176,6 +260,27 @@
         .cat-link { font-size: 12px; padding: 0 10px; }
         .page-container { padding: 16px 12px; }
         .brand-popup { width: 220px; }
+        .cat-bar {
+        top: 88px;
+        height: 40px;
+        padding: 0 36px;
+        }
+
+        .cat-link {
+            font-size: 12px;
+            padding: 0 12px;
+        }
+
+        .brand-item img {
+            width: 20px;
+            height: 20px;
+        }
+
+        .brand-scroll-btn {
+            width: 26px;
+            height: 26px;
+            font-size: 12px;
+        }
       }
       @media (max-width: 480px) {
         .top-bar { font-size: 10px; gap: 4px; padding: 6px 10px; }
@@ -188,17 +293,6 @@
   </head>
 
   <body>
-
-    <!-- TOP ANNOUNCEMENT BAR -->
-    <div class="top-bar">
-      <span>🚚 Free delivery on orders above</span>
-      <strong>Rs. 999</strong>
-      <span>|</span>
-      <span>Use code</span>
-      <strong>SAVE50</strong>
-      <span>for extra Rs.50 off</span>
-    </div>
-
     <!-- MAIN NAVBAR -->
     <nav class="main-nav">
       <a href="{% url 'products:view_products' %}" class="nav-logo">
@@ -339,22 +433,52 @@
     </nav>
 
     <!-- BRAND STRIP -->
-    <div class="cat-bar">
-      {% for brand in all_brands %}
-      <div class="brand-wrap">
-        <a href="{% url 'products:view_products' %}?brand={{ brand.slug }}"
-           class="cat-link {% if active_brand == brand.slug %}active{% endif %}"
-           data-brand-name="{{ brand.name }}"
-           data-brand-desc="{{ brand.description|default:''|escapejs }}"
-           data-brand-logo="{% if brand.logo %}{{ brand.logo.url }}{% endif %}"
-           data-brand-slug="{{ brand.slug }}"
-           onmouseenter="showBrandPopup(this)"
-           onmouseleave="hideBrandPopup()">
-          {{ brand.name }}
-        </a>
-      </div>
-      {% endfor %}
+    <!-- BRAND STRIP -->
+<div class="brand-strip-wrapper">
+
+  <button class="brand-scroll-btn left"
+          type="button"
+          onclick="scrollBrands(-300)">
+    ❮
+  </button>
+
+  <div class="cat-bar" id="brandStrip">
+
+    {% for brand in all_brands %}
+    <div class="brand-wrap">
+
+      <a href="{% url 'products:view_products' %}?brand={{ brand.slug }}"
+         class="cat-link brand-item {% if active_brand == brand.slug %}active{% endif %}"
+
+         data-brand-name="{{ brand.name }}"
+         data-brand-desc="{{ brand.description|default:''|escapejs }}"
+         data-brand-logo="{% if brand.logo %}{{ brand.logo.url }}{% endif %}"
+         data-brand-slug="{{ brand.slug }}"
+
+         onmouseenter="showBrandPopup(this)"
+         onmouseleave="hideBrandPopup()">
+
+          {% if brand.logo %}
+          <img src="{{ brand.logo.url }}"
+               alt="{{ brand.name }}">
+          {% endif %}
+
+          <span>{{ brand.name }}</span>
+
+      </a>
+
     </div>
+    {% endfor %}
+
+  </div>
+
+  <button class="brand-scroll-btn right"
+          type="button"
+          onclick="scrollBrands(300)">
+    ❯
+  </button>
+
+</div>
 
     <!-- SINGLE SHARED POPUP — lives outside cat-bar, positioned by JS -->
     <div class="brand-popup" id="brandPopup" onmouseenter="cancelHide()" onmouseleave="hideBrandPopup()">
@@ -460,6 +584,15 @@
 
       function cancelHide() {
         clearTimeout(hideTimer);
+      }
+
+      function scrollBrands(amount) {
+          const strip = document.getElementById('brandStrip');
+
+          strip.scrollBy({
+              left: amount,
+              behavior: 'smooth'
+          });
       }
     </script>
 
