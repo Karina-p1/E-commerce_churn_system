@@ -113,17 +113,37 @@ def remove_from_cart(request, item_id):
     )
 
     product = item.product
-    item.delete()
+
+    remove_quantity = request.POST.get('remove_quantity', 1)
+
+    try:
+        remove_quantity = int(remove_quantity)
+    except ValueError:
+        remove_quantity = 1
+
+    if remove_quantity < 1:
+        remove_quantity = 1
+
+    if remove_quantity >= item.quantity:
+        item.delete()
+
+        messages.info(
+            request,
+            f"All '{product.name}' removed from cart."
+        )
+    else:
+        item.quantity -= remove_quantity
+        item.save()
+
+        messages.info(
+            request,
+            f"{remove_quantity} '{product.name}' removed from cart."
+        )
 
     UserEvent.objects.create(
         user=request.user,
         product=product,
         event_type='REMOVE_CART'
-    )
-
-    messages.info(
-        request,
-        "Item removed from cart."
     )
 
     return redirect('cart')
