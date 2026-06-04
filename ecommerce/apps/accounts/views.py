@@ -3,7 +3,8 @@ from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from .forms import RegisterForm, LoginForm, ProfileUpdateForm
-
+from .utils import get_device_type
+from .utils import update_device_info  
 
 def register_view(request):
     """
@@ -33,11 +34,6 @@ def register_view(request):
 
 
 def login_view(request):
-    """
-    User login.
-    Login events will be tracked as UserActivity in Phase 6.
-    Last login time = key churn recency signal.
-    """
     if request.user.is_authenticated:
         return redirect('home')
 
@@ -46,9 +42,11 @@ def login_view(request):
         if form.is_valid():
             user = form.get_user()
             login(request, user)
-            messages.success(request, f"Welcome back, {user.username}!")
 
-            # Redirect to next page if exists
+            # Track device type and count in one call
+            update_device_info(user, request)
+
+            messages.success(request, f"Welcome back, {user.username}!")
             next_url = request.POST.get('next') or request.GET.get('next') or 'products:view_products'
             return redirect(next_url)
         else:
