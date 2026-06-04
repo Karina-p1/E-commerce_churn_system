@@ -23,22 +23,48 @@ def view_products(request):
         'brand'
     )
 
+    # Special offer products: discount 30% or more and available in stock
+    # This is calculated before filters/search so the slider always shows homepage offers.
+    all_active_products = Product.objects.filter(
+        is_active=True,
+        stock__gt=0
+    ).select_related(
+        'category',
+        'brand'
+    )
+
+    special_offers = [
+        product for product in all_active_products
+        if product.discount_percent and product.discount_percent >= 30
+    ]
+
     # Filter by brand
     brand_slug = request.GET.get('brand')
     if brand_slug:
-        products = products.filter(brand__slug=brand_slug)
+        products = products.filter(
+            brand__slug=brand_slug
+        )
 
     # Filter by category
     category_slug = request.GET.get('category')
     if category_slug:
-        products = products.filter(category__slug=category_slug)
+        products = products.filter(
+            category__slug=category_slug
+        )
+
     # Get wishlist product IDs for current user
     wishlist_ids = set()
+
     if request.user.is_authenticated:
         wishlist_ids = set(
-            Wishlist.objects.filter(user=request.user)
-            .values_list('product_id', flat=True)
+            Wishlist.objects.filter(
+                user=request.user
+            ).values_list(
+                'product_id',
+                flat=True
+            )
         )
+
     # Search by name, brand name, category name, and description
     q = request.GET.get('q')
     if q:
@@ -51,6 +77,7 @@ def view_products(request):
 
     return render(request, "products/dashboard.html", {
         "products": products,
+        "special_offers": special_offers,
         "all_brands": brands,
         "all_categories": categories,
         "active_brand": brand_slug,

@@ -1,5 +1,136 @@
-{% extends "base.html" %} {% block extra_head %}
+{% extends "base.html" %}
+
+{% block extra_head %}
 <style>
+  /* =========================
+     SPECIAL OFFER SLIDER
+  ========================= */
+  .offer-slider {
+    margin-bottom: 30px;
+    border-radius: 20px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #111827, #7f1d1d);
+    color: #fff;
+    position: relative;
+    box-shadow: 0 18px 35px rgba(15, 23, 42, 0.18);
+  }
+
+  .offer-slide {
+    min-height: 300px;
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr;
+    align-items: center;
+    gap: 28px;
+    padding: 38px;
+  }
+
+  .offer-kicker {
+    display: inline-block;
+    background: #facc15;
+    color: #111827;
+    font-size: 12px;
+    font-weight: 800;
+    padding: 6px 13px;
+    border-radius: 999px;
+    margin-bottom: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+
+  .offer-title {
+    font-size: 34px;
+    font-weight: 800;
+    margin-bottom: 10px;
+    line-height: 1.15;
+  }
+
+  .offer-text {
+    color: #fee2e2;
+    font-size: 15px;
+    margin-bottom: 20px;
+    max-width: 520px;
+  }
+
+  .offer-price {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 22px;
+    flex-wrap: wrap;
+  }
+
+  .offer-new-price {
+    font-size: 28px;
+    font-weight: 800;
+    color: #fff;
+  }
+
+  .offer-old-price {
+    font-size: 16px;
+    color: #fecaca;
+    text-decoration: line-through;
+  }
+
+  .offer-discount {
+    background: #ef4444;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 5px 10px;
+    border-radius: 8px;
+  }
+
+  .offer-btn {
+    display: inline-block;
+    background: #fff;
+    color: #111827;
+    padding: 10px 20px;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 700;
+    transition: 0.15s ease;
+  }
+
+  .offer-btn:hover {
+    background: #f3f4f6;
+    color: #111827;
+    transform: translateY(-1px);
+  }
+
+  .offer-image-wrap {
+    height: 235px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .offer-image-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .offer-no-image {
+    font-size: 56px;
+  }
+
+  .carousel-control-prev,
+  .carousel-control-next {
+    width: 7%;
+  }
+
+  /* =========================
+     PRODUCT GRID
+  ========================= */
+  .product-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px;
+  }
+
   .product-card-wrapper {
     position: relative;
     height: 100%;
@@ -21,6 +152,12 @@
     height: 100%;
     display: flex;
     flex-direction: column;
+    transition: 0.15s ease;
+  }
+
+  .product-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
   }
 
   .product-img-wrap {
@@ -32,15 +169,18 @@
     align-items: center;
     justify-content: center;
   }
+
   .product-img-wrap img {
     width: 100%;
     height: 100%;
     object-fit: cover;
   }
+
   .product-img-placeholder {
     color: #9ca3af;
     font-size: 14px;
   }
+
   .badge-stock {
     position: absolute;
     top: 10px;
@@ -51,12 +191,14 @@
     font-weight: 600;
     padding: 3px 8px;
     border-radius: 6px;
-    z-index: 1;
+    z-index: 2;
   }
+
   .badge-stock.out {
     background: #fee2e2;
     color: #b91c1c;
   }
+
   .badge-discount {
     position: absolute;
     top: 10px;
@@ -67,12 +209,17 @@
     font-weight: 600;
     padding: 3px 8px;
     border-radius: 6px;
-    z-index: 1;
+    z-index: 2;
   }
-  .btn-wishlist {
+
+  .wishlist-form {
     position: absolute;
     bottom: 10px;
     right: 10px;
+    z-index: 3;
+  }
+
+  .btn-wishlist {
     background: #fff;
     border: 1px solid #e5e7eb;
     border-radius: 50%;
@@ -80,40 +227,52 @@
     height: 34px;
     cursor: pointer;
     font-size: 16px;
-    z-index: 2;
+    line-height: 1;
+  }
+
+  .btn-wishlist.wishlisted {
+    background: #fee2e2;
+    color: #b91c1c;
+    border-color: #fca5a5;
   }
 
   .product-info {
     padding: 14px 16px 0;
     flex: 1;
   }
+
   .product-brand {
     font-size: 11px;
     color: #6b7280;
     margin: 0 0 4px;
   }
+
   .product-name {
     font-size: 15px;
     font-weight: 600;
     color: #111827;
     margin: 0 0 6px;
   }
+
   .product-rating {
     font-size: 12px;
     color: #6b7280;
     margin: 0 0 10px;
   }
+
   .product-price {
     display: flex;
     align-items: baseline;
     gap: 8px;
     margin-bottom: 0;
   }
+
   .price-main {
     font-size: 18px;
     font-weight: 700;
     color: #111827;
   }
+
   .price-original {
     font-size: 13px;
     color: #9ca3af;
@@ -123,8 +282,9 @@
   .cart-form {
     padding: 14px 16px 16px;
     position: relative;
-    z-index: 2;
+    z-index: 3;
   }
+
   .btn-cart {
     width: 100%;
     padding: 9px;
@@ -136,8 +296,14 @@
     font-weight: 600;
     cursor: pointer;
   }
+
   .btn-cart:hover {
     background: #1e5a8a;
+  }
+
+  .btn-cart:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
   }
 
   .empty-state {
@@ -145,20 +311,24 @@
     text-align: center;
     padding: 80px 20px;
   }
+
   .empty-state svg {
     display: block;
     margin: 0 auto 16px;
   }
+
   .empty-state h4 {
     color: #6b7280;
     font-weight: 600;
     margin-bottom: 8px;
   }
+
   .empty-state p {
     color: #9ca3af;
     font-size: 14px;
     margin-bottom: 20px;
   }
+
   .empty-state a {
     background: #0ea5e9;
     color: #fff;
@@ -168,28 +338,114 @@
     font-size: 13px;
     font-weight: 600;
   }
+
   .empty-state a:hover {
     background: #0284c7;
     color: #fff;
   }
-  .btn-wishlist.wishlisted {
-    background: #fee2e2;
-    color: #b91c1c;
-    border-color: #fca5a5;
+
+  @media (max-width: 768px) {
+    .offer-slide {
+      grid-template-columns: 1fr;
+      padding: 26px;
+    }
+
+    .offer-title {
+      font-size: 26px;
+    }
+
+    .offer-image-wrap {
+      height: 200px;
+    }
   }
 </style>
-{% endblock %} {% block start %}
-<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px;">
+{% endblock %}
+
+{% block start %}
+
+{% if special_offers %}
+<div id="specialOfferCarousel" class="carousel slide offer-slider" data-bs-ride="carousel">
+
+  <div class="carousel-inner">
+
+    {% for p in special_offers %}
+    <div class="carousel-item {% if forloop.first %}active{% endif %}">
+
+      <div class="offer-slide">
+
+        <div>
+          <span class="offer-kicker">Limited Time Offer</span>
+
+          <h2 class="offer-title">
+            {{ p.discount_percent }}% OFF on {{ p.name }}
+          </h2>
+
+          <p class="offer-text">
+            Special deal alert! Hurry up and grab it soon before the stock runs out.
+          </p>
+
+          <div class="offer-price">
+            <span class="offer-new-price">Rs. {{ p.effective_price }}</span>
+
+            {% if p.discount_price %}
+              <span class="offer-old-price">Rs. {{ p.price }}</span>
+            {% endif %}
+
+            <span class="offer-discount">
+              Save {{ p.discount_percent }}%
+            </span>
+          </div>
+
+          <a href="{% url 'products:product_detail' p.slug %}" class="offer-btn">
+            Shop Now
+          </a>
+        </div>
+
+        <div class="offer-image-wrap">
+          {% if p.image %}
+            <img src="{{ p.image.url }}" alt="{{ p.name }}">
+          {% else %}
+            <div class="offer-no-image">📦</div>
+          {% endif %}
+        </div>
+
+      </div>
+
+    </div>
+    {% endfor %}
+
+  </div>
+
+  {% if special_offers|length > 1 %}
+  <button class="carousel-control-prev" type="button" data-bs-target="#specialOfferCarousel" data-bs-slide="prev">
+    <span class="carousel-control-prev-icon"></span>
+  </button>
+
+  <button class="carousel-control-next" type="button" data-bs-target="#specialOfferCarousel" data-bs-slide="next">
+    <span class="carousel-control-next-icon"></span>
+  </button>
+  {% endif %}
+
+</div>
+{% endif %}
+
+<div class="product-grid">
+
   {% for p in products %}
 
   <div class="product-card-wrapper">
-    <a href="{% url 'products:product_detail' p.slug %}" class="card-link-overlay" aria-label="View {{ p.name }}"></a>
+
+    <a
+      href="{% url 'products:product_detail' p.slug %}"
+      class="card-link-overlay"
+      aria-label="View {{ p.name }}">
+    </a>
 
     <div class="product-card">
 
       <div class="product-img-wrap">
         {% if p.image %}
-          <img src="{{ p.image.url }}" alt="{{ p.name }}" />
+          <img src="{{ p.image.url }}" alt="{{ p.name }}">
         {% else %}
           <div class="product-img-placeholder">No Image</div>
         {% endif %}
@@ -204,13 +460,18 @@
           <span class="badge-discount">{{ p.discount_percent }}% off</span>
         {% endif %}
 
-        <form method="post" action="{% url 'products:add_to_wishlist' p.id %}">
-            {% csrf_token %}
-            <button class="btn-wishlist {% if p.id in wishlist_ids %}wishlisted{% endif %}"
-                    type="submit"
-                    aria-label="Add to wishlist">
-                {% if p.id in wishlist_ids %}♥{% else %}♡{% endif %}
-            </button>
+        <form
+          method="post"
+          action="{% url 'products:add_to_wishlist' p.id %}"
+          class="wishlist-form">
+          {% csrf_token %}
+
+          <button
+            class="btn-wishlist {% if p.id in wishlist_ids %}wishlisted{% endif %}"
+            type="submit"
+            aria-label="Add to wishlist">
+            {% if p.id in wishlist_ids %}♥{% else %}♡{% endif %}
+          </button>
         </form>
       </div>
 
@@ -218,19 +479,30 @@
         <p class="product-brand">{{ p.brand.name|default:"" }}</p>
         <p class="product-name">{{ p.name }}</p>
         <p class="product-rating">⭐ {{ p.rating }} ({{ p.review_count }})</p>
+
         <div class="product-price">
           <span class="price-main">Rs. {{ p.effective_price }}</span>
+
           {% if p.discount_price %}
             <span class="price-original">Rs. {{ p.price }}</span>
           {% endif %}
         </div>
       </div>
-<form method="post" action="{% url 'add_to_cart' p.id %}">
-    {% csrf_token %}
-    <button type="submit" class="btn btn-dark w-100">
-        View Product
-    </button>
-</form>
+
+      <form method="post" action="{% url 'add_to_cart' p.id %}" class="cart-form">
+        {% csrf_token %}
+
+        {% if p.stock > 0 %}
+          <button type="submit" name="action" value="cart" class="btn-cart">
+            🛒 Add to Cart
+          </button>
+        {% else %}
+          <button type="button" class="btn-cart" disabled>
+            Out of Stock
+          </button>
+        {% endif %}
+      </form>
+
     </div>
   </div>
 
@@ -238,10 +510,12 @@
 
   <div class="empty-state">
     <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5">
-      <circle cx="11" cy="11" r="8"/>
-      <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      <circle cx="11" cy="11" r="8"></circle>
+      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
     </svg>
+
     <h4>No products found</h4>
+
     <p>
       {% if request.GET.brand %}
         No products available for this brand yet.
@@ -253,10 +527,16 @@
         No products available at the moment.
       {% endif %}
     </p>
-    <a href="{% url 'products:view_products' %}">View All Products</a>
+
+    <a href="{% url 'products:view_products' %}">
+      View All Products
+    </a>
   </div>
 
   {% endfor %}
+
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 {% endblock %}
