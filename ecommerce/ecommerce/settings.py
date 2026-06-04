@@ -11,6 +11,8 @@ from dotenv import load_dotenv
 # Build paths
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+ML_MODELS_DIR = BASE_DIR / 'ecommerce' / 'apps' / 'churn' / 'ml_models'
+
 # Load .env file
 load_dotenv(BASE_DIR / ".env")
 

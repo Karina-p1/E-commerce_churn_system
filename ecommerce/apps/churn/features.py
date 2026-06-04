@@ -3,9 +3,9 @@ from apps.activity.models import UserEvent
 from apps.orders.models import Order
 
 
-def extract_features(user):
+def extract_features(user) -> dict:
     # ── Orders ────────────────────────────────────────
-    orders = Order.objects.filter(user=user).exclude(status='cancelled')
+    orders      = Order.objects.filter(user=user).exclude(status='cancelled')
     order_count = orders.count()
     last_order  = orders.order_by('-created_at').first()
 
@@ -16,37 +16,41 @@ def extract_features(user):
     # ── Tenure ────────────────────────────────────────
     tenure_months = max(1, (timezone.now() - user.date_joined).days // 30)
 
-    # ── Activity events ───────────────────────────────
-    logins = UserEvent.objects.filter(user=user, event_type='LOGIN').count()
+    # ── Activity ──────────────────────────────────────
+    logins      = UserEvent.objects.filter(user=user, event_type='LOGIN').count()
     hours_on_app = round(logins * 0.5, 1)
+    coupon_used  = 0
 
-    cart_adds = UserEvent.objects.filter(user=user, event_type='CART').count()
-    coupon_used = 0  # add when you track coupons
+    # ── Spend ─────────────────────────────────────────
+    total_spent = sum(float(o.total_price) for o in orders)
+    cashback    = round(total_spent * 0.02, 2)
 
-    # ── Total spend ───────────────────────────────────
-    total_spent = sum(
-        float(o.total_price) for o in orders
-    )
-    avg_order_value = round(total_spent / order_count, 2) if order_count else 0
-    cashback = round(total_spent * 0.02, 2)  # estimate 2% cashback
+    # ── Satisfaction / complaints ──────────────────────
+    # If you track complaints or ratings, pull them here.
+    # Using sensible defaults until you wire those models up.
+    satisfaction_score = 3
+    complain           = 0
 
     return {
-        'Tenure':                      tenure_months,
-        'PreferredLoginDevice':        0,
-        'CityTier':                    1,
-        'WarehouseToHome':             15,
-        'PreferredPaymentMode':        3,
-        'Gender':                      1,
-        'HourSpendOnApp':              hours_on_app,
-        'NumberOfDeviceRegistered':    1,
-        'PreferedOrderCat':            0,
-        'SatisfactionScore':           3,
-        'MaritalStatus':               2,
-        'NumberOfAddress':             1,
-        'Complain':                    0,
-        'OrderAmountHikeFromlastYear': 15,
-        'CouponUsed':                  coupon_used,
-        'OrderCount':                  order_count,
-        'DaySinceLastOrder':           days_since_last_order,
-        'CashbackAmount':              cashback,
+        # ── Raw text for categoricals — predictor.py encodes these ──
+        'PreferredLoginDevice':          'Mobile Phone',  # update when you track this
+        'PreferredPaymentMode':          'Debit Card',    # update when you track this
+        'Gender':                        'Male',          # update from user profile
+        'PreferedOrderCat':              'Mobile Phone',  # update when you track this
+        'MaritalStatus':                 'Single',        # update from user profile
+
+        # ── Numeric fields — pass as numbers directly ────────────────
+        'Tenure':                        tenure_months,
+        'CityTier':                      1,
+        'WarehouseToHome':               15,
+        'HourSpendOnApp':                hours_on_app,
+        'NumberOfDeviceRegistered':      1,
+        'SatisfactionScore':             satisfaction_score,
+        'NumberOfAddress':               1,
+        'Complain':                      complain,
+        'OrderAmountHikeFromlastYear':   15,
+        'CouponUsed':                    coupon_used,
+        'OrderCount':                    order_count,
+        'DaySinceLastOrder':             days_since_last_order,
+        'CashbackAmount':                cashback,
     }

@@ -1,12 +1,10 @@
 from django.db import models
 from django.conf import settings
 
-
 class ChurnScore(models.Model):
     RISK_LEVELS = [
-        ('low',    'Low'),
-        ('medium', 'Medium'),
-        ('high',   'High'),
+        ('low',  'Low'),
+        ('high', 'High'),
     ]
     customer     = models.ForeignKey(
         settings.AUTH_USER_MODEL,

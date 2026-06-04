@@ -18,7 +18,7 @@ class Command(BaseCommand):
         )
 
         self.stdout.write(f'Scoring {users.count()} customers...\n')
-        high = medium = low = errors = 0
+        high = low = errors = 0
 
         for user in users:
             try:
@@ -33,8 +33,6 @@ class Command(BaseCommand):
 
                 if result['risk_level'] == 'high':
                     high += 1
-                elif result['risk_level'] == 'medium':
-                    medium += 1
                 else:
                     low += 1
 
@@ -51,5 +49,5 @@ class Command(BaseCommand):
                 )
 
         self.stdout.write(self.style.SUCCESS(
-            f'\n✅ Done! High:{high}  Medium:{medium}  Low:{low}  Errors:{errors}'
+            f'\n✅ Done! High:{high}  Low:{low}  Errors:{errors}'
         ))
