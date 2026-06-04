@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block title %}Redirecting to eSewa{% endblock %}
+
+{% block start %}
+
+<div class="text-center py-5">
+    <h3 class="fw-bold mb-3">Redirecting to eSewa...</h3>
+
+    <p class="text-muted">
+        Please wait. Do not refresh or close this page.
+    </p>
+
+    <form id="esewaForm" action="{{ esewa_payment_url }}" method="POST">
+        {% for key, value in esewa_data.items %}
+            <input type="hidden" name="{{ key }}" value="{{ value }}">
+        {% endfor %}
+
+        <button type="submit" class="btn btn-success mt-3">
+            Continue to eSewa
+        </button>
+    </form>
+</div>
+
+<script>
+    window.addEventListener('load', function () {
+        document.getElementById('esewaForm').submit();
+    });
+</script>
+
+{% endblock %}
