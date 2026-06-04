@@ -162,6 +162,11 @@ STORAGES = {
     },
 }
 
+# eSewa Payment Config
+ESEWA_PRODUCT_CODE = "EPAYTEST"
+ESEWA_SECRET_KEY = "8gBm/:&EnhH.1/q"
+ESEWA_PAYMENT_URL = "https://rc-epay.esewa.com.np/api/epay/main/v2/form"
+
 MEDIA_URL = "/media/"
 
 

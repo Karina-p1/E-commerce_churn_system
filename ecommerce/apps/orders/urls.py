@@ -11,4 +11,7 @@ urlpatterns = [
     path('orders/<int:order_id>/', views.order_detail, name='order_detail'),
     path('orders/<int:order_id>/cancel/', views.cancel_order, name='cancel_order'),
     path('payment/failed/', views.payment_failed, name='payment_failed'),
+    
+    path('payment/esewa/success/', views.esewa_success, name='esewa_success'),
+    path('payment/esewa/failure/', views.esewa_failure, name='esewa_failure'),
 ]
