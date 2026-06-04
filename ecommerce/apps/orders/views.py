@@ -248,6 +248,11 @@ def checkout_view(request):
                     payment_method='ESEWA',
                     transaction_uuid=transaction_uuid
                 )
+                
+                UserEvent.objects.create(
+                    user=request.user,
+                    event_type='PAYMENT_STARTED'
+                )
 
                 for cart_item in cart_items:
                     product = cart_item.product
@@ -437,6 +442,11 @@ def esewa_success(request):
 
             if cart:
                 cart.items.all().delete()
+            
+            UserEvent.objects.create(
+                user=request.user,
+                event_type='PAYMENT_SUCCESS'
+            )
 
             UserEvent.objects.create(
                 user=request.user,

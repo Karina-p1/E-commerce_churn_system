@@ -20,11 +20,14 @@ class UserEvent(models.Model):
 
     ('CHECKOUT_STARTED', 'Checkout Started'),
     ('CART_ABANDONED', 'Cart Abandoned'),
+    
+    ('PAYMENT_STARTED', 'Payment Started'),
+    ('PAYMENT_SUCCESS', 'Payment Success'),
+    ('PAYMENT_FAILED', 'Payment Failed'),
 
     ('ORDER', 'Order Placed'),
     ('ORDER_CANCELLED', 'Order Cancelled'),
-    ('PAYMENT_FAILED', 'Payment Failed'),
-
+    
     ('REVIEW', 'Review'),
 )
 
