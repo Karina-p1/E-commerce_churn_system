@@ -261,7 +261,7 @@ def checkout_view(request):
                         order=order,
                         product=product,
                         product_name=product.name,
-                        price=product.price,
+                        price=product.effective_price,
                         quantity=cart_item.quantity
                     )
 
