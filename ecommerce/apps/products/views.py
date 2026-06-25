@@ -6,14 +6,16 @@ from django.contrib import messages
 from django.db.models import Q
 from django.db.models import Count
 from django.utils import timezone
+from flask import Response
 
 from apps.products.models import Category, Brand, Product, Review, Wishlist
-
+from apps.analytics.services import get_top_products
 from apps.activity.models import UserEvent
 
 
 def view_products(request):
     categories = Category.objects.all()
+    top_products = get_top_products(limit=10)
     brands = Brand.objects.all()
 
     products = Product.objects.filter(
@@ -78,6 +80,7 @@ def view_products(request):
     return render(request, "products/dashboard.html", {
         "products": products,
         "special_offers": special_offers,
+        "top_products": top_products,
         "all_brands": brands,
         "all_categories": categories,
         "active_brand": brand_slug,
@@ -231,7 +234,7 @@ def post_review(request, slug):
             rating=rating,
             comment=comment
         )
-        
+
         UserEvent.objects.create(
             user=request.user,
             product=product,
@@ -257,12 +260,31 @@ def add_to_wishlist(request, product_id):
         is_active=True
     )
 
-    obj, created = Wishlist.objects.get_or_create(
+    wishlist_item = Wishlist.objects.filter(
         user=request.user,
         product=product
-    )
+    ).first()
 
-    if created:
+    if wishlist_item:
+        wishlist_item.delete()
+
+        UserEvent.objects.create(
+            user=request.user,
+            product=product,
+            event_type='REMOVE_WISHLIST'
+        )
+
+        messages.info(
+            request,
+            f"'{product.name}' removed from wishlist."
+        )
+
+    else:
+        Wishlist.objects.create(
+            user=request.user,
+            product=product
+        )
+
         UserEvent.objects.create(
             user=request.user,
             product=product,
@@ -273,11 +295,6 @@ def add_to_wishlist(request, product_id):
             request,
             f"'{product.name}' added to wishlist ❤️"
         )
-    else:
-        messages.info(
-            request,
-            f"'{product.name}' is already in your wishlist."
-        )
 
     return redirect(
         request.META.get(
@@ -285,6 +302,7 @@ def add_to_wishlist(request, product_id):
             'products:view_products'
         )
     )
+
 
 @login_required
 def wishlist_view(request):
@@ -322,3 +340,53 @@ def remove_from_wishlist(request, product_id):
         )
 
     return redirect('products:wishlist')
+
+def top_products(request):
+    today = timezone.now()
+    month_start = today.replace(
+        day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    top = (
+        Product.objects
+        .filter(is_active=True)
+        .annotate(
+            order_count=Count(
+                'activity_events',
+                filter=Q(
+                    activity_events__event_type='ORDER',
+                    activity_events__created_at__gte=month_start,
+                )
+            ),
+            wishlist_count=Count(
+                'activity_events',
+                filter=Q(
+                    activity_events__event_type='WISHLIST',
+                    activity_events__created_at__gte=month_start,
+                )
+            ),
+            view_count=Count(
+                'activity_events',
+                filter=Q(
+                    activity_events__event_type='VIEW',
+                    activity_events__created_at__gte=month_start,
+                )
+            ),
+        )
+        .select_related('category', 'brand')
+        .order_by('-order_count', '-wishlist_count', '-view_count')[:5]
+    )
+
+    data = [
+        {
+            'name':          p.name,
+            'category':      p.category.name if p.category else 'Uncategorized',
+            'brand':         p.brand.name if p.brand else '',
+            'rating':        float(p.rating) if p.rating else 0,
+            'order_count':   p.order_count,
+            'wishlist_count': p.wishlist_count,
+            'view_count':    p.view_count,
+        }
+        for p in top
+    ]
+
+    return Response(data)

@@ -35,7 +35,9 @@ def register_view(request):
 
 def login_view(request):
     if request.user.is_authenticated:
-        return redirect('home')
+        if request.user.is_staff:
+            return redirect('admin_dashboard')
+        return redirect('products:view_products')
 
     if request.method == 'POST':
         form = LoginForm(request, data=request.POST)
@@ -43,10 +45,10 @@ def login_view(request):
             user = form.get_user()
             login(request, user)
 
-            # Track device type and count in one call
-            update_device_info(user, request)
-
-            messages.success(request, f"Welcome back, {user.username}!")
+            # Staff → admin dashboard, regular users → home
+            if user.is_staff:
+                return redirect('admin_dashboard')
+            
             next_url = request.POST.get('next') or request.GET.get('next') or 'products:view_products'
             return redirect(next_url)
         else:
