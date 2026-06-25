@@ -196,6 +196,17 @@
         </svg>
         Profile
       </a>
+      <form method="post" action="{% url 'logout' %}" style="margin: 0;">
+        {% csrf_token %}
+        <button type="submit" class="nav-item logout-btn">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+          Logout
+        </button>
+      </form>
       <button type="button" onclick="toggleAdminMenu()" class="nav-item admin-toggle" id="admin-toggle">
         <svg fill="none" stroke="#f59e0b" stroke-width="2" viewBox="0 0 24 24">
           <circle cx="12" cy="12" r="3"/>
