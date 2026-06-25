@@ -14,6 +14,14 @@ class User(AbstractUser):
     # Email is unique to support login identification, retention campaigns, and recommendations
     email = models.EmailField(unique=True)
 
+    preferred_login_device = models.CharField(
+    max_length=20,
+    default='Mobile Phone',
+    blank=True
+    )
+
+    number_of_devices = models.PositiveIntegerField(default=1)
+
     # Optional phone number for future SMS-based notifications, offers, and retention campaigns
     phone_number = models.CharField(
         max_length=20,
@@ -27,7 +35,30 @@ class User(AbstractUser):
         blank=True,
         null=True
     )
+    GENDER_CHOICES = [
+    ('Male', 'Male'),
+    ('Female', 'Female'),
+    ]
 
+    MARITAL_STATUS_CHOICES = [  
+    ('Single', 'Single'),
+    ('Married', 'Married'),
+    ('Divorced', 'Divorced'),
+    ]
+    
+    gender = models.CharField(
+    max_length=10,
+    choices=GENDER_CHOICES,
+    blank=True,
+    null=True
+    )
+
+    marital_status = models.CharField(
+    max_length=10,
+    choices=MARITAL_STATUS_CHOICES,
+    blank=True,
+    null=True
+    )
     # Automatically stores when the user account was created (useful for analytics & churn tracking)
     created_at = models.DateTimeField(auto_now_add=True)
 
