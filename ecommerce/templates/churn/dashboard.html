@@ -1,0 +1,377 @@
+{% extends 'admin_base.html' %}
+{% block title %}Churn Dashboard - ShopMart Admin{% endblock %}
+
+{% block start %}
+<style>
+  .churn-page {
+    padding: 28px 32px;
+  }
+
+  .churn-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .churn-title h1 {
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    margin: 0;
+    color: var(--text);
+  }
+
+  .churn-title p {
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 3px;
+    font-family: 'Space Mono', monospace;
+  }
+
+  .refresh-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent);
+    color: #fff;
+    padding: 9px 15px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: 0.15s ease;
+  }
+
+  .refresh-btn:hover {
+    opacity: 0.9;
+  }
+
+  .churn-metrics {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .metric-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--card-r);
+    padding: 20px 22px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .metric-card::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 3px;
+  }
+
+  .metric-card.total::before { background: var(--blue); }
+  .metric-card.high::before { background: var(--danger); }
+  .metric-card.medium::before { background: var(--warn); }
+  .metric-card.low::before { background: var(--accent); }
+
+  .metric-label {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    margin-bottom: 7px;
+  }
+
+  .metric-value {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    line-height: 1;
+    font-family: 'Space Mono', monospace;
+    color: var(--text);
+  }
+
+  .metric-value.high { color: var(--danger); }
+  .metric-value.medium { color: var(--warn); }
+  .metric-value.low { color: var(--accent); }
+
+  .filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  .filter-btn {
+    padding: 7px 13px;
+    border-radius: 999px;
+    font-size: 12.5px;
+    font-weight: 600;
+    text-decoration: none;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    transition: 0.15s ease;
+  }
+
+  .filter-btn:hover {
+    background: var(--bg3);
+    color: var(--text);
+  }
+
+  .filter-active-all { background: var(--blue-light) !important; border-color: rgba(26,122,181,0.25) !important; color: var(--blue) !important; }
+  .filter-active-high { background: var(--danger-light) !important; border-color: rgba(214,59,59,0.25) !important; color: var(--danger) !important; }
+  .filter-active-medium { background: var(--warn-light) !important; border-color: rgba(212,104,10,0.25) !important; color: var(--warn) !important; }
+  .filter-active-low { background: var(--accent-light) !important; border-color: rgba(58,140,28,0.25) !important; color: var(--accent) !important; }
+
+  .churn-table-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--card-r);
+    padding: 24px;
+    overflow-x: auto;
+  }
+
+  .customer-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .customer-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    background: var(--blue-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--blue);
+    flex-shrink: 0;
+    font-family: 'Space Mono', monospace;
+  }
+
+  .customer-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .customer-email {
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .risk-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .risk-badge::before {
+    content: "";
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .risk-high { background: var(--danger-light); color: var(--danger); }
+  .risk-medium { background: var(--warn-light); color: var(--warn); }
+  .risk-low { background: var(--accent-light); color: var(--accent); }
+
+  .score-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .score-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    min-width: 44px;
+  }
+
+  .score-track {
+    width: 90px;
+    height: 6px;
+    background: var(--border);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+
+  .score-bar {
+    height: 100%;
+    border-radius: 999px;
+  }
+
+  .score-bar-high { background: var(--danger); }
+  .score-bar-medium { background: var(--warn); }
+  .score-bar-low { background: var(--accent); }
+
+  .empty-state {
+    padding: 42px 16px;
+    text-align: center;
+    color: var(--muted);
+  }
+
+  .empty-state code,
+  .churn-note code {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    padding: 2px 7px;
+    border-radius: 6px;
+    color: var(--text);
+  }
+
+  .churn-note {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 12px;
+  }
+
+  @media (max-width: 980px) {
+    .churn-metrics {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 640px) {
+    .churn-page {
+      padding: 20px 16px;
+    }
+
+    .churn-header {
+      flex-direction: column;
+    }
+
+    .churn-metrics {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<main class="main">
+  <div class="churn-page">
+    <div class="churn-header">
+      <div class="churn-title">
+        <h1>Churn Dashboard</h1>
+        <p>Customer retention risk overview</p>
+      </div>
+      <a href="{% url 'churn:dashboard' %}" class="refresh-btn">Refresh scores</a>
+    </div>
+
+    <div class="churn-metrics">
+      <div class="metric-card total">
+        <div class="metric-label">Total customers</div>
+        <div class="metric-value">{{ total }}</div>
+      </div>
+
+      <div class="metric-card high">
+        <div class="metric-label">High risk</div>
+        <div class="metric-value high">{{ high_count }}</div>
+      </div>
+
+      <div class="metric-card medium">
+        <div class="metric-label">Medium risk</div>
+        <div class="metric-value medium">{{ med_count }}</div>
+      </div>
+
+      <div class="metric-card low">
+        <div class="metric-label">Low risk</div>
+        <div class="metric-value low">{{ low_count }}</div>
+      </div>
+    </div>
+
+    <div class="filter-bar">
+      <a href="?risk=all" class="filter-btn {% if risk_filter == 'all' %}filter-active-all{% endif %}">All</a>
+      <a href="?risk=high" class="filter-btn {% if risk_filter == 'high' %}filter-active-high{% endif %}">High risk</a>
+      <a href="?risk=medium" class="filter-btn {% if risk_filter == 'medium' %}filter-active-medium{% endif %}">Medium risk</a>
+      <a href="?risk=low" class="filter-btn {% if risk_filter == 'low' %}filter-active-low{% endif %}">Low risk</a>
+    </div>
+
+    <div class="churn-table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>Customer</th>
+            <th>Risk level</th>
+            <th>Churn score</th>
+            <th>Last scored</th>
+            <th>Orders</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in scores %}
+          <tr>
+            <td>
+              <div class="customer-cell">
+                <div class="customer-avatar">{{ s.customer.username|slice:":2"|upper }}</div>
+                <div>
+                  <div class="customer-name">{{ s.customer.username }}</div>
+                  <div class="customer-email">{{ s.customer.email }}</div>
+                </div>
+              </div>
+            </td>
+
+            <td>
+              {% if s.risk_level == 'high' %}
+                <span class="risk-badge risk-high">High</span>
+              {% elif s.risk_level == 'medium' %}
+                <span class="risk-badge risk-medium">Medium</span>
+              {% else %}
+                <span class="risk-badge risk-low">Low</span>
+              {% endif %}
+            </td>
+
+            <td>
+              <div class="score-wrap">
+                <span class="score-value">{{ s.score|floatformat:2 }}</span>
+                <div class="score-track">
+                  <div class="score-bar score-bar-{{ s.risk_level }}" data-width="{% widthratio s.score 1 100 %}"></div>
+                </div>
+              </div>
+            </td>
+
+            <td>{{ s.predicted_at|date:"M d, Y" }}</td>
+            <td>{{ s.customer.orders.count }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="empty-state">
+              No churn scores yet. Run <code>python manage.py score_customers</code> to generate scores.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <p class="churn-note">
+      Avg churn score: {{ avg_score }}% &nbsp;.&nbsp; Scores update when you run
+      <code>python manage.py score_customers</code>
+    </p>
+  </div>
+</main>
+
+<script>
+  document.querySelectorAll(".score-bar[data-width]").forEach(function(el) {
+    var width = Math.max(0, Math.min(100, Number(el.getAttribute("data-width")) || 0));
+    el.style.width = width + "%";
+  });
+</script>
+{% endblock %}

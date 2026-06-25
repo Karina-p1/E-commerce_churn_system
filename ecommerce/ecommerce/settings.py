@@ -53,6 +53,8 @@ INSTALLED_APPS = [
     'apps.activity.apps.ActivityConfig',
     "apps.orders",
     "apps.products",
+    "apps.analytics",
+    "apps.dashboard",
 ]
 
 

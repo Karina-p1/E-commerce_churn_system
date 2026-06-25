@@ -1,0 +1,426 @@
+{% extends 'admin_base.html' %}
+
+{% block title %}Analytics — ShopMart Admin{% endblock %}
+
+{% block start %}
+
+<main class="main">
+
+  <div class="topbar">
+    <div class="page-title">
+      <h1>Analytics</h1>
+      <p>Product performance, customer behavior, stock, and churn overview</p>
+    </div>
+
+    <div class="promo-badge">
+      <span class="promo-dot"></span>
+      Analytics report
+    </div>
+  </div>
+
+  <div class="kpi-grid">
+
+    <div class="kpi-card revenue">
+      <div class="kpi-icon green">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M12 1v22"/>
+          <path d="M17 5H9.5a3.5 3.5 0 000 7H14a3.5 3.5 0 010 7H6"/>
+        </svg>
+      </div>
+      <div class="kpi-label">Total sales</div>
+      <div class="kpi-value">Rs. {{ total_sales|floatformat:0 }}</div>
+      <span class="kpi-badge up">{{ total_orders }} orders</span>
+    </div>
+
+    <div class="kpi-card orders">
+      <div class="kpi-icon yellow">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M3 3v18h18"/>
+          <path d="M7 14l4-4 4 4 5-7"/>
+        </svg>
+      </div>
+      <div class="kpi-label">Product views</div>
+      <div class="kpi-value">{{ product_views }}</div>
+      <span class="kpi-badge up">View events</span>
+    </div>
+
+    <div class="kpi-card customers">
+      <div class="kpi-icon blue">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <path d="M23 21v-2a4 4 0 00-3-3.87"/>
+        </svg>
+      </div>
+      <div class="kpi-label">Customers</div>
+      <div class="kpi-value">{{ total_customers }}</div>
+      <span class="kpi-badge up">Registered</span>
+    </div>
+
+    <div class="kpi-card avg">
+      <div class="kpi-icon orange">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 000-7.78z"/>
+        </svg>
+      </div>
+      <div class="kpi-label">Wishlist</div>
+      <div class="kpi-value">{{ total_wishlist_items }}</div>
+      <span class="kpi-badge up">Saved products</span>
+    </div>
+
+  </div>
+
+  <div class="mid-grid">
+
+    <div class="chart-card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Revenue chart</div>
+          <p style="font-size: 12px; color: var(--muted); margin-top: 3px;">
+            Last 7 days revenue trend
+          </p>
+        </div>
+      </div>
+
+      <div class="bar-chart">
+        {% for item in revenue_chart %}
+          <div class="bar-group" title="{{ item.label }}: Rs. {{ item.revenue|floatformat:0 }}">
+            <div class="bar current" data-value="{{ item.revenue }}" style="height: 8px;"></div>
+          </div>
+        {% empty %}
+          <p style="font-size: 13px; color: var(--muted);">No revenue data available.</p>
+        {% endfor %}
+      </div>
+
+      <div class="chart-labels">
+        {% for item in revenue_chart %}
+          <div class="chart-label">{{ item.label }}</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="products-card">
+      <div class="card-header">
+        <div class="card-title">Customer activity</div>
+      </div>
+
+      <div class="product-item">
+        <div class="product-icon">👁</div>
+        <div class="product-info">
+          <div class="product-name">Product views</div>
+          <div class="product-cat">Users viewed products</div>
+        </div>
+        <div class="product-rev">{{ product_views }}</div>
+      </div>
+
+      <div class="product-item">
+        <div class="product-icon">🛒</div>
+        <div class="product-info">
+          <div class="product-name">Cart activity</div>
+          <div class="product-cat">Add/remove cart events</div>
+        </div>
+        <div class="product-rev">{{ cart_activity }}</div>
+      </div>
+
+      <div class="product-item">
+        <div class="product-icon">♡</div>
+        <div class="product-info">
+          <div class="product-name">Wishlist activity</div>
+          <div class="product-cat">Wishlist event tracking</div>
+        </div>
+        <div class="product-rev">{{ wishlist_activity_events }}</div>
+      </div>
+
+      <div class="product-item">
+        <div class="product-icon">📦</div>
+        <div class="product-info">
+          <div class="product-name">Order activity</div>
+          <div class="product-cat">Order event tracking</div>
+        </div>
+        <div class="product-rev">{{ order_activity }}</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="bottom-grid">
+
+    <div class="stock-card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Stock overview</div>
+          <p style="font-size: 12px; color: var(--muted); margin-top: 3px;">
+            Product inventory health
+          </p>
+        </div>
+      </div>
+
+      <div class="stock-item">
+        <div>
+          <div class="stock-name">Total products</div>
+          <div class="stock-bar-bg">
+            <div class="stock-bar-fill" style="width: 90%; background: var(--accent);"></div>
+          </div>
+        </div>
+        <div class="stock-left">{{ total_products }}</div>
+      </div>
+
+      <div class="stock-item">
+        <div>
+          <div class="stock-name">Active products</div>
+          <div class="stock-bar-bg">
+            <div class="stock-bar-fill" style="width: 80%; background: var(--accent);"></div>
+          </div>
+        </div>
+        <div class="stock-left">{{ active_products }}</div>
+      </div>
+
+      <div class="stock-item">
+        <div>
+          <div class="stock-name">Inactive products</div>
+          <div class="stock-bar-bg">
+            <div class="stock-bar-fill" style="width: 40%; background: var(--warn);"></div>
+          </div>
+        </div>
+        <div class="stock-left low">{{ inactive_products }}</div>
+      </div>
+
+      <div class="stock-item">
+        <div>
+          <div class="stock-name">Low stock products</div>
+          <div class="stock-bar-bg">
+            <div class="stock-bar-fill" style="width: 50%; background: var(--warn);"></div>
+          </div>
+        </div>
+        <div class="stock-left low">{{ low_stock_products }}</div>
+      </div>
+
+      <div class="stock-item">
+        <div>
+          <div class="stock-name">Out of stock products</div>
+          <div class="stock-bar-bg">
+            <div class="stock-bar-fill" style="width: 35%; background: var(--danger);"></div>
+          </div>
+        </div>
+        <div class="stock-left critical">{{ out_of_stock_products }}</div>
+      </div>
+
+      <div class="stock-item">
+        <div class="stock-name">Stock value</div>
+        <div class="stock-left">Rs. {{ stock_value|floatformat:0 }}</div>
+      </div>
+    </div>
+
+    <div class="channel-card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Churn risk summary</div>
+          <p style="font-size: 12px; color: var(--muted); margin-top: 3px;">
+            Customer retention risk overview
+          </p>
+        </div>
+      </div>
+
+      <div class="stock-item">
+        <div>
+          <div class="stock-name">High risk customers</div>
+          <div class="stock-bar-bg">
+            <div class="stock-bar-fill" style="width: 80%; background: var(--danger);"></div>
+          </div>
+        </div>
+        <div class="stock-left critical">{{ high_risk }}</div>
+      </div>
+
+      <div class="stock-item">
+        <div>
+          <div class="stock-name">Medium risk customers</div>
+          <div class="stock-bar-bg">
+            <div class="stock-bar-fill" style="width: 55%; background: var(--warn);"></div>
+          </div>
+        </div>
+        <div class="stock-left low">{{ medium_risk }}</div>
+      </div>
+
+      <div class="stock-item">
+        <div>
+          <div class="stock-name">Low risk customers</div>
+          <div class="stock-bar-bg">
+            <div class="stock-bar-fill" style="width: 35%; background: var(--accent);"></div>
+          </div>
+        </div>
+        <div class="stock-left">{{ low_risk }}</div>
+      </div>
+
+      <a href="{% url 'churn:dashboard' %}" class="restock-btn" style="text-decoration: none;">
+        Open churn dashboard
+      </a>
+    </div>
+
+  </div>
+
+  <div class="mid-grid" style="margin-top: 20px;">
+
+    <div class="products-card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Most wishlisted products</div>
+          <p style="font-size: 12px; color: var(--muted); margin-top: 3px;">
+            Products users saved the most
+          </p>
+        </div>
+      </div>
+
+      {% for product in most_wishlisted_products %}
+        <div class="product-item">
+          <div class="product-icon">
+            {% if product.image %}
+              <img src="{{ product.image.url }}" alt="{{ product.name }}"
+                   style="width: 36px; height: 36px; object-fit: cover; border-radius: 8px;">
+            {% else %}
+              🛍
+            {% endif %}
+          </div>
+
+          <div class="product-info">
+            <div class="product-name">{{ product.name }}</div>
+            <div class="product-cat">{{ product.category.name }}</div>
+          </div>
+
+          <div class="product-rev">{{ product.wishlist_count }}</div>
+        </div>
+      {% empty %}
+        <p style="font-size: 13px; color: var(--muted);">No wishlist data available.</p>
+      {% endfor %}
+    </div>
+
+    <div class="products-card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Category analysis</div>
+          <p style="font-size: 12px; color: var(--muted); margin-top: 3px;">
+            Product count by category
+          </p>
+        </div>
+      </div>
+
+      {% for category in category_analysis %}
+        <div class="product-item">
+          <div class="product-icon">📦</div>
+
+          <div class="product-info">
+            <div class="product-name">{{ category.name }}</div>
+            <div class="product-cat">Category</div>
+          </div>
+
+          <div class="product-rev">{{ category.product_count }}</div>
+        </div>
+      {% empty %}
+        <p style="font-size: 13px; color: var(--muted);">No category data available.</p>
+      {% endfor %}
+    </div>
+
+  </div>
+
+  <div class="bottom-grid" style="margin-top: 20px;">
+
+    <div class="orders-card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Best-rated products</div>
+          <p style="font-size: 12px; color: var(--muted); margin-top: 3px;">
+            Based on customer reviews
+          </p>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>Rating</th>
+            <th>Reviews</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {% for product in best_rated_products %}
+            <tr>
+              <td>{{ product.name }}</td>
+              <td>
+                <span class="status-badge delivered">
+                  <span class="status-dot"></span>
+                  {{ product.avg_rating|floatformat:1 }}
+                </span>
+              </td>
+              <td>{{ product.review_total }}</td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="3" style="color: var(--muted);">No review data available.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="orders-card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Brand analysis</div>
+          <p style="font-size: 12px; color: var(--muted); margin-top: 3px;">
+            Product count by brand
+          </p>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Brand</th>
+            <th>Products</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {% for brand in brand_analysis %}
+            <tr>
+              <td>{{ brand.name }}</td>
+              <td>
+                <span class="status-badge processing">
+                  <span class="status-dot"></span>
+                  {{ brand.product_count }}
+                </span>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="2" style="color: var(--muted);">No brand data available.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+</main>
+
+<script>
+  const bars = document.querySelectorAll(".bar.current[data-value]");
+  let maxValue = 0;
+
+  bars.forEach(function(bar) {
+    const value = Number(bar.dataset.value || 0);
+    if (value > maxValue) {
+      maxValue = value;
+    }
+  });
+
+  bars.forEach(function(bar) {
+    const value = Number(bar.dataset.value || 0);
+    const height = maxValue > 0 ? Math.max((value / maxValue) * 140, 8) : 8;
+    bar.style.height = height + "px";
+  });
+</script>
+
+{% endblock %}

@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 
 {% block extra_head %}
+{% load product_extras %}
+
 <style>
   /* =========================
      SPECIAL OFFER SLIDER
@@ -360,6 +362,32 @@
       height: 200px;
     }
   }
+
+  .popular-section { margin-bottom: 30px; }
+.popular-header {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 14px;
+}
+.popular-header h3 { font-size: 20px; font-weight: 700; margin: 0; color: #111827; }
+.popular-sub { font-size: 13px; color: #6b7280; }
+
+.popular-carousel { padding: 0 40px; }
+.popular-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+@media (max-width: 992px) { .popular-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 576px) { .popular-grid { grid-template-columns: 1fr; } }
+
+.popular-carousel .carousel-control-prev,
+.popular-carousel .carousel-control-next {
+  width: 35px; height: 35px; top: 50%; transform: translateY(-50%);
+  background: #111827; border-radius: 50%; opacity: 0.85;
+}
+.popular-carousel .carousel-control-prev { left: 0; }
+.popular-carousel .carousel-control-next { right: 0; }
+
 </style>
 {% endblock %}
 
@@ -428,6 +456,62 @@
   </button>
   {% endif %}
 
+</div>
+{% endif %}
+
+{% if top_products %}
+<div class="popular-section">
+  <div class="popular-header">
+    <h3>🔥 Top Popular Products</h3>
+    <span class="popular-sub">Most loved by our customers</span>
+  </div>
+
+  <div id="popularCarousel" class="carousel slide popular-carousel"
+       data-bs-ride="carousel" data-bs-interval="3500" data-bs-pause="hover">
+    <div class="carousel-inner">
+      {% for chunk in top_products|slice_chunks:4 %}
+        <div class="carousel-item {% if forloop.first %}active{% endif %}">
+          <div class="popular-grid">
+            {% for p in chunk %}
+              <div class="product-card-wrapper">
+                <div class="product-card">
+                  <div class="product-img-wrap">
+                    {% if p.product_image %}
+                      <img src="{{ p.product_image }}" alt="{{ p.product_name }}">
+                    {% else %}
+                      <span class="product-img-placeholder">No Image</span>
+                    {% endif %}
+                    <span class="badge-stock">🔥 Popular</span>
+                  </div>
+                  <div class="product-info">
+                    <p class="product-brand">{{ p.product_category }}</p>
+                    <p class="product-name">{{ p.product_name }}</p>
+                    <p class="product-rating">
+                      👁 {{ p.views }} · ♥ {{ p.wishlist }} · 🛒 {{ p.orders }}
+                    </p>
+                  </div>
+                  <div class="cart-form">
+        <a href="{% url 'products:product_detail' p.product_slug %}" class="btn-cart view-product-btn">
+          View Product
+        </a>
+      </div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <button class="carousel-control-prev" type="button"
+            data-bs-target="#popularCarousel" data-bs-slide="prev">
+      <span class="carousel-control-prev-icon"></span>
+    </button>
+    <button class="carousel-control-next" type="button"
+            data-bs-target="#popularCarousel" data-bs-slide="next">
+      <span class="carousel-control-next-icon"></span>
+    </button>
+  </div>
 </div>
 {% endif %}
 

@@ -1,0 +1,203 @@
+{% extends 'admin_base.html' %}
+
+{% block title %}Admin Profile — ShopMart Admin{% endblock %}
+
+{% block start %}
+
+<main class="main">
+
+  <div class="topbar">
+    <div class="page-title">
+      <h1>Admin Profile</h1>
+      <p>Manage your admin account information</p>
+    </div>
+
+    <div class="promo-badge">
+      <span class="promo-dot"></span>
+      Admin account
+    </div>
+  </div>
+
+  <div class="bottom-grid">
+
+    <!-- LEFT PROFILE CARD -->
+    <div class="stock-card">
+
+      <div style="text-align: center; padding: 10px 0 18px;">
+
+        {% if user.profile_image %}
+          <img src="{{ user.profile_image.url }}"
+               alt="{{ user.username }}"
+               style="width: 110px; height: 110px; object-fit: cover; border-radius: 50%; border: 4px solid var(--bg3);">
+        {% else %}
+          <div style="
+            width: 110px;
+            height: 110px;
+            border-radius: 50%;
+            background: var(--accent);
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 38px;
+            font-weight: 800;
+            margin-bottom: 10px;
+          ">
+            {{ user.username|first|upper }}
+          </div>
+        {% endif %}
+
+        <h2 style="font-size: 20px; margin-top: 12px; color: var(--text);">
+          {% if user.full_name %}
+            {{ user.full_name }}
+          {% else %}
+            {{ user.username }}
+          {% endif %}
+        </h2>
+
+        <p style="color: var(--muted); margin-top: 4px; font-size: 13px;">
+          @{{ user.username }}
+        </p>
+
+        {% if user.is_staff %}
+          <span class="status-badge pending" style="margin-top: 10px;">
+            <span class="status-dot"></span>
+            Admin
+          </span>
+        {% else %}
+          <span class="status-badge processing" style="margin-top: 10px;">
+            <span class="status-dot"></span>
+            Customer
+          </span>
+        {% endif %}
+
+      </div>
+
+      <a href="{% url 'profile_update' %}"
+         class="restock-btn"
+         style="text-decoration: none;">
+        Edit Profile
+      </a>
+
+      <a href="/admin/"
+         class="restock-btn"
+         style="text-decoration: none;">
+        Open Django Admin
+      </a>
+
+    </div>
+
+    <!-- RIGHT ACCOUNT DETAILS -->
+    <div class="orders-card">
+
+      <div class="card-header">
+        <div>
+          <div class="card-title">Account Details</div>
+          <p style="font-size: 12px; color: var(--muted); margin-top: 3px;">
+            Your personal and login information
+          </p>
+        </div>
+      </div>
+
+      <table>
+        <tbody>
+          <tr>
+            <td style="color: var(--muted); font-weight: 600;">Full name</td>
+            <td>
+              {% if user.full_name %}
+                {{ user.full_name }}
+              {% else %}
+                Not provided
+              {% endif %}
+            </td>
+          </tr>
+
+          <tr>
+            <td style="color: var(--muted); font-weight: 600;">Username</td>
+            <td>{{ user.username }}</td>
+          </tr>
+
+          <tr>
+            <td style="color: var(--muted); font-weight: 600;">Email</td>
+            <td>{{ user.email }}</td>
+          </tr>
+
+          <tr>
+            <td style="color: var(--muted); font-weight: 600;">Phone</td>
+            <td>{{ user.phone_number|default:"Not provided" }}</td>
+          </tr>
+
+          <tr>
+            <td style="color: var(--muted); font-weight: 600;">Role</td>
+            <td>
+              {% if user.is_superuser %}
+                Super Admin
+              {% elif user.is_staff %}
+                Staff Admin
+              {% else %}
+                Customer
+              {% endif %}
+            </td>
+          </tr>
+
+          <tr>
+            <td style="color: var(--muted); font-weight: 600;">Member since</td>
+            <td>{{ user.created_at|date:"F j, Y" }}</td>
+          </tr>
+
+          <tr>
+            <td style="color: var(--muted); font-weight: 600;">Last login</td>
+            <td>{{ user.last_login|date:"F j, Y, P" }}</td>
+          </tr>
+        </tbody>
+      </table>
+
+    </div>
+
+  </div>
+
+  <!-- ADMIN QUICK LINKS -->
+  <div class="orders-card" style="margin-top: 20px;">
+
+    <div class="card-header">
+      <div>
+        <div class="card-title">Admin Quick Links</div>
+        <p style="font-size: 12px; color: var(--muted); margin-top: 3px;">
+          Shortcuts for managing the system
+        </p>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;">
+
+      <a href="{% url 'admin_dashboard' %}"
+         style="text-decoration: none; background: var(--bg3); border: 1px solid var(--border); border-radius: 12px; padding: 18px; color: var(--text);">
+        <div style="font-weight: 700; margin-bottom: 4px;">Dashboard</div>
+        <div style="font-size: 12px; color: var(--muted);">Store overview</div>
+      </a>
+
+      <a href="{% url 'analytics' %}"
+         style="text-decoration: none; background: var(--bg3); border: 1px solid var(--border); border-radius: 12px; padding: 18px; color: var(--text);">
+        <div style="font-weight: 700; margin-bottom: 4px;">Analytics</div>
+        <div style="font-size: 12px; color: var(--muted);">Reports and insights</div>
+      </a>
+
+      <a href="{% url 'churn:dashboard' %}"
+         style="text-decoration: none; background: var(--bg3); border: 1px solid var(--border); border-radius: 12px; padding: 18px; color: var(--text);">
+        <div style="font-weight: 700; margin-bottom: 4px;">Churn</div>
+        <div style="font-size: 12px; color: var(--muted);">Customer risk</div>
+      </a>
+
+      <a href="/admin/"
+         style="text-decoration: none; background: var(--bg3); border: 1px solid var(--border); border-radius: 12px; padding: 18px; color: var(--text);">
+        <div style="font-weight: 700; margin-bottom: 4px;">Django Admin</div>
+        <div style="font-size: 12px; color: var(--muted);">Database control</div>
+      </a>
+
+    </div>
+
+  </div>
+
+</main>
+
+{% endblock %}

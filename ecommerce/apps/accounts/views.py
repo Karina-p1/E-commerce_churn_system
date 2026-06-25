@@ -33,13 +33,10 @@ def register_view(request):
 
 
 def login_view(request):
-    """
-    User login.
-    Login events will be tracked as UserActivity in Phase 6.
-    Last login time = key churn recency signal.
-    """
     if request.user.is_authenticated:
-        return redirect('home')
+        if request.user.is_staff:
+            return redirect('admin_dashboard')
+        return redirect('products:view_products')
 
     if request.method == 'POST':
         form = LoginForm(request, data=request.POST)
@@ -48,7 +45,10 @@ def login_view(request):
             login(request, user)
             messages.success(request, f"Welcome back, {user.username}!")
 
-            # Redirect to next page if exists
+            # Staff → admin dashboard, regular users → home
+            if user.is_staff:
+                return redirect('admin_dashboard')
+            
             next_url = request.POST.get('next') or request.GET.get('next') or 'products:view_products'
             return redirect(next_url)
         else:
