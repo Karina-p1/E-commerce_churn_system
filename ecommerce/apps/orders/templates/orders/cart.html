@@ -376,7 +376,13 @@
                             </h6>
 
                             <p class="cart-product-meta">
-                                Rs. {{ item.product.price }} each
+                                Rs. {{ item.product.effective_price }} each
+
+                                {% if item.product.discount_price %}
+                                    <span class="text-muted text-decoration-line-through ms-2">
+                                        Rs. {{ item.product.price }}
+                                    </span>
+                                {% endif %}
                             </p>
                         </div>
 

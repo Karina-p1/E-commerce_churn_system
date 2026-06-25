@@ -56,26 +56,34 @@ def extract_features(user) -> dict:
         avg_rating = reviews.aggregate(
             avg=django_models.Avg('rating')
         )['avg']
-        satisfaction_score = round(avg_rating)   # 1–5
+        satisfaction_score = round(avg_rating)
     else:
-        satisfaction_score = 3                   # neutral default
+        satisfaction_score = 3
 
     complain = 1 if reviews.filter(rating__lte=2).exists() else 0
 
-    return {
-        # ── Raw text for categoricals — predictor.py encodes these ──
-        'PreferredLoginDevice':        'Mobile Phone',  # TODO: track via middleware
-        'PreferredPaymentMode':        preferred_payment,
-        'Gender':                      'Male',          # TODO: user profile
-        'PreferedOrderCat':            'Mobile Phone',  # TODO: track from orders
-        'MaritalStatus':               'Single',        # TODO: user profile
+    # ── Device ────────────────────────────────────────
+    preferred_login_device = getattr(user, 'preferred_login_device', 'Mobile Phone')
+    number_of_devices      = getattr(user, 'number_of_devices', 1)
 
-        # ── Numeric fields ───────────────────────────────────────────
+    # ── Profile ───────────────────────────────────────
+    gender         = user.gender or 'Male'
+    marital_status = user.marital_status or 'Single'
+
+    return {
+        # ── Categoricals — predictor.py encodes these ────────────────
+        'PreferredLoginDevice':        preferred_login_device,
+        'PreferredPaymentMode':        preferred_payment,
+        'Gender':                      gender,
+        'PreferedOrderCat':            'Mobile Phone',  # TODO: derive from orders
+        'MaritalStatus':               marital_status,
+
+        # ── Numerics ─────────────────────────────────────────────────
         'Tenure':                      tenure_months,
         'CityTier':                    1,
         'WarehouseToHome':             15,
         'HourSpendOnApp':              hours_on_app,
-        'NumberOfDeviceRegistered':    1,
+        'NumberOfDeviceRegistered':    number_of_devices,
         'SatisfactionScore':           satisfaction_score,
         'NumberOfAddress':             1,
         'Complain':                    complain,

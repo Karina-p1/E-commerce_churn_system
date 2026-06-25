@@ -44,7 +44,7 @@ class CartItem(models.Model):
 
     @property
     def subtotal(self):
-        return self.product.price * self.quantity
+        return self.product.effective_price * self.quantity
 
 class Order(models.Model):
     STATUS_CHOICES = [

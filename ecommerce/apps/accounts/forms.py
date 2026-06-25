@@ -85,7 +85,15 @@ class ProfileUpdateForm(forms.ModelForm):
     """
     class Meta:
         model = User
-        fields = ['first_name', 'last_name', 'email', 'phone_number', 'profile_image']
+        fields = [
+            'first_name',
+            'last_name',
+            'email',
+            'phone_number',
+            'profile_image',
+            'gender',
+            'marital_status',
+        ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

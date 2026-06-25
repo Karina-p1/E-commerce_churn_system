@@ -9,14 +9,44 @@ _columns        = joblib.load(os.path.join(_MODEL_DIR, 'feature_columns.pkl'))
 _encoding_maps  = joblib.load(os.path.join(_MODEL_DIR, 'encoding_maps.pkl'))
 
 
+def _adjust_score(proba: float, enc: dict) -> float:
+    """
+    Post-prediction adjustment for cases where the raw model
+    mispredicts due to limited real-world data (e.g. new but active users).
+    """
+    tenure     = enc.get('Tenure', 0) or 0
+    order_cnt  = enc.get('OrderCount', 0) or 0
+    last_order = enc.get('DaySinceLastOrder', 0) or 0
+    sat_score  = enc.get('SatisfactionScore', 3) or 3
+    complain   = enc.get('Complain', 0) or 0
+
+    # New user who is clearly active and happy — pull score down
+    if (
+        tenure <= 2
+        and order_cnt >= 5
+        and last_order <= 7
+        and sat_score >= 4
+        and complain == 0
+    ):
+        proba = min(proba, 0.35)
+
+    # New user with some orders and recent activity — mild pull down
+    elif (
+        tenure <= 2
+        and order_cnt >= 3
+        and last_order <= 14
+        and complain == 0
+    ):
+        proba = min(proba, 0.45)
+
+    # Clearly inactive regardless of tenure — push score up
+    elif last_order > 30 and order_cnt <= 2:
+        proba = max(proba, 0.65)
+
+    return round(proba, 3)
+
+
 def predict_churn(feature_dict: dict) -> dict:
-    """
-    Args:
-        feature_dict: output of features.extract_features(user)
-                      categorical columns must be RAW TEXT e.g. 'Male', not 1
-    Returns:
-        { 'score': float, 'risk_level': str, 'will_churn': bool }
-    """
     enc = feature_dict.copy()
 
     # Step 1: encode text → number using training maps
@@ -53,6 +83,9 @@ def predict_churn(feature_dict: dict) -> dict:
     row   = {col: enc.get(col, 0) for col in _columns}
     df    = pd.DataFrame([row])[_columns]
     proba = float(_model.predict_proba(df)[0][1])
+
+    # Step 4: adjust for known model blind spots
+    proba = _adjust_score(proba, enc)
 
     if proba >= 0.5:
         risk = 'high'

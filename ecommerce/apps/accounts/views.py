@@ -3,7 +3,8 @@ from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from .forms import RegisterForm, LoginForm, ProfileUpdateForm
-
+from .utils import get_device_type
+from .utils import update_device_info  
 
 def register_view(request):
     """
@@ -43,7 +44,6 @@ def login_view(request):
         if form.is_valid():
             user = form.get_user()
             login(request, user)
-            messages.success(request, f"Welcome back, {user.username}!")
 
             # Staff → admin dashboard, regular users → home
             if user.is_staff:

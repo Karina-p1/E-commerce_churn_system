@@ -25,11 +25,13 @@ class Command(BaseCommand):
                 features = extract_features(user)
                 result   = predict_churn(features)
 
-                ChurnScore.objects.create(
-                    customer   = user,
-                    score      = result['score'],
-                    risk_level = result['risk_level'],
-                )
+                ChurnScore.objects.update_or_create(
+    customer   = user,
+    defaults   = {
+        'score':      result['score'],
+        'risk_level': result['risk_level'],
+    }
+)
 
                 if result['risk_level'] == 'high':
                     high += 1
