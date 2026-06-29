@@ -35,25 +35,29 @@
         transition: background 0.2s; flex-shrink: 0;
       }
       .btn-categories:hover { background: #1e5a8a; }
-      .search-wrap {
-        flex: 1; min-width: 0; display: flex; align-items: center;
-        border: 1.5px solid #d1d5db; border-radius: 10px; overflow: hidden;
-        background: #f9fafb; transition: border-color 0.2s, box-shadow 0.2s;
-      }
+.search-wrap {
+  flex: 1; min-width: 0; display: flex; align-items: center;
+  border: 1.5px solid #d1d5db; border-radius: 10px; overflow: visible;
+  background: #f9fafb; transition: border-color 0.2s, box-shadow 0.2s;
+  position: relative;
+}
+.search-wrap input {
+  flex: 1; min-width: 0; border: none; background: transparent;
+  padding: 9px 14px; font-size: 13.5px; font-family: "DM Sans", sans-serif;
+  color: #1f2937; outline: none;
+  border-radius: 10px 0 0 10px;
+}
+.search-wrap input::placeholder { color: #9ca3af; }
+.btn-search {
+  background: #0ea5e9; border: none; padding: 9px 18px; cursor: pointer;
+  display: flex; align-items: center; color: #fff; transition: background 0.2s;
+  flex-shrink: 0; border-radius: 0 10px 10px 0;
+}
+.btn-search:hover { background: #0284c7; }
       .search-wrap:focus-within {
         border-color: #0ea5e9; box-shadow: 0 0 0 3px rgba(14,165,233,0.12); background: #fff;
       }
-      .search-wrap input {
-        flex: 1; min-width: 0; border: none; background: transparent;
-        padding: 9px 14px; font-size: 13.5px; font-family: "DM Sans", sans-serif;
-        color: #1f2937; outline: none;
-      }
-      .search-wrap input::placeholder { color: #9ca3af; }
-      .btn-search {
-        background: #0ea5e9; border: none; padding: 9px 18px; cursor: pointer;
-        display: flex; align-items: center; color: #fff; transition: background 0.2s; flex-shrink: 0;
-      }
-      .btn-search:hover { background: #0284c7; }
+
       .nav-divider { width: 1px; height: 32px; background: #e5e7eb; margin: 0 4px; flex-shrink: 0; }
       .nav-right { display: flex; align-items: center; gap: 4px; margin-left: auto; flex-shrink: 0; }
       .icon-btn {
@@ -322,14 +326,23 @@
         </ul>
       </div>
 
-      <form class="search-wrap" method="GET" action="{% url 'products:view_products' %}">
-        <input type="search" name="q" placeholder="Search for products, brands..." value="{{ request.GET.q }}" />
+<form class="search-wrap" method="GET" action="{% url 'products:view_products' %}"
+            style="position:relative;" autocomplete="off">
+        <input type="search" id="search-input" name="q"
+               placeholder="Search for products, brands..."
+               value="{{ request.GET.q }}" />
         <button class="btn-search" type="submit">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <circle cx="11" cy="11" r="8"/>
             <line x1="21" y1="21" x2="16.65" y2="16.65"/>
           </svg>
         </button>
+        <div id="search-dropdown" style="
+          display:none; position:absolute; top:100%; left:0; right:0;
+          background:#fff; border:1.5px solid #e5e7eb; border-top:none;
+          border-radius:0 0 10px 10px;
+          box-shadow:0 8px 24px rgba(0,0,0,0.10); z-index:2000; overflow:hidden;
+        "></div>
       </form>
 
       <div class="nav-divider"></div>
@@ -664,6 +677,92 @@ document.addEventListener('click', function(e) {
     if (menu) menu.style.display = 'none';
   }
 });
+
+// ── Search Autocomplete ──────────────────────────────────────────
+(function () {
+  const input    = document.getElementById('search-input');
+  const dropdown = document.getElementById('search-dropdown');
+  let timer;
+
+  input.addEventListener('input', function () {
+    clearTimeout(timer);
+    const q = this.value.trim();
+    if (!q) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; return; }
+
+    timer = setTimeout(() => {
+      fetch('/api/search/?q=' + encodeURIComponent(q))
+        .then(r => r.json())
+        .then(data => {
+          dropdown.innerHTML = '';
+          if (!data.results.length) { dropdown.style.display = 'none'; return; }
+
+          data.results.forEach(p => {
+            const a = document.createElement('a');
+            a.href = '/' + p.slug + '/';   // ← fixed URL
+            a.style.cssText = [
+              'display:flex', 'align-items:center', 'gap:10px',
+              'padding:11px 16px', 'text-decoration:none',
+              'font-size:14px', 'color:#1f2937',
+              "font-family:'DM Sans',sans-serif",
+              'border-bottom:1px solid #f3f4f6',
+              'transition:background 0.15s',
+              'cursor:pointer'
+            ].join(';');
+            a.onmouseenter = () => a.style.background = '#f0f9ff';
+            a.onmouseleave = () => a.style.background = '';
+
+            // Search icon
+            const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            icon.setAttribute('width', '14');
+            icon.setAttribute('height', '14');
+            icon.setAttribute('viewBox', '0 0 24 24');
+            icon.setAttribute('fill', 'none');
+            icon.setAttribute('stroke', '#9ca3af');
+            icon.setAttribute('stroke-width', '2.5');
+            icon.style.flexShrink = '0';
+            icon.innerHTML = '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>';
+
+            // Text container
+            const textWrap = document.createElement('span');
+            textWrap.style.cssText = 'flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;';
+
+            // Find where query matches in name (case-insensitive)
+            const lowerName = p.name.toLowerCase();
+            const lowerQ = q.toLowerCase();
+            const matchIdx = lowerName.indexOf(lowerQ);
+
+            if (matchIdx !== -1) {
+              const before = document.createTextNode(p.name.substring(0, matchIdx));
+              const bold = document.createElement('strong');
+              bold.style.color = '#0ea5e9';
+              bold.textContent = p.name.substring(matchIdx, matchIdx + q.length);
+              const after = document.createTextNode(p.name.substring(matchIdx + q.length));
+              textWrap.appendChild(before);
+              textWrap.appendChild(bold);
+              textWrap.appendChild(after);
+            } else {
+              textWrap.textContent = p.name;
+            }
+
+            a.appendChild(icon);
+            a.appendChild(textWrap);
+            dropdown.appendChild(a);
+          });
+
+          dropdown.style.display = 'block';
+        });
+    }, 300);
+  });
+
+  // Close on outside click or Escape
+  document.addEventListener('click', e => {
+    if (!input.contains(e.target) && !dropdown.contains(e.target))
+      dropdown.style.display = 'none';
+  });
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Escape') dropdown.style.display = 'none';
+  });
+})();
     </script>
 
     {% block extra_js %}{% endblock %}

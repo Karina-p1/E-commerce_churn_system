@@ -15,55 +15,63 @@
         align-items: center;
         margin-bottom: 28px;
         gap: 16px;
+        flex-wrap: wrap;
     }
 
     .cart-title {
         font-weight: 800;
         margin: 0;
         color: #111827;
+        font-size: 28px;
     }
 
     .continue-btn {
         border: 1px solid #d1d5db;
         color: #374151;
         background: #fff;
-        padding: 9px 15px;
+        padding: 9px 16px;
         border-radius: 999px;
         font-size: 13px;
         font-weight: 700;
         text-decoration: none;
         transition: 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
     }
 
     .continue-btn:hover {
         background: #f3f4f6;
         color: #111827;
+        border-color: #9ca3af;
     }
 
     .cart-item-card {
-        border: 0;
+        border: 1px solid #f1f2f4;
         border-radius: 18px;
         background: #fff;
-        box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+        box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05);
         overflow: hidden;
         transition: 0.15s ease;
     }
 
     .cart-item-card:hover {
-        box-shadow: 0 14px 34px rgba(15, 23, 42, 0.1);
+        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.09);
+        border-color: #e5e7eb;
     }
 
     .cart-img {
-        height: 92px;
-        width: 92px;
+        height: 96px;
+        width: 96px;
         border-radius: 14px;
         object-fit: cover;
         background: #f3f4f6;
+        border: 1px solid #f1f2f4;
     }
 
     .cart-img-placeholder {
-        height: 92px;
-        width: 92px;
+        height: 96px;
+        width: 96px;
         border-radius: 14px;
         background: #f3f4f6;
         color: #9ca3af;
@@ -72,6 +80,7 @@
         justify-content: center;
         font-size: 12px;
         font-weight: 600;
+        border: 1px solid #f1f2f4;
     }
 
     .cart-product-name {
@@ -79,12 +88,22 @@
         font-weight: 800;
         color: #111827;
         margin-bottom: 6px;
+        line-height: 1.3;
     }
 
     .cart-product-meta {
         color: #6b7280;
         font-size: 13px;
         margin-bottom: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .cart-product-meta .strike {
+        color: #9ca3af;
+        text-decoration: line-through;
     }
 
     .quantity-pill {
@@ -111,17 +130,17 @@
     }
 
     .subtotal-price {
-        font-size: 17px;
+        font-size: 18px;
         font-weight: 900;
-        color: #0e3a5c;
+        color: #111827;
         margin-bottom: 0;
     }
 
     .remove-box {
         background: #f9fafb;
-        border: 1px solid #e5e7eb;
+        border: 1px solid #eef0f2;
         border-radius: 14px;
-        padding: 10px;
+        padding: 12px 14px;
     }
 
     .remove-label {
@@ -129,7 +148,7 @@
         color: #6b7280;
         font-size: 11px;
         font-weight: 800;
-        margin-bottom: 6px;
+        margin-bottom: 8px;
         text-transform: uppercase;
         letter-spacing: 0.4px;
     }
@@ -149,12 +168,18 @@
         padding: 8px;
     }
 
+    .remove-input:focus {
+        outline: none;
+        border-color: #9ca3af;
+        box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.06);
+    }
+
     .remove-btn {
         border: 0;
         background: #fee2e2;
         color: #b91c1c;
         border-radius: 10px;
-        padding: 8px 12px;
+        padding: 8px 14px;
         font-size: 13px;
         font-weight: 800;
         transition: 0.15s ease;
@@ -166,26 +191,16 @@
         color: #fff;
     }
 
+    /* Summary card now matches the site's light card style instead of a dark/blue block */
     .summary-card {
-        border: 0;
+        border: 1px solid #eef0f2;
         border-radius: 20px;
-        background: #111827;
-        color: #fff;
-        box-shadow: 0 18px 38px rgba(15, 23, 42, 0.2);
+        background: #fff;
+        color: #111827;
+        box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
         position: sticky;
         top: 90px;
         overflow: hidden;
-    }
-
-    .summary-card::before {
-        content: "";
-        position: absolute;
-        width: 180px;
-        height: 180px;
-        border-radius: 50%;
-        background: rgba(14, 165, 233, 0.25);
-        top: -70px;
-        right: -70px;
     }
 
     .summary-body {
@@ -196,22 +211,41 @@
     .summary-title {
         font-weight: 900;
         margin-bottom: 18px;
+        font-size: 18px;
+        color: #111827;
     }
 
     .summary-row {
         display: flex;
         justify-content: space-between;
-        margin-bottom: 12px;
-        color: #d1d5db;
+        align-items: center;
+        margin-bottom: 14px;
+        color: #6b7280;
         font-size: 14px;
     }
 
     .summary-row strong {
-        color: #fff;
+        color: #111827;
+        font-weight: 800;
+    }
+
+    .free-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: #ecfdf5;
+        color: #16a34a;
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        padding: 4px 10px;
+        border-radius: 999px;
     }
 
     .summary-divider {
-        border-color: rgba(255, 255, 255, 0.14);
+        border: none;
+        border-top: 1px solid #eef0f2;
         margin: 18px 0;
     }
 
@@ -220,35 +254,43 @@
         justify-content: space-between;
         align-items: center;
         margin-bottom: 22px;
+        background: #f9fafb;
+        border-radius: 14px;
+        padding: 14px 16px;
     }
 
     .summary-total span {
-        color: #d1d5db;
+        color: #6b7280;
         font-weight: 700;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
     }
 
     .summary-total strong {
-        font-size: 24px;
+        font-size: 22px;
         font-weight: 900;
-        color: #fff;
+        color: #111827;
     }
 
     .checkout-btn {
         display: block;
         text-align: center;
-        background: #fff;
-        color: #111827;
+        background: #111827;
+        color: #fff;
         text-decoration: none;
-        padding: 12px 16px;
+        padding: 13px 16px;
         border-radius: 14px;
-        font-weight: 900;
+        font-weight: 800;
         transition: 0.15s ease;
+        font-size: 15px;
     }
 
     .checkout-btn:hover {
-        background: #f3f4f6;
-        color: #111827;
+        background: #1f2937;
+        color: #fff;
         transform: translateY(-1px);
+        box-shadow: 0 10px 20px rgba(17, 24, 39, 0.18);
     }
 
     .secure-note {
@@ -256,14 +298,19 @@
         color: #9ca3af;
         font-size: 12px;
         text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
     }
 
     .empty-cart {
         background: #fff;
+        border: 1px solid #eef0f2;
         border-radius: 22px;
         padding: 80px 24px;
         text-align: center;
-        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
     }
 
     .empty-cart-icon {
@@ -296,10 +343,11 @@
         text-decoration: none;
         font-weight: 800;
         display: inline-block;
+        transition: 0.15s ease;
     }
 
     .browse-btn:hover {
-        background: #374151;
+        background: #1f2937;
         color: #fff;
     }
 
@@ -307,6 +355,10 @@
         .cart-header {
             align-items: flex-start;
             flex-direction: column;
+        }
+
+        .cart-title {
+            font-size: 24px;
         }
 
         .cart-img,
@@ -376,10 +428,10 @@
                             </h6>
 
                             <p class="cart-product-meta">
-                                Rs. {{ item.product.effective_price }} each
+                                <span>Rs. {{ item.product.effective_price }} each</span>
 
                                 {% if item.product.discount_price %}
-                                    <span class="text-muted text-decoration-line-through ms-2">
+                                    <span class="strike">
                                         Rs. {{ item.product.price }}
                                     </span>
                                 {% endif %}
@@ -459,7 +511,7 @@
 
                     <div class="summary-row">
                         <span>Delivery</span>
-                        <strong>Free</strong>
+                        <span class="free-badge">✓ Free</span>
                     </div>
 
                     <hr class="summary-divider">
@@ -474,7 +526,7 @@
                     </a>
 
                     <div class="secure-note">
-                        Secure checkout powered by eSewa
+                        🔒 Secure checkout powered by eSewa
                     </div>
                 </div>
             </div>
