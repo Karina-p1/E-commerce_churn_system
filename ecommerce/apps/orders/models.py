@@ -60,6 +60,8 @@ class Order(models.Model):
         ('INITIATED', 'Payment Initiated'),
         ('PAID', 'Paid'),
         ('FAILED', 'Failed'),
+        ("REFUND_PENDING", "Refund Pending"),
+        ("REFUNDED", "Refunded"),
     ]
 
     user = models.ForeignKey(
@@ -72,6 +74,32 @@ class Order(models.Model):
         max_length=20,
         choices=STATUS_CHOICES,
         default='pending'
+    )
+    
+    CANCEL_REASON_CHOICES = (
+        ("mistake", "Ordered by mistake"),
+        ("cheaper", "Found cheaper elsewhere"),
+        ("delivery", "Delivery takes too long"),
+        ("changed", "Changed my mind"),
+        ("payment", "Payment issue"),
+        ("other", "Other"),
+    )
+
+    cancel_reason = models.CharField(
+        max_length=20,
+        choices=CANCEL_REASON_CHOICES,
+        blank=True,
+        null=True,
+    )
+
+    cancel_note = models.TextField(
+        blank=True,
+        null=True,
+    )
+
+    cancelled_at = models.DateTimeField(
+        blank=True,
+        null=True,
     )
 
     payment_status = models.CharField(
@@ -113,6 +141,13 @@ class Order(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        
+    @property
+    def can_cancel(self):
+        return self.status in [
+            "pending",
+            "processing",
+        ]
 
     def __str__(self):
         return f"Order #{self.id} by {self.user.username}"

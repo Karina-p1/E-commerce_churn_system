@@ -502,8 +502,12 @@ def payment_failed(request):
 def order_list(request):
     orders = Order.objects.filter(
         user=request.user,
-        payment_status='PAID'
-    ).order_by('-created_at')
+        # payment_status__in=[
+        #     "PAID",
+        #     "REFUND_PENDING",
+        #     "REFUNDED",
+        # ]
+    ).order_by("-created_at")
 
     return render(request, 'orders/order_list.html', {
         'orders': orders
@@ -516,7 +520,7 @@ def order_detail(request, order_id):
         Order,
         id=order_id,
         user=request.user,
-        payment_status='PAID'
+        # payment_status='PAID'
     )
 
     return render(request, 'orders/order_detail.html', {
@@ -524,35 +528,94 @@ def order_detail(request, order_id):
     })
 
 
+# @login_required
+# def cancel_order(request, order_id):
+#     order = get_object_or_404(
+#         Order,
+#         id=order_id,
+#         user=request.user,
+#         payment_status='PAID'
+#     )
+
+#     if order.status in ['pending', 'processing']:
+#         order.status = 'cancelled'
+#         order.save()
+
+#         UserEvent.objects.create(
+#             user=request.user,
+#             event_type='ORDER_CANCELLED'
+#         )
+
+#         messages.success(
+#             request,
+#             f"Order #{order.id} cancelled successfully."
+#         )
+#     else:
+#         messages.warning(
+#             request,
+#             "This order cannot be cancelled."
+#         )
+
+#     return redirect(
+#         'order_detail',
+#         order_id=order.id
+#     )
+
 @login_required
 def cancel_order(request, order_id):
+
     order = get_object_or_404(
         Order,
         id=order_id,
-        user=request.user,
-        payment_status='PAID'
+        user=request.user
     )
 
-    if order.status in ['pending', 'processing']:
-        order.status = 'cancelled'
+    if not order.can_cancel:
+        messages.error(
+            request,
+            "This order can no longer be cancelled."
+        )
+        return redirect(
+            "order_detail",
+            order_id=order.id
+        )
+
+    if request.method == "POST":
+
+        reason = request.POST.get("reason")
+        note = request.POST.get("note")
+
+        order.status = "cancelled"
+        order.cancel_reason = reason
+        order.cancel_note = note
+        order.cancelled_at = timezone.now()
         order.save()
+
+        # Restore stock
+        for item in order.items.all():
+
+            product = item.product
+
+            product.stock += item.quantity
+
+            product.save()
 
         UserEvent.objects.create(
             user=request.user,
-            event_type='ORDER_CANCELLED'
+            event_type="ORDER_CANCELLED"
         )
 
         messages.success(
             request,
-            f"Order #{order.id} cancelled successfully."
-        )
-    else:
-        messages.warning(
-            request,
-            "This order cannot be cancelled."
+            "Your order has been cancelled successfully."
         )
 
-    return redirect(
-        'order_detail',
-        order_id=order.id
+        return redirect("order_list")
+
+    return render(
+        request,
+        "orders/cancel_order.html",
+        {
+            "order": order
+        }
     )

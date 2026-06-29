@@ -17,6 +17,31 @@
                 {% else %}bg-warning text-dark{% endif %} px-3 py-2">
                 {{ order.get_status_display }}
             </span>
+            
+            {% if order.status == "cancelled" %}
+            <div class="alert alert-danger mt-3">
+                <h6 class="fw-bold mb-2">
+                    Order Cancelled
+                </h6>
+
+                <p class="mb-1">
+                    <strong>Reason:</strong>
+                    {{ order.get_cancel_reason_display }}
+                </p>
+
+                {% if order.cancel_note %}
+                    <p class="mb-1">
+                        <strong>Note:</strong>
+                        {{ order.cancel_note }}
+                    </p>
+                {% endif %}
+
+                <small class="text-muted">
+                    Cancelled on
+                    {{ order.cancelled_at|date:"F d, Y h:i A" }}
+                </small>
+            </div>
+            {% endif %}
         </div>
 
         <div class="card border-0 shadow-sm mb-3">
@@ -64,7 +89,7 @@
             </div>
         </div>
 
-        <div class="d-flex gap-2 flex-wrap">
+        <!-- <div class="d-flex gap-2 flex-wrap">
 
             <a href="{% url 'order_list' %}" class="btn btn-outline-dark">
                 Back to Orders
@@ -77,6 +102,19 @@
                     Cancel Order
                 </button>
             </form>
+            {% endif %}
+
+        </div> -->
+
+        <div class="d-flex gap-2">
+            <a href="{% url 'order_list' %}" class="btn btn-outline-dark">
+                Back to Orders
+            </a>
+
+            {% if order.can_cancel %}
+                <a href="{% url 'cancel_order' order.id %}" class="btn btn-danger">
+                    Cancel Order
+                </a>
             {% endif %}
 
         </div>
