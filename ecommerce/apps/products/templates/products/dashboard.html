@@ -1,534 +1,467 @@
 {% extends "base.html" %}
-
 {% block extra_head %}
 {% load product_extras %}
-
 <style>
-  /* =========================
-     SPECIAL OFFER SLIDER
-  ========================= */
+
+  /* ── OFFER SLIDER ─────────────────────────────────── */
   .offer-slider {
-    margin-bottom: 30px;
+    margin-bottom: 36px;
     border-radius: 20px;
     overflow: hidden;
-    background: linear-gradient(135deg, #111827, #7f1d1d);
-    color: #fff;
     position: relative;
-    box-shadow: 0 18px 35px rgba(15, 23, 42, 0.18);
+    box-shadow: 0 20px 40px rgba(14,58,92,0.18);
   }
-
   .offer-slide {
-    min-height: 370px;
+    min-height: 340px;
     display: grid;
-    grid-template-columns: 1.2fr 0.8fr;
+    grid-template-columns: 1.15fr 0.85fr;
     align-items: center;
-    gap: 28px;
-    padding: 38px;
+    gap: 32px;
+    padding: 44px 48px;
+    background: linear-gradient(130deg, #0e3a5c 0%, #1e2d5a 55%, #7f1d1d 100%);
+    color: #fff;
   }
-
   .offer-kicker {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     background: #facc15;
-    color: #111827;
-    font-size: 12px;
+    color: #1a1a1a;
+    font-size: 11px;
     font-weight: 800;
-    padding: 6px 13px;
+    padding: 5px 12px;
     border-radius: 999px;
-    margin-bottom: 14px;
+    margin-bottom: 16px;
     text-transform: uppercase;
-    letter-spacing: 0.4px;
+    letter-spacing: 0.6px;
   }
-
   .offer-title {
-    font-size: 34px;
+    font-size: 32px;
     font-weight: 800;
+    line-height: 1.18;
     margin-bottom: 10px;
-    line-height: 1.15;
+    letter-spacing: -0.5px;
   }
-
   .offer-text {
-    color: #fee2e2;
-    font-size: 15px;
-    margin-bottom: 20px;
-    max-width: 520px;
+    color: rgba(255,255,255,0.65);
+    font-size: 14px;
+    margin-bottom: 22px;
+    line-height: 1.6;
   }
-
   .offer-price {
     display: flex;
     align-items: baseline;
-    gap: 12px;
-    margin-bottom: 22px;
+    gap: 10px;
+    margin-bottom: 24px;
     flex-wrap: wrap;
   }
-
   .offer-new-price {
-    font-size: 28px;
+    font-size: 30px;
     font-weight: 800;
     color: #fff;
+    letter-spacing: -0.5px;
   }
-
   .offer-old-price {
-    font-size: 16px;
-    color: #fecaca;
+    font-size: 15px;
+    color: rgba(255,255,255,0.45);
     text-decoration: line-through;
   }
-
   .offer-discount {
     background: #ef4444;
     color: #fff;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 700;
-    padding: 5px 10px;
-    border-radius: 8px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    letter-spacing: 0.2px;
   }
-
   .offer-btn {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
     background: #fff;
-    color: #111827;
-    padding: 10px 20px;
+    color: #0e3a5c;
+    padding: 11px 22px;
     border-radius: 10px;
     text-decoration: none;
     font-weight: 700;
-    transition: 0.15s ease;
+    font-size: 14px;
+    transition: background 0.15s, transform 0.1s;
   }
-
   .offer-btn:hover {
-    background: #f3f4f6;
-    color: #111827;
+    background: #f0f9ff;
+    color: #0e3a5c;
     transform: translateY(-1px);
   }
-
   .offer-image-wrap {
-    height: 235px;
-    background: rgba(255, 255, 255, 0.08);
-    border-radius: 18px;
+    height: 230px;
+    background: rgba(255,255,255,0.07);
+    border-radius: 16px;
+    overflow: hidden;
     display: flex;
     align-items: center;
     justify-content: center;
-    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.1);
   }
-
   .offer-image-wrap img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+    width: 100%; height: 100%; object-fit: cover;
+  }
+  .carousel-control-prev, .carousel-control-next { width: 6%; }
+
+  /* ── SECTION HEADER ───────────────────────────────── */
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+  }
+  .section-header h3 {
+    font-size: 20px;
+    font-weight: 800;
+    color: #0e3a5c;
+    margin: 0;
+    letter-spacing: -0.3px;
+  }
+  .section-sub {
+    font-size: 13px;
+    color: #9ca3af;
+    font-weight: 500;
   }
 
-  .offer-no-image {
-    font-size: 56px;
+  /* ── POPULAR PRODUCTS ─────────────────────────────── */
+  .popular-section { margin-bottom: 36px; }
+  .popular-carousel { position: relative; padding: 0 44px; }
+  .popular-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
   }
-
-  .carousel-control-prev,
-  .carousel-control-next {
-    width: 7%;
+  .popular-carousel .carousel-control-prev,
+  .popular-carousel .carousel-control-next {
+    width: 36px; height: 36px;
+    top: 50%; transform: translateY(-50%);
+    background: #0e3a5c;
+    border-radius: 50%;
+    opacity: 1;
+    box-shadow: 0 2px 8px rgba(14,58,92,0.25);
+    transition: background 0.15s;
   }
+  .popular-carousel .carousel-control-prev:hover,
+  .popular-carousel .carousel-control-next:hover { background: #1e5a8a; }
+  .popular-carousel .carousel-control-prev { left: 0; }
+  .popular-carousel .carousel-control-next { right: 0; }
 
-  /* =========================
-     PRODUCT GRID
-  ========================= */
+  /* ── PRODUCT CARDS ────────────────────────────────── */
   .product-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 18px;
   }
-
-  .product-card-wrapper {
-    position: relative;
-    height: 100%;
-  }
+  .product-card-wrapper { position: relative; height: 100%; }
 
   .product-card {
     background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
+    border: 1px solid #f0f0f0;
+    border-radius: 14px;
     overflow: hidden;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    transition: 0.15s ease;
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+    transition: box-shadow 0.18s, transform 0.18s;
   }
-
   .product-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+    transform: translateY(-3px);
+    box-shadow: 0 16px 36px rgba(14,58,92,0.10);
+    border-color: #e0e7ef;
   }
 
   .product-img-wrap {
     position: relative;
-    background: #f9fafb;
-    height: 220px;
+    background: #f8fafc;
+    height: 210px;
     flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
   }
-
   .product-img-wrap img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+    width: 100%; height: 100%; object-fit: cover;
+    transition: transform 0.3s ease;
   }
+  .product-card:hover .product-img-wrap img { transform: scale(1.03); }
+  .product-img-placeholder { color: #d1d5db; font-size: 13px; }
 
-  .product-img-placeholder {
-    color: #9ca3af;
-    font-size: 14px;
-  }
-
+  /* badges */
   .badge-stock {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    background: #dcfce7;
-    color: #15803d;
-    font-size: 11px;
-    font-weight: 600;
-    padding: 3px 8px;
-    border-radius: 6px;
-    z-index: 2;
+    position: absolute; top: 10px; left: 10px;
+    font-size: 10.5px; font-weight: 700;
+    padding: 3px 9px; border-radius: 6px; z-index: 2;
+    background: #dcfce7; color: #15803d;
+    letter-spacing: 0.2px;
   }
-
-  .badge-stock.out {
-    background: #fee2e2;
-    color: #b91c1c;
-  }
-
+  .badge-stock.out { background: #fee2e2; color: #b91c1c; }
   .badge-discount {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    background: #fee2e2;
-    color: #b91c1c;
-    font-size: 11px;
-    font-weight: 600;
-    padding: 3px 8px;
-    border-radius: 6px;
-    z-index: 2;
+    position: absolute; top: 10px; right: 10px;
+    background: #ef4444; color: #fff;
+    font-size: 10.5px; font-weight: 700;
+    padding: 3px 9px; border-radius: 6px; z-index: 2;
+    letter-spacing: 0.2px;
   }
 
+  /* wishlist button */
   .wishlist-form {
-    position: absolute;
-    bottom: 10px;
-    right: 10px;
-    z-index: 3;
+    position: absolute; bottom: 10px; right: 10px; z-index: 3;
   }
-
   .btn-wishlist {
     background: #fff;
     border: 1px solid #e5e7eb;
     border-radius: 50%;
-    width: 34px;
-    height: 34px;
-    cursor: pointer;
-    font-size: 16px;
-    line-height: 1;
+    width: 34px; height: 34px;
+    cursor: pointer; font-size: 16px; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    transition: background 0.15s, border-color 0.15s;
   }
+  .btn-wishlist:hover { background: #fef2f2; border-color: #fca5a5; }
+  .btn-wishlist.wishlisted { background: #fee2e2; border-color: #fca5a5; color: #ef4444; }
 
-  .btn-wishlist.wishlisted {
-    background: #fee2e2;
-    color: #b91c1c;
-    border-color: #fca5a5;
-  }
-
-  .product-info {
-    padding: 14px 16px 0;
-    flex: 1;
-  }
-
+  /* product info */
+  .product-info { padding: 14px 16px 10px; flex: 1; }
   .product-brand {
-    font-size: 11px;
-    color: #6b7280;
-    margin: 0 0 4px;
+    font-size: 10.5px; font-weight: 700;
+    color: #0ea5e9; margin: 0 0 4px;
+    text-transform: uppercase; letter-spacing: 0.5px;
   }
-
   .product-name {
-    font-size: 15px;
-    font-weight: 600;
-    color: #111827;
-    margin: 0 0 6px;
+    font-size: 14.5px; font-weight: 700;
+    color: #0e3a5c; margin: 0 0 6px;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
-
   .product-rating {
-    font-size: 12px;
-    color: #6b7280;
-    margin: 0 0 10px;
+    font-size: 12px; color: #9ca3af; margin: 0 0 10px;
+    display: flex; align-items: center; gap: 4px;
   }
-
   .product-price {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-    margin-bottom: 0;
+    display: flex; align-items: baseline; gap: 8px;
   }
-
   .price-main {
-    font-size: 18px;
-    font-weight: 700;
-    color: #111827;
+    font-size: 17px; font-weight: 800; color: #0e3a5c;
   }
-
   .price-original {
-    font-size: 13px;
-    color: #9ca3af;
-    text-decoration: line-through;
+    font-size: 12.5px; color: #d1d5db; text-decoration: line-through;
   }
 
-  .cart-form {
-    padding: 14px 16px 16px;
-    position: relative;
-    z-index: 3;
-  }
-
+  /* view product button */
+  .cart-form { padding: 10px 14px 14px; }
   .btn-cart {
-    width: 100%;
-    padding: 9px;
-    background: #0e3a5c;
-    color: #fff;
-    border: none;
-    border-radius: 8px;
-    font-size: 13.5px;
-    font-weight: 600;
-    cursor: pointer;
-    display: block;
-    text-align: center;
-    text-decoration: none;
+    width: 100%; padding: 10px;
+    background: #0e3a5c; color: #fff;
+    border: none; border-radius: 9px;
+    font-size: 13.5px; font-weight: 700;
+    cursor: pointer; display: block;
+    text-align: center; text-decoration: none;
+    transition: background 0.15s;
+    letter-spacing: 0.1px;
   }
+  .btn-cart:hover { background: #1e5a8a; color: #fff; }
+  .btn-cart:disabled { background: #e5e7eb; color: #9ca3af; cursor: not-allowed; }
 
-  .btn-cart:hover {
-    background: #1e5a8a;
-    color: #fff;
-  }
-
-  .btn-cart:disabled {
-    background: #9ca3af;
-    cursor: not-allowed;
-  }
-
-  .view-product-btn {
-    position: relative;
-    z-index: 5;
-  }
-
+  /* empty state */
   .empty-state {
     grid-column: 1 / -1;
     text-align: center;
     padding: 80px 20px;
   }
-
-  .empty-state svg {
-    display: block;
-    margin: 0 auto 16px;
-  }
-
-  .empty-state h4 {
-    color: #6b7280;
-    font-weight: 600;
-    margin-bottom: 8px;
-  }
-
-  .empty-state p {
-    color: #9ca3af;
-    font-size: 14px;
+  .empty-state-icon {
+    width: 80px; height: 80px;
+    background: #f0f9ff;
+    border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
     margin-bottom: 20px;
   }
-
+  .empty-state h4 { font-size: 18px; font-weight: 700; color: #0e3a5c; margin-bottom: 8px; }
+  .empty-state p { color: #9ca3af; font-size: 14px; margin-bottom: 22px; }
   .empty-state a {
-    background: #0ea5e9;
-    color: #fff;
-    text-decoration: none;
-    padding: 9px 20px;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 600;
+    display: inline-block;
+    background: #0ea5e9; color: #fff;
+    text-decoration: none; padding: 10px 22px;
+    border-radius: 8px; font-size: 13.5px; font-weight: 700;
+    transition: background 0.15s;
+  }
+  .empty-state a:hover { background: #0284c7; color: #fff; }
+
+  /* results header */
+  .results-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 18px; padding-bottom: 14px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .results-bar h4 {
+    font-size: 17px; font-weight: 800; color: #0e3a5c; margin: 0;
+  }
+  .results-count {
+    font-size: 13px; color: #9ca3af; font-weight: 500;
+  }
+  .active-filter {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #f0f9ff; border: 1px solid #bae6fd;
+    color: #0284c7; font-size: 12.5px; font-weight: 600;
+    padding: 4px 10px; border-radius: 99px;
+  }
+  .active-filter a {
+    color: #0ea5e9; text-decoration: none; font-size: 14px; line-height: 1;
   }
 
-  .empty-state a:hover {
-    background: #0284c7;
-    color: #fff;
-  }
-
+  @media (max-width: 992px) { .popular-grid { grid-template-columns: repeat(2,1fr); } }
   @media (max-width: 768px) {
-    .offer-slide {
-      grid-template-columns: 1fr;
-      padding: 26px;
-    }
-
-    .offer-title {
-      font-size: 26px;
-    }
-
-    .offer-image-wrap {
-      height: 200px;
-    }
+    .offer-slide { grid-template-columns: 1fr; padding: 28px; min-height: auto; }
+    .offer-title { font-size: 24px; }
+    .offer-image-wrap { height: 180px; }
+    .popular-grid { grid-template-columns: repeat(2,1fr); }
   }
-
-  .popular-section { margin-bottom: 30px; }
-.popular-header {
-  display: flex; align-items: baseline; justify-content: space-between;
-  margin-bottom: 14px;
-}
-.popular-header h3 { font-size: 20px; font-weight: 700; margin: 0; color: #111827; }
-.popular-sub { font-size: 13px; color: #6b7280; }
-
-.popular-carousel { padding: 0 40px; }
-.popular-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-}
-@media (max-width: 992px) { .popular-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 576px) { .popular-grid { grid-template-columns: 1fr; } }
-
-.popular-carousel .carousel-control-prev,
-.popular-carousel .carousel-control-next {
-  width: 35px; height: 35px; top: 50%; transform: translateY(-50%);
-  background: #111827; border-radius: 50%; opacity: 0.85;
-}
-.popular-carousel .carousel-control-prev { left: 0; }
-.popular-carousel .carousel-control-next { right: 0; }
-
+  @media (max-width: 480px) {
+    .popular-grid { grid-template-columns: 1fr; }
+    .product-grid { grid-template-columns: repeat(2,1fr); gap: 10px; }
+  }
 </style>
 {% endblock %}
 
 {% block start %}
 
+<!-- ── SPECIAL OFFERS ── -->
 {% if special_offers %}
 <div id="specialOfferCarousel" class="carousel slide offer-slider" data-bs-ride="carousel">
-
   <div class="carousel-inner">
-
     {% for p in special_offers %}
     <div class="carousel-item {% if forloop.first %}active{% endif %}">
-
       <div class="offer-slide">
-
         <div>
-          <span class="offer-kicker">Limited Time Offer</span>
-
-          <h2 class="offer-title">
-            {{ p.discount_percent }}% OFF on {{ p.name }}
-          </h2>
-
-          <p class="offer-text">
-            Special deal alert! Hurry up and grab it soon before the stock runs out.
-          </p>
-
+          <span class="offer-kicker">⚡ Limited Time Offer</span>
+          <h2 class="offer-title">{{ p.discount_percent }}% OFF on {{ p.name }}</h2>
+          <p class="offer-text">Special deal alert! Hurry up and grab it soon before stock runs out.</p>
           <div class="offer-price">
             <span class="offer-new-price">Rs. {{ p.effective_price }}</span>
-
             {% if p.discount_price %}
-              <span class="offer-old-price">Rs. {{ p.price }}</span>
+            <span class="offer-old-price">Rs. {{ p.price }}</span>
             {% endif %}
-
-            <span class="offer-discount">
-              Save {{ p.discount_percent }}%
-            </span>
+            <span class="offer-discount">Save {{ p.discount_percent }}%</span>
           </div>
-
           <a href="{% url 'products:product_detail' p.slug %}" class="offer-btn">
             Shop Now
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
           </a>
         </div>
-
         <div class="offer-image-wrap">
           {% if p.image %}
             <img src="{{ p.image.url }}" alt="{{ p.name }}">
           {% else %}
-            <div class="offer-no-image">📦</div>
+            <div style="font-size:52px;">📦</div>
           {% endif %}
         </div>
-
       </div>
-
     </div>
     {% endfor %}
-
   </div>
-
   {% if special_offers|length > 1 %}
   <button class="carousel-control-prev" type="button" data-bs-target="#specialOfferCarousel" data-bs-slide="prev">
     <span class="carousel-control-prev-icon"></span>
   </button>
-
   <button class="carousel-control-next" type="button" data-bs-target="#specialOfferCarousel" data-bs-slide="next">
     <span class="carousel-control-next-icon"></span>
   </button>
   {% endif %}
-
 </div>
 {% endif %}
 
+<!-- ── TOP POPULAR ── -->
 {% if top_products %}
 <div class="popular-section">
-  <div class="popular-header">
+  <div class="section-header">
     <h3>🔥 Top Popular Products</h3>
-    <span class="popular-sub">Most loved by our customers</span>
+    <span class="section-sub">Most loved by our customers</span>
   </div>
 
   <div id="popularCarousel" class="carousel slide popular-carousel"
        data-bs-ride="carousel" data-bs-interval="3500" data-bs-pause="hover">
     <div class="carousel-inner">
       {% for chunk in top_products|slice_chunks:4 %}
-        <div class="carousel-item {% if forloop.first %}active{% endif %}">
-          <div class="popular-grid">
-            {% for p in chunk %}
-              <div class="product-card-wrapper">
-                <div class="product-card">
-                  <div class="product-img-wrap">
-                    {% if p.product_image %}
-                      <img src="{{ p.product_image }}" alt="{{ p.product_name }}">
-                    {% else %}
-                      <span class="product-img-placeholder">No Image</span>
-                    {% endif %}
-                    <span class="badge-stock">🔥 Popular</span>
-                  </div>
-                  <div class="product-info">
-                    <p class="product-brand">{{ p.product_category }}</p>
-                    <p class="product-name">{{ p.product_name }}</p>
-                    <p class="product-rating">
-                      👁 {{ p.views }} · ♥ {{ p.wishlist }} · 🛒 {{ p.orders }}
-                    </p>
-                  </div>
-                  <div class="cart-form">
-        <a href="{% url 'products:product_detail' p.product_slug %}" class="btn-cart view-product-btn">
-          View Product
-        </a>
-      </div>
-                </div>
+      <div class="carousel-item {% if forloop.first %}active{% endif %}">
+        <div class="popular-grid">
+          {% for p in chunk %}
+          <div class="product-card-wrapper">
+            <div class="product-card">
+              <div class="product-img-wrap">
+                {% if p.product_image %}
+                  <img src="{{ p.product_image }}" alt="{{ p.product_name }}">
+                {% else %}
+                  <span class="product-img-placeholder">No Image</span>
+                {% endif %}
+                <span class="badge-stock" style="background:#fef3c7;color:#92400e;">🔥 Popular</span>
               </div>
-            {% endfor %}
+              <div class="product-info">
+                <p class="product-brand">{{ p.product_category }}</p>
+                <p class="product-name">{{ p.product_name }}</p>
+                <p class="product-rating">
+                  <span>👁 {{ p.views }}</span>
+                  <span>·</span>
+                  <span>♥ {{ p.wishlist }}</span>
+                  <span>·</span>
+                  <span>🛒 {{ p.orders }}</span>
+                </p>
+              </div>
+              <div class="cart-form">
+                <a href="{% url 'products:product_detail' p.product_slug %}" class="btn-cart">View Product</a>
+              </div>
+            </div>
           </div>
+          {% endfor %}
         </div>
+      </div>
       {% endfor %}
     </div>
-
-    <button class="carousel-control-prev" type="button"
-            data-bs-target="#popularCarousel" data-bs-slide="prev">
+    <button class="carousel-control-prev" type="button" data-bs-target="#popularCarousel" data-bs-slide="prev">
       <span class="carousel-control-prev-icon"></span>
     </button>
-    <button class="carousel-control-next" type="button"
-            data-bs-target="#popularCarousel" data-bs-slide="next">
+    <button class="carousel-control-next" type="button" data-bs-target="#popularCarousel" data-bs-slide="next">
       <span class="carousel-control-next-icon"></span>
     </button>
   </div>
 </div>
 {% endif %}
 
+<!-- ── RESULTS BAR ── -->
+<div class="results-bar">
+  <h4>
+    {% if request.GET.brand %}
+      {{ active_brand|title }} Products
+    {% elif request.GET.category %}
+      {{ active_category|title }} Products
+    {% elif request.GET.q %}
+      Results for "{{ request.GET.q }}"
+    {% else %}
+      All Products
+    {% endif %}
+  </h4>
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+    {% if request.GET.brand or request.GET.category or request.GET.q %}
+    <span class="active-filter">
+      {% if request.GET.brand %}Brand: {{ active_brand }}{% endif %}
+      {% if request.GET.category %}Category: {{ active_category }}{% endif %}
+      {% if request.GET.q %}Search: {{ request.GET.q }}{% endif %}
+      <a href="{% url 'products:view_products' %}" title="Clear filter">×</a>
+    </span>
+    {% endif %}
+    <span class="results-count">{{ products|length }} item{{ products|length|pluralize }}</span>
+  </div>
+</div>
+
+<!-- ── PRODUCT GRID ── -->
 <div class="product-grid">
-
   {% for p in products %}
-
   <div class="product-card-wrapper">
-
-    <a
-      href="{% url 'products:product_detail' p.slug %}"
-      class="card-link-overlay"
-      aria-label="View {{ p.name }}">
-    </a>
-
     <div class="product-card">
-
       <div class="product-img-wrap">
         {% if p.image %}
           <img src="{{ p.image.url }}" alt="{{ p.name }}">
@@ -546,16 +479,10 @@
           <span class="badge-discount">{{ p.discount_percent }}% off</span>
         {% endif %}
 
-        <form
-          method="post"
-          action="{% url 'products:add_to_wishlist' p.id %}"
-          class="wishlist-form">
+        <form method="post" action="{% url 'products:add_to_wishlist' p.id %}" class="wishlist-form">
           {% csrf_token %}
-
-          <button
-            class="btn-wishlist {% if p.id in wishlist_ids %}wishlisted{% endif %}"
-            type="submit"
-            aria-label="Add to wishlist">
+          <button class="btn-wishlist {% if p.id in wishlist_ids %}wishlisted{% endif %}"
+                  type="submit" aria-label="Wishlist">
             {% if p.id in wishlist_ids %}♥{% else %}♡{% endif %}
           </button>
         </form>
@@ -564,57 +491,45 @@
       <div class="product-info">
         <p class="product-brand">{{ p.brand.name|default:"" }}</p>
         <p class="product-name">{{ p.name }}</p>
-        <p class="product-rating">⭐ {{ p.rating }} ({{ p.review_count }})</p>
-
+        <p class="product-rating">
+          ⭐ {{ p.rating }} <span style="color:#e5e7eb;">|</span> {{ p.review_count }} review{{ p.review_count|pluralize }}
+        </p>
         <div class="product-price">
           <span class="price-main">Rs. {{ p.effective_price }}</span>
-
           {% if p.discount_price %}
-            <span class="price-original">Rs. {{ p.price }}</span>
+          <span class="price-original">Rs. {{ p.price }}</span>
           {% endif %}
         </div>
       </div>
 
       <div class="cart-form">
-        <a href="{% url 'products:product_detail' p.slug %}" class="btn-cart view-product-btn">
-          View Product
-        </a>
+        <a href="{% url 'products:product_detail' p.slug %}" class="btn-cart">View Product</a>
       </div>
-
     </div>
   </div>
 
   {% empty %}
-
   <div class="empty-state">
-    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5">
-      <circle cx="11" cy="11" r="8"></circle>
-      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-    </svg>
-
+    <div class="empty-state-icon">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" stroke-width="1.8">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+    </div>
     <h4>No products found</h4>
-
     <p>
-      {% if request.GET.brand %}
-        No products available for this brand yet.
-      {% elif request.GET.category %}
-        No products available in this category yet.
-      {% elif request.GET.q %}
+      {% if request.GET.q %}
         No results for "<strong>{{ request.GET.q }}</strong>". Try a different search.
+      {% elif request.GET.brand %}
+        No products for this brand yet.
+      {% elif request.GET.category %}
+        No products in this category yet.
       {% else %}
         No products available at the moment.
       {% endif %}
     </p>
-
-    <a href="{% url 'products:view_products' %}">
-      View All Products
-    </a>
+    <a href="{% url 'products:view_products' %}">View All Products</a>
   </div>
-
   {% endfor %}
-
 </div>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 {% endblock %}
