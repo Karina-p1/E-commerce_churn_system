@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+
+{% block title %}Cancel Order{% endblock %}
+
+{% block start %}
+
+<div class="row justify-content-center">
+
+    <div class="col-lg-7">
+
+        <div class="card border-0 shadow-lg rounded-4">
+
+            <div class="card-body p-5">
+
+                <div class="text-center mb-4">
+
+                    <div class="display-5 mb-3">⚠️</div>
+
+                    <h2 class="fw-bold">
+                        Cancel Order
+                    </h2>
+
+                    <p class="text-muted">
+                        Are you sure you want to cancel
+                        <strong>Order #{{ order.id }}</strong>?
+                    </p>
+
+                </div>
+
+                <form method="POST">
+
+                    {% csrf_token %}
+
+                    <div class="mb-4">
+
+                        <label class="form-label fw-semibold">
+                            Cancellation Reason
+                        </label>
+
+                        <select
+                            class="form-select"
+                            name="reason"
+                            id="reasonSelect"
+                            required
+                        >
+
+                            <option value="">
+                                Select a reason
+                            </option>
+
+                            <option value="mistake">
+                                Ordered by mistake
+                            </option>
+
+                            <option value="cheaper">
+                                Found cheaper elsewhere
+                            </option>
+
+                            <option value="delivery">
+                                Delivery takes too long
+                            </option>
+
+                            <option value="changed">
+                                Changed my mind
+                            </option>
+
+                            <option value="payment">
+                                Payment issue
+                            </option>
+
+                            <option value="other">
+                                Other
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <div
+                        class="mb-4"
+                        id="noteBox"
+                        style="display:none;"
+                    >
+
+                        <label class="form-label fw-semibold">
+                            Please tell us more
+                        </label>
+
+                        <textarea
+                            name="note"
+                            class="form-control"
+                            rows="4"
+                            placeholder="Tell us why you're cancelling..."
+                        ></textarea>
+
+                    </div>
+
+                    <div class="d-flex gap-3">
+
+                        <a
+                            href="{% url 'order_detail' order.id %}"
+                            class="btn btn-outline-secondary flex-fill"
+                        >
+                            Go Back
+                        </a>
+
+                        <button
+                            class="btn btn-danger flex-fill"
+                            type="submit"
+                        >
+                            Cancel Order
+                        </button>
+
+                    </div>
+
+                </form>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+
+const reasonSelect = document.getElementById("reasonSelect");
+const noteBox = document.getElementById("noteBox");
+
+reasonSelect.addEventListener("change", function(){
+
+    if(this.value === "other"){
+        noteBox.style.display = "block";
+    }
+    else{
+        noteBox.style.display = "none";
+    }
+
+});
+
+</script>
+
+{% endblock %}
