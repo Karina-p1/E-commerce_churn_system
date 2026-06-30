@@ -1,0 +1,198 @@
+{% extends 'admin_base.html' %}
+{% block title %}Manage Orders - ShopMart Admin{% endblock %}
+
+{% block start %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+
+<style>
+  .mgmt-page { font-family: 'Segoe UI', system-ui, sans-serif; background: #f5f5f4; padding: 20px; border-radius: 12px; color: #1a1a1a; }
+  .mgmt-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; flex-wrap: wrap; }
+  .mgmt-title h1 { font-size: 18px; font-weight: 500; margin: 0 0 2px; }
+  .mgmt-title p { color: #888; font-size: 12px; margin: 0; }
+
+  .mgmt-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+  .mgmt-search { flex: 1; min-width: 200px; display: flex; align-items: center; gap: 8px; background: #fff; border: 0.5px solid #e5e5e5; border-radius: 8px; padding: 8px 12px; }
+  .mgmt-search input { border: none; outline: none; font-size: 13px; flex: 1; background: transparent; color: #1a1a1a; }
+  .mgmt-search i { color: #bbb; font-size: 15px; }
+
+  .filter-btn { padding: 6px 13px; border-radius: 999px; font-size: 12px; font-weight: 500; text-decoration: none; background: #fff; border: 0.5px solid #e5e5e5; color: #888; transition: 0.15s ease; white-space: nowrap; }
+  .filter-btn:hover { background: #f0f0f0; color: #1a1a1a; }
+  .filter-btn.active { background: #e8eafd; border-color: #b5b8f0; color: #2931a3; }
+
+  .mgmt-table-card { background: #fff; border: 0.5px solid #e5e5e5; border-radius: 10px; padding: 16px; overflow-x: auto; }
+  .mgmt-table-card table { width: 100%; border-collapse: collapse; }
+  .mgmt-table-card thead th { font-size: 10px; font-weight: 600; color: #bbb; text-transform: uppercase; letter-spacing: 0.06em; padding: 0 0 8px; text-align: left; }
+  .mgmt-table-card tbody tr { border-top: 0.5px solid #f5f5f4; }
+  .mgmt-table-card tbody tr:hover { background: #fafafa; }
+  .mgmt-table-card td { padding: 10px 8px 10px 0; font-size: 12px; vertical-align: middle; }
+
+  .order-id { font-weight: 600; color: #1a1a1a; font-size: 12.5px; }
+  .order-id a { color: inherit; text-decoration: none; }
+  .order-id a:hover { color: #2931a3; }
+
+  .user-cell { display: flex; align-items: center; gap: 10px; }
+  .user-avatar { width: 30px; height: 30px; border-radius: 7px; background: #e6f1fb; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #1a7ab5; flex-shrink: 0; }
+  .user-name { font-size: 12.5px; font-weight: 500; color: #1a1a1a; }
+  .user-email { font-size: 10.5px; color: #888; margin-top: 1px; }
+
+  .items-count { color: #888; font-size: 11.5px; }
+  .order-total { font-weight: 600; font-size: 12.5px; }
+
+  .status-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 20px; font-size: 10px; font-weight: 600; white-space: nowrap; }
+  .status-pill::before { content: ""; width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
+  .status-pending { background: #fef3c7; color: #92400e; }
+  .status-processing { background: #e0eafd; color: #1d4ed8; }
+  .status-shipped { background: #e8eafd; color: #2931a3; }
+  .status-delivered { background: #e8f3e1; color: #3a8c1c; }
+  .status-cancelled { background: #f8e3e3; color: #A32D2D; }
+
+  .payment-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 20px; font-size: 10px; font-weight: 600; white-space: nowrap; }
+  .payment-PAID { background: #e8f3e1; color: #3a8c1c; }
+  .payment-UNPAID { background: #f0f0f0; color: #888; }
+  .payment-INITIATED { background: #fef3c7; color: #92400e; }
+  .payment-FAILED { background: #f8e3e3; color: #A32D2D; }
+  .payment-REFUND_PENDING { background: #fdf0d9; color: #b45309; }
+  .payment-REFUNDED { background: #e8eafd; color: #2931a3; }
+
+  .row-actions { display: flex; gap: 6px; justify-content: flex-end; align-items: center; }
+  .icon-btn { width: 28px; height: 28px; border-radius: 7px; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 13px; border: 0.5px solid #e5e5e5; background: #fff; color: #888; transition: 0.15s ease; cursor: pointer; }
+  .icon-btn:hover { background: #f0f0f0; color: #1a1a1a; }
+  .icon-btn.danger:hover { background: #f8e3e3; color: #A32D2D; border-color: #e8bcbc; }
+  .icon-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .icon-form { display: inline; }
+
+  .status-select-form { display: inline-block; }
+  .status-select {
+    font-size: 11px; font-weight: 600; padding: 5px 22px 5px 9px; border-radius: 20px;
+    border: 0.5px solid #e5e5e5; background: #fff; color: #1a1a1a; cursor: pointer;
+    appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%23999'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z' clip-rule='evenodd'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 6px center; background-size: 13px;
+    transition: 0.15s ease;
+  }
+  .status-select:hover { border-color: #c9c9c9; }
+  .status-select:focus { outline: none; border-color: #2931a3; }
+
+  .empty-state { padding: 36px 16px; text-align: center; color: #888; font-size: 12px; }
+
+  .pagination { display: flex; justify-content: center; gap: 6px; margin-top: 16px; }
+  .page-link { padding: 6px 11px; border-radius: 7px; font-size: 12px; text-decoration: none; border: 0.5px solid #e5e5e5; background: #fff; color: #888; }
+  .page-link:hover { background: #f0f0f0; color: #1a1a1a; }
+  .page-link.current { background: #2931a3; border-color: #2931a3; color: #fff; }
+
+  @media (max-width: 640px) {
+    .mgmt-header { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+
+<div class="mgmt-page">
+
+  <div class="mgmt-header">
+    <div class="mgmt-title">
+      <h1>Manage Orders</h1>
+      <p>{{ page_obj.paginator.count }} order{{ page_obj.paginator.count|pluralize }} total</p>
+    </div>
+  </div>
+
+  <form method="get" class="mgmt-toolbar">
+    <div class="mgmt-search">
+      <i class="ti ti-search"></i>
+      <input type="text" name="q" value="{{ query }}" placeholder="Search by order ID, username or email...">
+    </div>
+    <a href="?status=all{% if query %}&q={{ query }}{% endif %}" class="filter-btn {% if status == 'all' %}active{% endif %}">All</a>
+    <a href="?status=pending{% if query %}&q={{ query }}{% endif %}" class="filter-btn {% if status == 'pending' %}active{% endif %}">Pending</a>
+    <a href="?status=processing{% if query %}&q={{ query }}{% endif %}" class="filter-btn {% if status == 'processing' %}active{% endif %}">Processing</a>
+    <a href="?status=shipped{% if query %}&q={{ query }}{% endif %}" class="filter-btn {% if status == 'shipped' %}active{% endif %}">Shipped</a>
+    <a href="?status=delivered{% if query %}&q={{ query }}{% endif %}" class="filter-btn {% if status == 'delivered' %}active{% endif %}">Delivered</a>
+    <a href="?status=cancelled{% if query %}&q={{ query }}{% endif %}" class="filter-btn {% if status == 'cancelled' %}active{% endif %}">Cancelled</a>
+  </form>
+
+  <div class="mgmt-table-card">
+    <table>
+      <thead>
+        <tr>
+          <th>Order</th>
+          <th>Customer</th>
+          <th>Items</th>
+          <th>Total</th>
+          <th>Payment</th>
+          <th>Status</th>
+          <th style="text-align:right">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for order in page_obj %}
+        <tr>
+          <td>
+            <div class="order-id"><a href="{% url 'order_detail_admin' order.pk %}">#{{ order.id }}</a></div>
+            <div class="user-email">{{ order.created_at|date:"M d, Y, g:i A" }}</div>
+          </td>
+          <td>
+            <div class="user-cell">
+              <div class="user-avatar">{{ order.user.username|slice:":2"|upper }}</div>
+              <div>
+                <div class="user-name">{{ order.user.get_full_name|default:order.user.username }}</div>
+                <div class="user-email">{{ order.user.email }}</div>
+              </div>
+            </div>
+          </td>
+          <td><span class="items-count">{{ order.items.count }} item{{ order.items.count|pluralize }}</span></td>
+          <td><span class="order-total">Rs. {{ order.total_price }}</span></td>
+          <td><span class="payment-pill payment-{{ order.payment_status }}">{{ order.get_payment_status_display }}</span></td>
+          <td>
+            {% if order.status == 'cancelled' %}
+              <span class="status-pill status-cancelled">Cancelled</span>
+            {% else %}
+              <form method="post" action="{% url 'order_update_status' order.pk %}" class="status-select-form">
+                {% csrf_token %}
+                <select name="status" class="status-select status-{{ order.status }}" onchange="this.form.submit()">
+                  {% for value, label in order.STATUS_CHOICES %}
+                    {% if value != 'cancelled' %}
+                      <option value="{{ value }}" {% if order.status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endif %}
+                  {% endfor %}
+                </select>
+              </form>
+            {% endif %}
+          </td>
+          <td>
+            <div class="row-actions">
+              <a href="{% url 'order_detail_admin' order.pk %}" class="icon-btn" title="View details"><i class="ti ti-eye"></i></a>
+              {% if order.status == 'cancelled' %}
+                <button class="icon-btn" disabled title="Order already cancelled"><i class="ti ti-ban"></i></button>
+              {% else %}
+                <form method="post" action="{% url 'order_cancel' order.pk %}" class="icon-form"
+                      onsubmit="return confirm('Cancel this order? This cannot be undone.');">
+                  {% csrf_token %}
+                  <button type="submit" class="icon-btn danger" title="Cancel order"><i class="ti ti-x"></i></button>
+                </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="empty-state">No orders found{% if query %} for "{{ query }}"{% endif %}.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if page_obj.paginator.num_pages > 1 %}
+  <div class="pagination">
+    {% if page_obj.has_previous %}
+      <a href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if status %}&status={{ status }}{% endif %}" class="page-link">‹</a>
+    {% endif %}
+    {% for num in page_obj.paginator.page_range %}
+      <a href="?page={{ num }}{% if query %}&q={{ query }}{% endif %}{% if status %}&status={{ status }}{% endif %}" class="page-link {% if num == page_obj.number %}current{% endif %}">{{ num }}</a>
+    {% endfor %}
+    {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if status %}&status={{ status }}{% endif %}" class="page-link">›</a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
