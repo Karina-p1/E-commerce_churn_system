@@ -37,12 +37,7 @@
                   type="radio"
                   name="address"
                   value="{{ address.id }}"
-                  {%
-                  if
-                  address.is_default
-                  %}checked{%
-                  endif
-                  %}
+                  {% if address.is_default %}checked{% endif %}
                 />
 
                 <div class="form-check-label w-100">
@@ -105,23 +100,63 @@
         <!-- Payment -->
 
         <div class="card shadow-sm border-0">
-          <div class="card-body">
-            <h5 class="fw-bold mb-3">💳 Payment Method</h5>
+            <div class="card-body">
+                <h5 class="fw-bold mb-3">
+                    💳 Payment Method
+                </h5>
 
-            <div class="border rounded p-3 d-flex align-items-center">
-              <img
-                src="https://esewa.com.np/common/images/esewa_logo.png"
-                style="height: 34px"
-                class="me-3"
-              />
+                <!-- eSewa -->
 
-              <div>
-                <div class="fw-semibold">eSewa Digital Wallet</div>
+                <label class="payment-option card border p-3 mb-3">
+                    <div class="form-check d-flex align-items-center">
+                        <input
+                            class="form-check-input me-3"
+                            type="radio"
+                            name="payment_method"
+                            value="ESEWA"
+                            {% if not payment_method %}checked{% endif %}>
+                        <img
+                            src="https://esewa.com.np/common/images/esewa_logo.png"
+                            style="height:36px"
+                            class="me-3">
+                        <div>
+                            <div class="fw-semibold">
+                                eSewa Digital Wallet
+                            </div>
 
-                <small class="text-muted"> Secure online payment </small>
-              </div>
+                            <small class="text-muted">
+                                Pay instantly online
+                            </small>
+                        </div>
+                    </div>
+                </label>
+
+                <!-- Cash On Delivery -->
+
+                <label class="payment-option card border p-3">
+                    <div class="form-check d-flex align-items-center">
+                        <input
+                            class="form-check-input me-3"
+                            type="radio"
+                            name="payment_method"
+                            value="COD">
+
+                        <div style="font-size:32px" class="me-3">
+                            💵
+                        </div>
+
+                        <div>
+                            <div class="fw-semibold">
+                                Cash on Delivery
+                            </div>
+
+                            <small class="text-muted">
+                                Pay when your order arrives
+                            </small>
+                        </div>
+                    </div>
+                </label>
             </div>
-          </div>
         </div>
       </div>
 
@@ -173,7 +208,7 @@
             {% if addresses %}
 
             <button type="submit" class="btn btn-dark btn-lg w-100 mt-4">
-              Proceed to eSewa
+              Proceed to Payment
             </button>
 
             {% else %}
@@ -224,7 +259,6 @@
   .address-option:has(input:checked) {
     border: 2px solid #0d6efd;
     background: #f8fbff;
-    box-shadow: 0 10px 25px rgba(13, 110, 253, 0.18);
   }
 
   .address-option .form-check {
@@ -239,6 +273,22 @@
   .sticky-top {
     z-index: 10;
   }
+
+  .payment-option{
+    cursor:pointer;
+    border-radius:14px;
+    transition:.2s;
+    }
+
+    .payment-option:hover{
+    border-color:#198754;
+    box-shadow:0 8px 20px rgba(25,135,84,.15);
+    transform:translateY(-2px);
+    }
+
+    .payment-option input[type=radio]{
+    transform:scale(1.2);
+    }
 </style>
 
 {% endblock %}

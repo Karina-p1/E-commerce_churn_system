@@ -209,6 +209,8 @@ def checkout_view(request):
         "-is_default",
         "-created_at"
     )
+    
+    payment_method = request.POST.get("payment_method")
 
     if not cart.items.exists():
         messages.warning(
@@ -288,7 +290,7 @@ def checkout_view(request):
                     user=request.user,
                     total_price=cart.total_price,
                     payment_status='INITIATED',
-                    payment_method='ESEWA',
+                    payment_method=payment_method,
                     transaction_uuid=transaction_uuid,
                     
                     delivery_label=selected_address.label,
@@ -321,6 +323,20 @@ def checkout_view(request):
                         price=product.effective_price,
                         quantity=cart_item.quantity
                     )
+                
+                if payment_method == "COD":
+
+                    order.payment_status = "UNPAID"
+                    order.save()
+
+                    cart.items.all().delete()
+
+                    messages.success(
+                        request,
+                        "Your order has been placed successfully."
+                    )
+
+                    return redirect("order_detail", order.id)
 
                 amount = Decimal(order.total_price)
                 tax_amount = Decimal("0")
