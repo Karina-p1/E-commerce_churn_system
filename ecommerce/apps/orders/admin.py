@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Cart, CartItem, Order, OrderItem
+from .models import Cart, CartItem, Order, OrderItem,OrderStatusHistory
 
 class CartItemInline(admin.TabularInline):
     model = CartItem
@@ -20,3 +20,5 @@ class OrderAdmin(admin.ModelAdmin):
     list_filter = ['status']
     list_editable = ['status']
     inlines = [OrderItemInline]
+
+admin.site.register(OrderStatusHistory)

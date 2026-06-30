@@ -4,7 +4,7 @@ import hmac
 import json
 import uuid
 from decimal import Decimal
-
+from django.contrib.admin.views.decorators import staff_member_required
 from django.conf import settings
 from django.db import transaction
 from django.urls import reverse
@@ -17,7 +17,8 @@ from apps.products.models import Product
 from apps.activity.models import UserEvent
 
 from .models import Cart, CartItem, Order, OrderItem
-
+from django.core.paginator import Paginator
+from django.db.models import Q
 
 @login_required
 def cart_view(request):
@@ -248,6 +249,7 @@ def checkout_view(request):
                     payment_method='ESEWA',
                     transaction_uuid=transaction_uuid
                 )
+                order.status_history.create(status='pending')
                 
                 UserEvent.objects.create(
                     user=request.user,
@@ -619,3 +621,62 @@ def cancel_order(request, order_id):
             "order": order
         }
     )
+
+@staff_member_required
+def order_list_admin(request):
+    query = request.GET.get('q', '').strip()
+    status = request.GET.get('status', 'all')
+ 
+    orders = Order.objects.select_related('user').prefetch_related('items')
+ 
+    if status != 'all':
+        orders = orders.filter(status=status)
+ 
+    if query:
+        orders = orders.filter(
+            Q(id__icontains=query) |
+            Q(user__username__icontains=query) |
+            Q(user__email__icontains=query)
+        )
+ 
+    paginator = Paginator(orders, 20)
+    page_obj = paginator.get_page(request.GET.get('page'))
+ 
+    return render(request, 'admin/order_list.html', {
+        'page_obj': page_obj,
+        'query': query,
+        'status': status,
+    })
+ 
+ 
+@staff_member_required
+def order_detail_admin(request, pk):
+    order = get_object_or_404(
+        Order.objects.select_related('user').prefetch_related('items', 'status_history'),
+        pk=pk
+    )
+    return render(request, 'admin/order_detail.html', {'order': order})
+ 
+ 
+@staff_member_required
+def order_update_status(request, pk):
+    order = get_object_or_404(Order, pk=pk)
+    if request.method == 'POST':
+        new_status = request.POST.get('status')
+        note = request.POST.get('note', '').strip() or None
+        valid_statuses = [choice[0] for choice in Order.STATUS_CHOICES if choice[0] != 'cancelled']
+        if new_status in valid_statuses:
+            order.set_status(new_status, note=note, changed_by=request.user)
+            messages.success(request, f"Order #{order.id} marked as {order.get_status_display()}.")
+        else:
+            messages.error(request, "Invalid status.")
+    return redirect(request.META.get('HTTP_REFERER', 'order_list_admin'))
+ 
+ 
+@staff_member_required
+def order_cancel(request, pk):
+    order = get_object_or_404(Order, pk=pk)
+    if request.method == 'POST':
+        order.set_status('cancelled', note='Cancelled by admin', changed_by=request.user)
+        messages.success(request, f"Order #{order.id} has been cancelled.")
+    return redirect(request.META.get('HTTP_REFERER', 'order_list_admin'))

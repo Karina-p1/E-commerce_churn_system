@@ -125,24 +125,29 @@
       Profile
     </a>
     <a href="{% url 'products:user_list' %}"
-      class="nav-item {% if request.resolver_match.url_name == 'user_list' %}active{% endif %}">
+      class="nav-item {% if request.resolver_match.url_name in "user_list,user_add,user_edit" %}active{% endif %}">
       <i class="ti ti-users"></i>
       Manage Users
     </a>
     <a href="{% url 'products:category_list' %}"
-      class="nav-item {% if request.resolver_match.url_name == 'category_list' %}active{% endif %}">
+      class="nav-item {% if request.resolver_match.url_name in "category_list,category_add,category_edit" %}active{% endif %}">
       <i class="ti ti-category"></i>
       Manage Categories
     </a>
     <a href="{% url 'products:brand_list' %}"
-      class="nav-item {% if request.resolver_match.url_name == 'brand_list' %}active{% endif %}">
+      class="nav-item {% if request.resolver_match.url_name in "brand_list,brand_add,brand_edit" %}active{% endif %}">
       <i class="ti ti-tag"></i>
       Manage Brands
     </a>
     <a href="{% url 'products:product_list' %}"
-      class="nav-item {% if request.resolver_match.url_name == 'product_list' %}active{% endif %}">
+      class="nav-item {% if request.resolver_match.url_name in "product_list,product_add,product_edit" %}active{% endif %}">
       <i class="ti ti-shopping-bag"></i>
       Manage Products
+    </a>
+    <a href="{% url 'order_list_admin' %}"
+      class="nav-item {% if request.resolver_match.url_name in "order_list_admin,order_detail_admin" %}active{% endif %}">
+      <i class="ti ti-shopping-bag"></i>
+      Manage Orders
     </a>
 
     <div class="nav-dropdown">

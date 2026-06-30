@@ -1,7 +1,7 @@
 from django.db import models
 from django.conf import settings
 from apps.products.models import Product
-
+from django.utils import timezone
 
 class Cart(models.Model):
     user = models.OneToOneField(
@@ -148,6 +148,20 @@ class Order(models.Model):
             "pending",
             "processing",
         ]
+    
+    def set_status(self, new_status, note=None, changed_by=None):
+        self.status = new_status
+        update_fields = ['status', 'updated_at']
+        if new_status == 'cancelled':
+            self.cancelled_at = timezone.now()
+            update_fields.append('cancelled_at')
+        self.save(update_fields=update_fields)
+
+        self.status_history.create(
+            status=new_status,
+            note=note,
+            changed_by=changed_by,
+        )
 
     def __str__(self):
         return f"Order #{self.id} by {self.user.username}"
@@ -176,3 +190,33 @@ class OrderItem(models.Model):
     @property
     def subtotal(self):
         return self.price * self.quantity
+    
+class OrderStatusHistory(models.Model):
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.CASCADE,
+        related_name='status_history'
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=Order.STATUS_CHOICES
+    )
+    note = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True
+    )
+    changed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+        verbose_name_plural = "Order status histories"
+
+    def __str__(self):
+        return f"Order #{self.order_id} -> {self.status} at {self.created_at:%Y-%m-%d %H:%M}"
