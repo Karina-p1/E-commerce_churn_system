@@ -4,236 +4,245 @@
 
 {% block start %}
 
-<main class="main">
 
-  <div class="topbar">
-    <div class="page-title">
+<style>
+  .db { font-family: 'Segoe UI', system-ui, sans-serif; background: #f5f5f4; padding: 20px; border-radius: 12px; color: #1a1a1a; }
+  .db-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; flex-wrap:wrap; gap:10px; }
+  .db-header h1 { font-size:18px; font-weight:500; margin:0 0 2px; }
+  .db-header p { font-size:12px; color:#888; margin:0; }
+  .db-badge { display:inline-flex; align-items:center; gap:6px; background:#e8eafd; border:0.5px solid #b5b8f0; color:#2931a3; font-size:12px; font-weight:500; padding:6px 12px; border-radius:20px; }
+  .db-badge-dot { width:6px; height:6px; border-radius:50%; background:#2931a3; animation:dbp 2s infinite; }
+  @keyframes dbp { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  .db-kpi-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-bottom:14px; }
+  .db-kpi { background:#fff; border:0.5px solid #e5e5e5; border-radius:10px; padding:14px; position:relative; overflow:hidden; }
+  .db-kpi::after { content:''; position:absolute; bottom:0; left:0; right:0; height:3px; }
+  .db-kpi.s::after { background:#2931a3; }
+  .db-kpi.o::after { background:#d4900a; }
+  .db-kpi.c::after { background:#1a7ab5; }
+  .db-kpi.p::after { background:#d4680a; }
+  .db-kpi-icon { width:30px; height:30px; border-radius:7px; display:flex; align-items:center; justify-content:center; margin-bottom:10px; font-size:15px; }
+  .db-kpi-label { font-size:10px; color:#888; font-weight:500; text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px; }
+  .db-kpi-value { font-size:20px; font-weight:500; color:#1a1a1a; margin-bottom:5px; }
+  .db-kpi-sub { display:inline-flex; align-items:center; gap:4px; font-size:10px; font-weight:600; padding:2px 7px; border-radius:20px; }
+
+  .db-mid { display:grid; grid-template-columns:1fr 230px; gap:10px; margin-bottom:14px; }
+  .db-bottom { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .db-card { background:#fff; border:0.5px solid #e5e5e5; border-radius:10px; padding:16px; }
+  .db-card-head { margin-bottom:12px; padding-bottom:10px; border-bottom:0.5px solid #f0f0f0; }
+  .db-card-head h2 { font-size:13px; font-weight:500; margin:0 0 2px; }
+  .db-card-head p { font-size:11px; color:#888; margin:0; }
+
+  .db-bars { display:flex; align-items:flex-end; gap:5px; height:100px; margin-bottom:6px; }
+  .db-bar-group { flex:1; display:flex; align-items:flex-end; }
+  .db-bar { flex:1; border-radius:3px 3px 0 0; background:#2931a3; opacity:.8; cursor:default; }
+  .db-bar-labels { display:flex; gap:5px; }
+  .db-bar-lbl { flex:1; text-align:center; font-size:9px; color:#bbb; }
+  .db-empty { font-size:13px; color:#888; }
+
+  .db-pi { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:0.5px solid #f8f8f8; }
+  .db-pi:first-child { padding-top:0; } .db-pi:last-child { border-bottom:none; padding-bottom:0; }
+  .db-pi-thumb { width:30px; height:30px; border-radius:7px; background:#f5f5f4; display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; color:#888; overflow:hidden; }
+  .db-pi-thumb img { width:100%; height:100%; object-fit:cover; border-radius:7px; }
+  .db-pi-name { font-size:12px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .db-pi-sub  { font-size:10px; color:#888; }
+  .db-pi-val  { margin-left:auto; font-size:12px; font-weight:500; color:#2931a3; flex-shrink:0; }
+
+  .db-table { width:100%; border-collapse:collapse; }
+  .db-table thead th { font-size:10px; font-weight:600; color:#bbb; text-transform:uppercase; letter-spacing:.06em; padding:0 0 8px; text-align:left; }
+  .db-table tbody tr { border-top:0.5px solid #f5f5f4; }
+  .db-table tbody tr:hover { background:#fafafa; }
+  .db-table td { padding:10px 0; font-size:12px; }
+  .db-pill { display:inline-flex; align-items:center; gap:4px; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:600; background:#e8eafd; color:#2931a3; }
+  .db-pill-dot { width:4px; height:4px; border-radius:50%; background:currentColor; }
+
+  .db-si { display:flex; align-items:center; justify-content:space-between; padding:9px 0; border-bottom:0.5px solid #f8f8f8; }
+  .db-si:last-of-type { border-bottom:none; }
+  .db-si-name { font-size:12px; margin-bottom:4px; }
+  .db-si-bg { height:3px; border-radius:2px; background:#f0f0f0; width:100px; }
+  .db-si-fill { height:3px; border-radius:2px; }
+  .db-si-val { font-size:12px; font-weight:500; margin-left:12px; flex-shrink:0; }
+
+  .db-cta { display:flex; align-items:center; justify-content:center; gap:6px; width:100%; margin-top:12px; padding:8px; background:#f5f5f4; border:0.5px solid #d4d4d4; border-radius:8px; font-size:12px; font-weight:500; color:#1a1a1a; text-decoration:none; }
+  .db-cta:hover { background:#e8eafd; color:#2931a3; }
+
+  @media (max-width: 900px) {
+    .db-kpi-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .db-mid, .db-bottom { grid-template-columns:1fr; }
+  }
+</style>
+
+<div class="db">
+
+  <div class="db-header">
+    <div>
       <h1>Admin Dashboard</h1>
       <p>Store overview, recent activity, and quick performance summary</p>
     </div>
-
-    <div class="promo-badge">
-      <span class="promo-dot"></span>
-      Admin overview
-    </div>
+    <div class="db-badge"><span class="db-badge-dot"></span> Admin overview</div>
   </div>
 
-  <div class="kpi-grid">
+  <div class="db-kpi-grid">
 
-    <div class="kpi-card revenue">
-      <div class="kpi-icon green">
-        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path d="M12 1v22"/>
-          <path d="M17 5H9.5a3.5 3.5 0 000 7H14a3.5 3.5 0 010 7H6"/>
-        </svg>
-      </div>
-      <div class="kpi-label">Total sales</div>
-      <div class="kpi-value">Rs. {{ total_sales|floatformat:0 }}</div>
-      <span class="kpi-badge up">Revenue</span>
+    <div class="db-kpi s">
+      <div class="db-kpi-icon" style="background:#e8eafd;color:#2931a3"><i class="ti ti-currency-rupee"></i></div>
+      <div class="db-kpi-label">Total sales</div>
+      <div class="db-kpi-value">Rs. {{ total_sales|floatformat:0 }}</div>
+      <span class="db-kpi-sub" style="background:#e8eafd;color:#2931a3">Revenue</span>
     </div>
 
-    <div class="kpi-card orders">
-      <div class="kpi-icon yellow">
-        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
-          <path d="M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-        </svg>
-      </div>
-      <div class="kpi-label">Total orders</div>
-      <div class="kpi-value">{{ total_orders }}</div>
-      <span class="kpi-badge up">Orders</span>
+    <div class="db-kpi o">
+      <div class="db-kpi-icon" style="background:#faeeda;color:#d4900a"><i class="ti ti-clipboard-list"></i></div>
+      <div class="db-kpi-label">Total orders</div>
+      <div class="db-kpi-value">{{ total_orders }}</div>
+      <span class="db-kpi-sub" style="background:#faeeda;color:#d4900a">Orders</span>
     </div>
 
-    <div class="kpi-card customers">
-      <div class="kpi-icon blue">
-        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
-          <circle cx="9" cy="7" r="4"/>
-          <path d="M23 21v-2a4 4 0 00-3-3.87"/>
-        </svg>
-      </div>
-      <div class="kpi-label">Customers</div>
-      <div class="kpi-value">{{ total_customers }}</div>
-      <span class="kpi-badge up">Users</span>
+    <div class="db-kpi c">
+      <div class="db-kpi-icon" style="background:#e6f1fb;color:#1a7ab5"><i class="ti ti-users"></i></div>
+      <div class="db-kpi-label">Customers</div>
+      <div class="db-kpi-value">{{ total_customers }}</div>
+      <span class="db-kpi-sub" style="background:#e6f1fb;color:#1a7ab5">Users</span>
     </div>
 
-    <div class="kpi-card avg">
-      <div class="kpi-icon orange">
-        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path d="M20 7H4"/>
-          <path d="M4 7l2 13h12l2-13"/>
-          <path d="M9 7V4a3 3 0 016 0v3"/>
-        </svg>
-      </div>
-      <div class="kpi-label">Products</div>
-      <div class="kpi-value">{{ total_products }}</div>
-      <span class="kpi-badge up">{{ active_products }} active</span>
+    <div class="db-kpi p">
+      <div class="db-kpi-icon" style="background:#fde8d8;color:#d4680a"><i class="ti ti-shopping-bag"></i></div>
+      <div class="db-kpi-label">Products</div>
+      <div class="db-kpi-value">{{ total_products }}</div>
+      <span class="db-kpi-sub" style="background:#fde8d8;color:#d4680a">{{ active_products }} active</span>
     </div>
 
   </div>
 
-  <div class="mid-grid">
+  <div class="db-mid">
 
-    <div class="chart-card">
-      <div class="card-header">
-        <div>
-          <div class="card-title">Revenue overview</div>
-          <p style="font-size: 12px; color: var(--muted); margin-top: 3px;">
-            Last 7 days revenue
-          </p>
-        </div>
+    <div class="db-card">
+      <div class="db-card-head">
+        <h2>Revenue overview</h2>
+        <p>Last 7 days revenue</p>
       </div>
 
-      <div class="bar-chart">
+      <div class="db-bars" id="dbars">
         {% for item in revenue_chart %}
-          <div class="bar-group" title="{{ item.label }}: Rs. {{ item.revenue|floatformat:0 }}">
-            <div class="bar current" data-value="{{ item.revenue }}" style="height: 8px;"></div>
+          <div class="db-bar-group" title="{{ item.label }}: Rs. {{ item.revenue|floatformat:0 }}">
+            <div class="db-bar" data-v="{{ item.revenue }}" style="height: 8px;"></div>
           </div>
         {% empty %}
-          <p style="font-size: 13px; color: var(--muted);">No revenue data available.</p>
+          <p class="db-empty">No revenue data available.</p>
         {% endfor %}
       </div>
 
-      <div class="chart-labels">
+      {% if revenue_chart %}
+      <div class="db-bar-labels">
         {% for item in revenue_chart %}
-          <div class="chart-label">{{ item.label }}</div>
+          <div class="db-bar-lbl">{{ item.label }}</div>
         {% endfor %}
       </div>
+      {% endif %}
     </div>
 
-    <div class="products-card">
-      <div class="card-header">
-        <div class="card-title">Top wishlisted</div>
+    <div class="db-card">
+      <div class="db-card-head">
+        <h2>Top wishlisted</h2>
+        <p>Products saved the most</p>
       </div>
 
       {% for product in top_wishlisted_products %}
-        <div class="product-item">
-          <div class="product-icon">
+        <div class="db-pi">
+          <div class="db-pi-thumb">
             {% if product.image %}
-              <img src="{{ product.image.url }}" alt="{{ product.name }}"
-                   style="width: 36px; height: 36px; border-radius: 8px; object-fit: cover;">
+              <img src="{{ product.image.url }}" alt="{{ product.name }}">
             {% else %}
-              🛍
+              <i class="ti ti-shopping-bag"></i>
             {% endif %}
           </div>
-
-          <div class="product-info">
-            <div class="product-name">{{ product.name }}</div>
-            <div class="product-cat">{{ product.category.name }}</div>
+          <div style="flex:1;min-width:0">
+            <div class="db-pi-name">{{ product.name }}</div>
+            <div class="db-pi-sub">{{ product.category.name }}</div>
           </div>
-
-          <div class="product-rev">{{ product.wishlist_count }}</div>
+          <div class="db-pi-val">{{ product.wishlist_count }}</div>
         </div>
       {% empty %}
-        <p style="font-size: 13px; color: var(--muted);">No wishlist data yet.</p>
+        <p class="db-empty">No wishlist data yet.</p>
       {% endfor %}
     </div>
 
   </div>
 
-  <div class="bottom-grid">
+  <div class="db-bottom">
 
-    <div class="orders-card">
-      <div class="card-header">
-        <div>
-          <div class="card-title">Best-selling products</div>
-          <p style="font-size: 12px; color: var(--muted); margin-top: 3px;">
-            Based on order items or order events
-          </p>
-        </div>
+    <div class="db-card">
+      <div class="db-card-head">
+        <h2>Best-selling products</h2>
+        <p>Based on order items or order events</p>
       </div>
 
-      <table>
+      <table class="db-table">
         <thead>
-          <tr>
-            <th>Product</th>
-            <th>Sold</th>
-          </tr>
+          <tr><th>Product</th><th>Sold</th></tr>
         </thead>
         <tbody>
           {% for product in best_selling_products %}
             <tr>
               <td>{{ product.product__name|default:"Unknown product" }}</td>
-              <td>
-                <span class="status-badge delivered">
-                  <span class="status-dot"></span>
-                  {{ product.total_sold }}
-                </span>
-              </td>
+              <td><span class="db-pill"><span class="db-pill-dot"></span>{{ product.total_sold }}</span></td>
             </tr>
           {% empty %}
             <tr>
-              <td colspan="2" style="color: var(--muted);">No selling data available.</td>
+              <td colspan="2" style="color:#888;">No selling data available.</td>
             </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
 
-    <div class="stock-card">
-      <div class="card-header">
-        <div>
-          <div class="card-title">Stock alert</div>
-          <p style="font-size: 12px; color: var(--muted); margin-top: 3px;">
-            Product stock health
-          </p>
-        </div>
+    <div class="db-card">
+      <div class="db-card-head">
+        <h2>Stock alert</h2>
+        <p>Product stock health</p>
       </div>
 
-      <div class="stock-item">
+      <div class="db-si">
         <div>
-          <div class="stock-name">Active products</div>
-          <div class="stock-bar-bg">
-            <div class="stock-bar-fill" style="width: 80%; background: var(--accent);"></div>
-          </div>
+          <div class="db-si-name">Active products</div>
+          <div class="db-si-bg"><div class="db-si-fill" style="width:80%;background:#2931a3"></div></div>
         </div>
-        <div class="stock-left">{{ active_products }}</div>
+        <div class="db-si-val">{{ active_products }}</div>
       </div>
 
-      <div class="stock-item">
+      <div class="db-si">
         <div>
-          <div class="stock-name">Low stock products</div>
-          <div class="stock-bar-bg">
-            <div class="stock-bar-fill" style="width: 50%; background: var(--warn);"></div>
-          </div>
+          <div class="db-si-name">Low stock products</div>
+          <div class="db-si-bg"><div class="db-si-fill" style="width:50%;background:#d4680a"></div></div>
         </div>
-        <div class="stock-left low">{{ low_stock_products }}</div>
+        <div class="db-si-val" style="color:#d4680a">{{ low_stock_products }}</div>
       </div>
 
-      <div class="stock-item">
+      <div class="db-si">
         <div>
-          <div class="stock-name">Out of stock products</div>
-          <div class="stock-bar-bg">
-            <div class="stock-bar-fill" style="width: 35%; background: var(--danger);"></div>
-          </div>
+          <div class="db-si-name">Out of stock products</div>
+          <div class="db-si-bg"><div class="db-si-fill" style="width:35%;background:#A32D2D"></div></div>
         </div>
-        <div class="stock-left critical">{{ out_of_stock_products }}</div>
+        <div class="db-si-val" style="color:#A32D2D">{{ out_of_stock_products }}</div>
       </div>
 
-      <a href="/admin/products/product/" class="restock-btn" style="text-decoration: none;">
-        Manage products
-      </a>
+      <a href="/admin/products/product/" class="db-cta"><i class="ti ti-arrow-right"></i> Manage products</a>
     </div>
 
   </div>
 
-</main>
+</div>
 
 <script>
-  const bars = document.querySelectorAll(".bar.current[data-value]");
-  let maxValue = 0;
-
-  bars.forEach(function(bar) {
-    const value = Number(bar.dataset.value || 0);
-    if (value > maxValue) {
-      maxValue = value;
-    }
+  const bars = document.querySelectorAll(".db-bar[data-v]");
+  let mx = 0;
+  bars.forEach(function(b) {
+    const v = Number(b.dataset.v || 0);
+    if (v > mx) mx = v;
   });
-
-  bars.forEach(function(bar) {
-    const value = Number(bar.dataset.value || 0);
-    const height = maxValue > 0 ? Math.max((value / maxValue) * 140, 8) : 8;
-    bar.style.height = height + "px";
+  bars.forEach(function(b) {
+    const v = Number(b.dataset.v || 0);
+    b.style.height = (mx > 0 ? Math.max((v / mx) * 100, 8) : 8) + "px";
   });
 </script>
 

@@ -1,11 +1,16 @@
 from datetime import timedelta
+from django.contrib.admin.views.decorators import staff_member_required
 
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.db.models import Q
+from django.db.models import Q, ProtectedError
 from django.db.models import Count
+from django.urls import reverse
 from django.utils import timezone
+from flask import Response
+from django.core.paginator import Paginator
+from apps.accounts.models import User
 from django.http import JsonResponse                          # ← replaces flask import
 
 from apps.products.models import Category, Brand, Product, Review, Wishlist
@@ -262,6 +267,508 @@ def top_products(request):
         for p in top
     ]
 
+    return Response(data)
+
+
+# ---------------------------------------------------------------------------
+# CATEGORY
+# ---------------------------------------------------------------------------
+
+@login_required
+@staff_member_required
+def category_list(request):
+    categories = Category.objects.annotate(
+        product_count=Count('products')
+    ).order_by('name')
+
+    q = request.GET.get('q', '').strip()
+    if q:
+        categories = categories.filter(name__icontains=q)
+
+    paginator = Paginator(categories, 20)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    return render(request, 'products/category_list.html', {
+        'page_obj': page_obj,
+        'query': q,
+    })
+
+
+@login_required
+@staff_member_required
+def category_edit(request, pk):
+    category = get_object_or_404(Category, pk=pk)
+
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        description = request.POST.get('description', '').strip()
+        image = request.FILES.get('image')
+
+        if not name:
+            messages.error(request, 'Category name is required.')
+            return redirect('products:category_edit', pk=pk)
+
+        category.name = name
+        category.description = description
+        if image:
+            category.image = image
+        category.save()
+
+        messages.success(request, f"'{category.name}' updated.")
+        return redirect('products:category_list')
+
+    return render(request, 'products/category_edit.html', {
+        'category': category,
+    })
+
+
+@login_required
+@staff_member_required
+def category_delete_confirm(request, pk):
+    category = get_object_or_404(Category, pk=pk)
+    product_count = category.products.count()
+
+    if request.method == 'POST':
+        try:
+            category.delete()
+            messages.success(request, f"'{category.name}' deleted.")
+        except ProtectedError:
+            messages.error(
+                request,
+                f"Can't delete '{category.name}' — it still has linked products."
+            )
+        return redirect('products:category_list')
+
+    return render(request, 'products/confirm_delete.html', {
+        'object': category,
+        'object_label': category.name,
+        'object_type': 'category',
+        'warning': (
+            f"This category has {product_count} product(s) attached. "
+            f"Deleting it will cascade-delete those products."
+        ) if product_count else None,
+        'cancel_link': reverse('products:category_list'),
+    })
+
+
+# ---------------------------------------------------------------------------
+# BRAND
+# ---------------------------------------------------------------------------
+
+@login_required
+@staff_member_required
+def brand_list(request):
+    brands = Brand.objects.annotate(
+        product_count=Count('products')
+    ).order_by('name')
+
+    q = request.GET.get('q', '').strip()
+    if q:
+        brands = brands.filter(name__icontains=q)
+
+    paginator = Paginator(brands, 20)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    return render(request, 'products/brand_list.html', {
+        'page_obj': page_obj,
+        'query': q,
+    })
+
+
+@login_required
+@staff_member_required
+def brand_edit(request, pk):
+    brand = get_object_or_404(Brand, pk=pk)
+
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        description = request.POST.get('description', '').strip()
+        logo = request.FILES.get('logo')
+
+        if not name:
+            messages.error(request, 'Brand name is required.')
+            return redirect('products:brand_edit', pk=pk)
+
+        brand.name = name
+        brand.description = description
+        if logo:
+            brand.logo = logo
+        brand.save()
+
+        messages.success(request, f"'{brand.name}' updated.")
+        return redirect('products:brand_list')
+
+    return render(request, 'products/brand_edit.html', {
+        'brand': brand,
+    })
+
+
+@login_required
+@staff_member_required
+def brand_delete_confirm(request, pk):
+    brand = get_object_or_404(Brand, pk=pk)
+    product_count = brand.products.count()
+
+    if request.method == 'POST':
+        # Product.brand uses on_delete=SET_NULL, so this won't cascade —
+        # affected products just lose their brand reference.
+        brand.delete()
+        messages.success(request, f"'{brand.name}' deleted.")
+        return redirect('products:brand_list')
+
+    return render(request, 'products/confirm_delete.html', {
+        'object': brand,
+        'object_label': brand.name,
+        'object_type': 'brand',
+        'warning': (
+            f"{product_count} product(s) use this brand. They will be "
+            f"kept, but their brand will be cleared."
+        ) if product_count else None,
+        'cancel_link': reverse('products:brand_list'),
+    })
+
+
+# ---------------------------------------------------------------------------
+# PRODUCT
+# ---------------------------------------------------------------------------
+
+@login_required
+@staff_member_required
+def product_list(request):
+    products = Product.objects.select_related(
+        'category', 'brand'
+    ).order_by('-created_at')
+
+    q = request.GET.get('q', '').strip()
+    if q:
+        products = products.filter(name__icontains=q)
+
+    status = request.GET.get('status')
+    if status == 'active':
+        products = products.filter(is_active=True)
+    elif status == 'inactive':
+        products = products.filter(is_active=False)
+    elif status == 'out_of_stock':
+        products = products.filter(stock=0)
+
+    paginator = Paginator(products, 20)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    return render(request, 'products/product_list.html', {
+        'page_obj': page_obj,
+        'query': q,
+        'status': status or 'all',
+    })
+
+
+@login_required
+@staff_member_required
+def product_edit(request, pk):
+    product = get_object_or_404(Product, pk=pk)
+    categories = Category.objects.order_by('name')
+    brands = Brand.objects.order_by('name')
+
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        description = request.POST.get('description', '').strip()
+        price = request.POST.get('price', '').strip()
+        discount_price = request.POST.get('discount_price', '').strip()
+        stock = request.POST.get('stock', '').strip()
+        category_id = request.POST.get('category')
+        brand_id = request.POST.get('brand')
+        is_active = request.POST.get('is_active') == 'on'
+        image = request.FILES.get('image')
+
+        errors = []
+        if not name:
+            errors.append('Product name is required.')
+        if not category_id:
+            errors.append('Category is required.')
+
+        try:
+            price = float(price)
+        except ValueError:
+            errors.append('Price must be a valid number.')
+            price = None
+
+        if discount_price:
+            try:
+                discount_price = float(discount_price)
+            except ValueError:
+                errors.append('Discount price must be a valid number.')
+                discount_price = None
+        else:
+            discount_price = None
+
+        try:
+            stock = int(stock)
+        except ValueError:
+            errors.append('Stock must be a whole number.')
+            stock = None
+
+        if errors:
+            for e in errors:
+                messages.error(request, e)
+            return redirect('products:product_edit', pk=pk)
+
+        product.name = name
+        product.description = description
+        product.price = price
+        product.discount_price = discount_price
+        product.stock = stock
+        product.category_id = category_id
+        product.brand_id = brand_id or None
+        product.is_active = is_active
+        if image:
+            product.image = image
+        product.save()
+
+        messages.success(request, f"'{product.name}' updated.")
+        return redirect('products:product_list')
+
+    return render(request, 'products/product_edit.html', {
+        'product': product,
+        'categories': categories,
+        'brands': brands,
+    })
+
+
+@login_required
+@staff_member_required
+def product_delete_confirm(request, pk):
+    product = get_object_or_404(Product, pk=pk)
+
+    if request.method == 'POST':
+        product.delete()
+        messages.success(request, f"'{product.name}' deleted.")
+        return redirect('products:product_list')
+
+    return render(request, 'products/confirm_delete.html', {
+        'object': product,
+        'object_label': product.name,
+        'object_type': 'product',
+        'warning': None,
+        'cancel_link': reverse('products:product_list'),
+    })
+
+
+# ---------------------------------------------------------------------------
+# USERS  (list + activate/deactivate + delete only — no field editing,
+# since changing username/email/staff-status on auth.User directly carries
+# more risk; ask if you want full edit added too)
+# ---------------------------------------------------------------------------
+
+@login_required
+@staff_member_required
+def user_list(request):
+    users = User.objects.all().order_by('-date_joined')
+
+    q = request.GET.get('q', '').strip()
+    if q:
+        users = users.filter(username__icontains=q) | users.filter(email__icontains=q)
+
+    status = request.GET.get('status')
+    if status == 'active':
+        users = users.filter(is_active=True)
+    elif status == 'inactive':
+        users = users.filter(is_active=False)
+
+    paginator = Paginator(users, 20)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    return render(request, 'products/user_list.html', {
+        'page_obj': page_obj,
+        'query': q,
+        'status': status or 'all',
+    })
+
+
+@login_required
+@staff_member_required
+def user_toggle_active(request, pk):
+    user = get_object_or_404(User, pk=pk)
+
+    if user == request.user:
+        messages.error(request, "You can't deactivate your own account.")
+        return redirect('products:user_list')
+
+    user.is_active = not user.is_active
+    user.save(update_fields=['is_active'])
+
+    state = 'activated' if user.is_active else 'deactivated'
+    messages.success(request, f"'{user.username}' {state}.")
+    return redirect('products:user_list')
+
+
+@login_required
+@staff_member_required
+def user_delete_confirm(request, pk):
+    user = get_object_or_404(User, pk=pk)
+
+    if user == request.user:
+        messages.error(request, "You can't delete your own account.")
+        return redirect('products:user_list')
+
+    if request.method == 'POST':
+        username = user.username
+        user.delete()
+        messages.success(request, f"'{username}' deleted.")
+        return redirect('products:user_list')
+
+    return render(request, 'products/confirm_delete.html', {
+        'object': user,
+        'object_label': user.username,
+        'object_type': 'user',
+        'warning': (
+            "This permanently deletes the account and anonymizes/cascades "
+            "related orders and reviews depending on your model's on_delete "
+            "settings. Consider deactivating instead if you're unsure."
+        ),
+        'cancel_link': reverse('products:user_list'),
+    })
+
+# ---------------------------------------------------------------------------
+# ADD (CREATE) VIEWS
+# ---------------------------------------------------------------------------
+
+@login_required
+@staff_member_required
+def category_add(request):
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        description = request.POST.get('description', '').strip()
+        image = request.FILES.get('image')
+
+        if not name:
+            messages.error(request, 'Category name is required.')
+            return redirect('products:category_add')
+
+        if Category.objects.filter(name__iexact=name).exists():
+            messages.error(request, f"A category named '{name}' already exists.")
+            return redirect('products:category_add')
+
+        category = Category.objects.create(
+            name=name,
+            description=description,
+        )
+        if image:
+            category.image = image
+            category.save()
+
+        messages.success(request, f"'{category.name}' created.")
+        return redirect('products:category_list')
+
+    return render(request, 'products/category_add.html')
+
+
+@login_required
+@staff_member_required
+def brand_add(request):
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        description = request.POST.get('description', '').strip()
+        logo = request.FILES.get('logo')
+
+        if not name:
+            messages.error(request, 'Brand name is required.')
+            return redirect('products:brand_add')
+
+        if Brand.objects.filter(name__iexact=name).exists():
+            messages.error(request, f"A brand named '{name}' already exists.")
+            return redirect('products:brand_add')
+
+        brand = Brand.objects.create(
+            name=name,
+            description=description,
+        )
+        if logo:
+            brand.logo = logo
+            brand.save()
+
+        messages.success(request, f"'{brand.name}' created.")
+        return redirect('products:brand_list')
+
+    return render(request, 'products/brand_add.html')
+
+
+@login_required
+@staff_member_required
+def product_add(request):
+    categories = Category.objects.order_by('name')
+    brands = Brand.objects.order_by('name')
+
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        description = request.POST.get('description', '').strip()
+        price = request.POST.get('price', '').strip()
+        discount_price = request.POST.get('discount_price', '').strip()
+        stock = request.POST.get('stock', '').strip()
+        category_id = request.POST.get('category')
+        brand_id = request.POST.get('brand')
+        is_active = request.POST.get('is_active') == 'on'
+        image = request.FILES.get('image')
+
+        errors = []
+        if not name:
+            errors.append('Product name is required.')
+        if not category_id:
+            errors.append('Category is required.')
+
+        try:
+            price = float(price)
+        except ValueError:
+            errors.append('Price must be a valid number.')
+            price = None
+
+        if discount_price:
+            try:
+                discount_price = float(discount_price)
+            except ValueError:
+                errors.append('Discount price must be a valid number.')
+                discount_price = None
+        else:
+            discount_price = None
+
+        try:
+            stock = int(stock) if stock else 0
+        except ValueError:
+            errors.append('Stock must be a whole number.')
+            stock = None
+
+        # Re-render the form with entered values preserved on error,
+        # instead of redirecting (which would lose everything typed so far).
+        if errors:
+            for e in errors:
+                messages.error(request, e)
+            return render(request, 'products/product_add.html', {
+                'categories': categories,
+                'brands': brands,
+                'form_data': request.POST,
+            })
+
+        product = Product.objects.create(
+            name=name,
+            description=description,
+            price=price,
+            discount_price=discount_price,
+            stock=stock,
+            category_id=category_id,
+            brand_id=brand_id or None,
+            is_active=is_active,
+        )
+        if image:
+            product.image = image
+            product.save()
+
+        messages.success(request, f"'{product.name}' created.")
+        return redirect('products:product_list')
+
+    return render(request, 'products/product_add.html', {
+        'categories': categories,
+        'brands': brands,
+        'form_data': {},
+    })
+
     return JsonResponse({'results': data})              # ← was Flask Response, now fixed too
 
 
@@ -277,3 +784,4 @@ def search_autocomplete(request):
     ).values('name', 'slug')[:8]
 
     return JsonResponse({'results': list(products)})
+

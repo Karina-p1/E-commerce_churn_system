@@ -1,267 +1,209 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ShopAdmin — Dashboard</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg: #f4f7f0;
-    --bg2: #ffffff;
-    --bg3: #eef3e8;
-    --border: #dde8d4;
-    --text: #1a2214;
-    --muted: #7a8f6e;
-    --accent: #2931a3;
-    --accent-light: rgba(58,140,28,0.1);
-    --accent2: #d4900a;
-    --accent2-light: rgba(212,144,10,0.1);
-    --blue: #1a7ab5;
-    --blue-light: rgba(26,122,181,0.1);
-    --danger: #d63b3b;
-    --danger-light: rgba(214,59,59,0.1);
-    --warn: #d4680a;
-    --warn-light: rgba(212,104,10,0.1);
-    --card-r: 14px;
-  }
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--text); display: flex; min-height: 100vh; font-size: 14px; }
- 
-  /* SIDEBAR */
-  .sidebar { width: 220px; min-height: 100vh; background: var(--bg2); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 24px 0; position: fixed; top: 0; left: 0; }
-  .logo { padding: 0 20px 28px; font-size: 20px; font-weight: 800; letter-spacing: -0.5px; display: flex; align-items: center; gap: 8px; color: var(--text); }
-  .logo-icon { width: 30px; height: 30px; background: var(--accent); border-radius: 7px; display: flex; align-items: center; justify-content: center; }
-  .logo-icon svg { width: 18px; height: 18px; color: #fff; }
-  .logo span { color: var(--accent); }
-  .nav-section { padding: 0 12px 20px; }
-  .nav-label { font-size: 10px; font-weight: 700; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; padding: 0 8px 8px; }
-  .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 8px; border-radius: 8px; color: var(--muted); cursor: pointer; transition: all 0.15s; font-size: 13.5px; font-weight: 500; margin-bottom: 2px; text-decoration: none; }
-  .nav-item:hover { background: var(--bg3); color: var(--text); }
-  .nav-item:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .nav-item.active { background: var(--accent-light); color: var(--accent); }
-  .nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
-  .nav-badge { margin-left: auto; background: var(--danger); color: #fff; font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 20px; }
-  .admin-toggle { width: 100%; border: 0; background: transparent; font-family: inherit; }
-  .admin-toggle .chevron { margin-left: auto; font-size: 11px; transition: transform 0.15s ease; }
-  .admin-toggle.open .chevron { transform: rotate(180deg); }
-  .admin-menu { display: none; margin: 4px 0 8px 26px; border-left: 1px solid var(--border); padding-left: 8px; }
-  .admin-menu.show { display: block; }
-  .admin-menu .nav-item { font-size: 12.5px; padding: 8px; }
- 
-  /* MAIN */
-  .main { margin-left: 220px; flex: 1; padding: 28px 32px; min-height: 100vh; }
-  .topbar { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 28px; }
-  .page-title h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; color: var(--text); }
-  .page-title p { color: var(--muted); font-size: 12px; margin-top: 3px; font-family: 'Space Mono', monospace; }
-  .topbar-right { display: flex; align-items: center; gap: 10px; }
-  .date-btn { display: flex; align-items: center; gap: 7px; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 500; cursor: pointer; color: var(--text); font-family: 'Outfit', sans-serif; }
-  .date-btn svg { width: 14px; height: 14px; color: var(--muted); }
-  .promo-badge { background: var(--accent-light); border: 1px solid rgba(58,140,28,0.2); color: var(--accent); font-size: 12px; font-weight: 600; padding: 8px 14px; border-radius: 8px; display: flex; align-items: center; gap: 6px; }
-  .promo-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: pulse 2s infinite; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
- 
-  /* KPI CARDS */
-  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
-  .kpi-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--card-r); padding: 20px 22px; position: relative; overflow: hidden; }
-  .kpi-card::before { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 3px; }
-  .kpi-card.revenue::before { background: var(--accent); }
-  .kpi-card.orders::before { background: var(--accent2); }
-  .kpi-card.customers::before { background: var(--blue); }
-  .kpi-card.avg::before { background: var(--warn); }
-  .kpi-icon { width: 36px; height: 36px; border-radius: 9px; display: flex; align-items: center; justify-content: center; margin-bottom: 14px; }
-  .kpi-icon.green { background: var(--accent-light); color: var(--accent); }
-  .kpi-icon.yellow { background: var(--accent2-light); color: var(--accent2); }
-  .kpi-icon.blue { background: var(--blue-light); color: var(--blue); }
-  .kpi-icon.orange { background: var(--warn-light); color: var(--warn); }
-  .kpi-icon svg { width: 18px; height: 18px; }
-  .kpi-label { font-size: 11.5px; font-weight: 600; color: var(--muted); letter-spacing: 0.4px; text-transform: uppercase; margin-bottom: 6px; }
-  .kpi-value { font-size: 28px; font-weight: 800; letter-spacing: -1px; line-height: 1; margin-bottom: 8px; font-family: 'Space Mono', monospace; color: var(--text); }
-  .kpi-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 600; padding: 3px 8px; border-radius: 20px; font-family: 'Space Mono', monospace; }
-  .kpi-badge.up { background: var(--accent-light); color: var(--accent); }
-  .kpi-badge.down { background: var(--danger-light); color: var(--danger); }
- 
-  /* CHART + TOP PRODUCTS */
-  .mid-grid { display: grid; grid-template-columns: 1fr 290px; gap: 16px; margin-bottom: 20px; }
-  .chart-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--card-r); padding: 24px; }
-  .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-  .card-title { font-size: 15px; font-weight: 700; color: var(--text); }
-  .legend { display: flex; gap: 16px; }
-  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
-  .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
- 
-  /* Bar chart */
-  .bar-chart { display: flex; align-items: flex-end; gap: 8px; height: 140px; }
-  .bar-group { flex: 1; display: flex; gap: 3px; align-items: flex-end; }
-  .bar { flex: 1; border-radius: 4px 4px 0 0; transition: opacity 0.2s; }
-  .bar:hover { opacity: 0.8; }
-  .bar.current { background: var(--accent); }
-  .bar.prev { background: var(--border); }
-  .chart-labels { display: flex; gap: 8px; margin-top: 8px; }
-  .chart-label { flex: 1; text-align: center; font-size: 10.5px; color: var(--muted); font-family: 'Space Mono', monospace; }
- 
-  /* Top products */
-  .products-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--card-r); padding: 24px; }
-  .product-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
-  .product-item:last-child { border-bottom: none; padding-bottom: 0; }
-  .product-item:first-child { padding-top: 0; }
-  .product-icon { width: 36px; height: 36px; border-radius: 8px; background: var(--bg3); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
-  .product-info { flex: 1; min-width: 0; }
-  .product-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
-  .product-cat { font-size: 11px; color: var(--muted); margin-top: 2px; }
-  .product-rev { font-size: 13px; font-weight: 700; color: var(--accent); font-family: 'Space Mono', monospace; }
- 
-  /* ORDERS TABLE */
-  .orders-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--card-r); padding: 24px; margin-bottom: 20px; }
-  table { width: 100%; border-collapse: collapse; }
-  thead th { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; padding: 0 12px 12px; text-align: left; }
-  tbody tr { border-top: 1px solid var(--border); transition: background 0.12s; }
-  tbody tr:hover { background: var(--bg3); }
-  td { padding: 13px 12px; font-size: 13px; color: var(--text); }
-  .order-id { font-family: 'Space Mono', monospace; font-size: 12px; color: var(--muted); }
-  .status-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-  .status-badge.delivered { background: var(--accent-light); color: var(--accent); }
-  .status-badge.processing { background: var(--blue-light); color: var(--blue); }
-  .status-badge.pending { background: var(--warn-light); color: var(--warn); }
-  .status-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
- 
-  /* BOTTOM GRID */
-  .bottom-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  .channel-card, .stock-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--card-r); padding: 24px; }
- 
-  /* Donut */
-  .donut-wrap { display: flex; align-items: center; gap: 28px; margin-top: 16px; }
-  .donut-svg { flex-shrink: 0; }
-  .donut-legend { display: flex; flex-direction: column; gap: 10px; }
-  .dl-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text); }
-  .dl-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
-  .dl-pct { margin-left: auto; font-weight: 700; font-family: 'Space Mono', monospace; color: var(--text); }
- 
-  /* Stock */
-  .stock-item { display: flex; align-items: center; justify-content: space-between; padding: 11px 0; border-bottom: 1px solid var(--border); }
-  .stock-item:last-of-type { border-bottom: none; }
-  .stock-name { font-size: 13px; font-weight: 500; color: var(--text); }
-  .stock-left { font-size: 12.5px; font-weight: 700; font-family: 'Space Mono', monospace; }
-  .stock-left.critical { color: var(--danger); }
-  .stock-left.low { color: var(--warn); }
-  .stock-bar-bg { height: 4px; border-radius: 2px; background: var(--border); margin-top: 4px; width: 100%; }
-  .stock-bar-fill { height: 4px; border-radius: 2px; }
-  .restock-btn { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; margin-top: 16px; padding: 10px; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--text); cursor: pointer; transition: all 0.15s; font-family: 'Outfit', sans-serif; }
-  .restock-btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .badge-red { background: var(--danger); color: #fff; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 20px; }
- 
-  /* Scrollbar */
-  ::-webkit-scrollbar { width: 6px; }
-  ::-webkit-scrollbar-track { background: var(--bg); }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-  .logout-btn {
-  width: 100%;
-  border: none;
-  background: transparent;
-  font-family: inherit;
-  text-align: left;
-}
+  <title>ShopAdmin</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f5f5f4; color: #1a1a1a; }
 
-.logout-btn:hover {
-  background: var(--danger-light);
-  color: var(--danger);
-}
-</style>
+    /* Topbar */
+    .topbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; background: #ffffff; border-bottom: 0.5px solid #e5e5e5; }
+    .topbar-left { display: flex; align-items: center; gap: 10px; }
+    .logo-sm { width: 28px; height: 28px; border-radius: 6px; background: #2931a3; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; font-weight: 700; }
+    .app-name { font-size: 15px; font-weight: 500; color: #1a1a1a; }
+    .topbar-right { display: flex; align-items: center; gap: 12px; }
+    .avatar { width: 32px; height: 32px; border-radius: 50%; background: #e8eafd; color: #2931a3; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 500; }
+    .logout-btn { font-size: 12px; color: #666; background: none; border: 0.5px solid #d4d4d4; padding: 5px 10px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+    .logout-btn:hover { background: #f5f5f4; }
+
+    /* Layout */
+    .dash-body { display: grid; grid-template-columns: 180px 1fr; min-height: calc(100vh - 53px); }
+
+    /* Sidebar */
+    .sidebar { border-right: 0.5px solid #e5e5e5; padding: 1.25rem 0; background: #ffffff; }
+    .nav-section { font-size: 10px; letter-spacing: .08em; color: #aaa; padding: 16px 18px 4px; text-transform: uppercase; }
+    .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 18px; font-size: 13px; color: #555; cursor: pointer; transition: background .1s; text-decoration: none; }
+    .nav-item:hover { background: #f5f5f4; color: #1a1a1a; }
+    .nav-item.active { background: #e8eafd; color: #2931a3; font-weight: 500; }
+    .nav-item i { font-size: 16px; }
+
+    /* Main */
+    .main { padding: 20px; background: #f5f5f4; }
+    .page-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; }
+    .page-head h1 { font-size: 18px; font-weight: 500; color: #1a1a1a; }
+    .page-head .date { font-size: 12px; color: #888; }
+
+    /* Metrics */
+    .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 1.25rem; }
+    .metric-card { background: #ffffff; border: 0.5px solid #e5e5e5; border-radius: 8px; padding: 14px 16px; }
+    .metric-label { font-size: 11px; color: #888; margin-bottom: 6px; }
+    .metric-val { font-size: 22px; font-weight: 500; color: #1a1a1a; }
+    .metric-delta { font-size: 11px; margin-top: 4px; }
+    .delta-up { color: #3B6D11; }
+    .delta-down { color: #A32D2D; }
+
+    /* Sidebar Dropdown */
+    .nav-dropdown { position: relative; }
+    .nav-dropdown-toggle { justify-content: space-between; }
+    .nav-dropdown-toggle span { flex: 1; }
+    .dropdown-arrow { margin-left: auto; font-size: 14px !important; transition: transform .18s ease; }
+    .nav-dropdown:hover .dropdown-arrow { transform: rotate(90deg); }
+    .nav-submenu { display: none; margin: 4px 10px 8px 18px; padding-left: 10px; border-left: 1px solid #e5e5e5; }
+    .nav-dropdown:hover .nav-submenu { display: block; }
+    .nav-subitem { display: flex; align-items: center; gap: 9px; padding: 8px 12px; font-size: 12px; color: #666; text-decoration: none; border-radius: 6px; transition: background .12s ease, color .12s ease; }
+    .nav-subitem:hover { background: #f5f5f4; color: #2931a3; }
+    .nav-subitem.active { background: #e8eafd; color: #2931a3; font-weight: 600; }
+    .nav-subitem i { font-size: 15px; }
+
+    /* Flash Messages */
+    @keyframes msgShrink { from { width: 100%; } to { width: 0%; } }
+    .alert-success { background: #f0fdf4; border-color: #86efac; color: #166534; }
+    .alert-success .msg-timer { background: #16a34a; opacity: .4; }
+    .alert-error, .alert-danger { background: #fef2f2; border-color: #fca5a5; color: #991b1b; }
+    .alert-error .msg-timer, .alert-danger .msg-timer { background: #dc2626; opacity: .4; }
+    .alert-warning { background: #fffbeb; border-color: #fcd34d; color: #92400e; }
+    .alert-warning .msg-timer { background: #d97706; opacity: .4; }
+    .alert-info { background: #eff6ff; border-color: #93c5fd; color: #1e40af; }
+    .alert-info .msg-timer { background: #2563eb; opacity: .4; }
+
+    /* Logout as nav item */
+    .nav-item.logout-nav { border: none; background: transparent; font-family: inherit; width: 100%; text-align: left; }
+    .nav-item.logout-nav:hover { background: #fef2f2; color: #991b1b; }
+  </style>
+  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </head>
 <body>
-<!-- SIDEBAR -->
-<aside class="sidebar">
-  <div class="logo"><span>Shop</span>admin</div>
-  <nav>
-    <div class="nav-section">
-      <div class="nav-label">Overview</div>
 
-      <a href="{% url 'admin_dashboard' %}"
-        class="nav-item {% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}">
-        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <rect x="3" y="3" width="7" height="7" rx="1"/>
-          <rect x="14" y="3" width="7" height="7" rx="1"/>
-          <rect x="3" y="14" width="7" height="7" rx="1"/>
-          <rect x="14" y="14" width="7" height="7" rx="1"/>
-        </svg>
-        Dashboard
-      </a>
-    </div>
-    <div class="nav-section">
-      <div class="nav-label">Finance</div>
-      <a href="{% url 'analytics' %}"
-        class="nav-item {% if request.resolver_match.url_name == 'analytics' %}active{% endif %}">
-        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-        </svg>
-        Analytics
-      </a>
-    </div>
-    {% if request.user.is_staff %}
-    <div class="nav-section">
-      <div class="nav-label">System</div>
-      <a href="{% url 'admin_profile' %}"
-        class="nav-item {% if request.resolver_match.url_name == 'admin_profile' %}active{% endif %}">
-        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
-          <circle cx="12" cy="7" r="4"/>
-        </svg>
-        Profile
-      </a>
-      <form method="post" action="{% url 'logout' %}" style="margin: 0;">
-        {% csrf_token %}
-        <button type="submit" class="nav-item logout-btn">
-          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
-            <polyline points="16 17 21 12 16 7"/>
-            <line x1="21" y1="12" x2="9" y2="12"/>
-          </svg>
-          Logout
-        </button>
-      </form>
-      <button type="button" onclick="toggleAdminMenu()" class="nav-item admin-toggle" id="admin-toggle">
-        <svg fill="none" stroke="#f59e0b" stroke-width="2" viewBox="0 0 24 24">
-          <circle cx="12" cy="12" r="3"/>
-          <path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/>
-        </svg>
-        Admin
-        <span class="chevron">v</span>
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="logo-sm">S</div>
+    <span class="app-name">ShopAdmin</span>
+  </div>
+  <div class="topbar-right">
+    <a href="{% url 'admin_profile' %}" style="text-decoration: none;">
+      <div style="text-align:right">
+        <div style="font-size:13px;font-weight:500;color:#1a1a1a">{{ user.get_full_name|default:user.username }}</div>
+        <div style="font-size:11px;color:#888">{{ user.email }}</div>
+      </div>
+    </a>
+    <div class="avatar">AU</div>
+    <form method="POST" action="{% url 'logout' %}">
+      {% csrf_token %}
+      <button type="submit" class="logout-btn">
+        <i class="ti ti-logout"></i> Log out
       </button>
-      <div id="admin-menu" class="admin-menu">
-        <a href="/admin/" class="nav-item {% if request.path|slice:':7' == '/admin/' %}active{% endif %}">
-          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <rect x="3" y="3" width="7" height="7"/>
-            <rect x="14" y="3" width="7" height="7"/>
-            <rect x="14" y="14" width="7" height="7"/>
-            <rect x="3" y="14" width="7" height="7"/>
-          </svg>
-          Django Admin
-        </a>
+    </form>
+  </div>
+</div>
 
-        <a href="{% url 'churn:dashboard' %}" class="nav-item {% if request.resolver_match.namespace == 'churn' %}active{% endif %}">
-          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
-            <circle cx="9" cy="7" r="4"/>
-            <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
-          </svg>
-          Churn Dashboard
+<div class="dash-body">
+  <div class="sidebar">
+
+    <div class="nav-section">Overview</div>
+    <a href="{% url 'admin_dashboard' %}"
+      class="nav-item {% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}">
+      <i class="ti ti-layout-dashboard"></i>
+      Dashboard
+    </a>
+
+    <div class="nav-section">Finance</div>
+    <a href="{% url 'analytics' %}"
+      class="nav-item {% if request.resolver_match.url_name == 'analytics' %}active{% endif %}">
+      <i class="ti ti-chart-line"></i>
+      Analytics
+    </a>
+
+    {% if request.user.is_staff %}
+    <div class="nav-section">System</div>
+
+    <a href="{% url 'admin_profile' %}"
+      class="nav-item {% if request.resolver_match.url_name == 'admin_profile' %}active{% endif %}">
+      <i class="ti ti-user"></i>
+      Profile
+    </a>
+    <a href="{% url 'products:user_list' %}"
+      class="nav-item {% if request.resolver_match.url_name == 'user_list' %}active{% endif %}">
+      <i class="ti ti-users"></i>
+      Manage Users
+    </a>
+    <a href="{% url 'products:category_list' %}"
+      class="nav-item {% if request.resolver_match.url_name == 'category_list' %}active{% endif %}">
+      <i class="ti ti-category"></i>
+      Manage Categories
+    </a>
+    <a href="{% url 'products:brand_list' %}"
+      class="nav-item {% if request.resolver_match.url_name == 'brand_list' %}active{% endif %}">
+      <i class="ti ti-tag"></i>
+      Manage Brands
+    </a>
+    <a href="{% url 'products:product_list' %}"
+      class="nav-item {% if request.resolver_match.url_name == 'product_list' %}active{% endif %}">
+      <i class="ti ti-shopping-bag"></i>
+      Manage Products
+    </a>
+
+    <div class="nav-dropdown">
+      <div class="nav-item nav-dropdown-toggle
+        {% if request.resolver_match.namespace == 'churn' %}active{% endif %}">
+        <i class="ti ti-alert-triangle"></i>
+        <span>Churn</span>
+        <i class="ti ti-chevron-right dropdown-arrow"></i>
+      </div>
+      <div class="nav-submenu">
+        <a href="{% url 'churn:dashboard' %}"
+          class="nav-subitem {% if request.resolver_match.url_name == 'dashboard' and request.resolver_match.namespace == 'churn' %}active{% endif %}">
+          <i class="ti ti-chart-pie"></i>
+          Dashboard
         </a>
       </div>
     </div>
+
+    <form method="post" action="{% url 'logout' %}" style="margin:0">
+      {% csrf_token %}
+      <button type="submit" class="nav-item logout-nav">
+        <i class="ti ti-logout"></i>
+        Logout
+      </button>
+    </form>
     {% endif %}
-  </nav>
-</aside>
-{% block start %}{% endblock %}
+
+  </div>
+
+  <div class="main">
+    {% if messages %}
+      <div id="messages-container" style="position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:10px;min-width:320px;max-width:420px;">
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }}" style="display:flex;align-items:flex-start;gap:12px;padding:13px 16px;border-radius:12px;border:0.5px solid;font-size:14px;line-height:1.5;position:relative;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.08);">
+            <div style="flex:1;">{{ message }}</div>
+            <button onclick="this.closest('.alert').remove()" style="background:none;border:none;cursor:pointer;font-size:18px;opacity:.5;padding:0;line-height:1;">&times;</button>
+            <div class="msg-timer" style="position:absolute;bottom:0;left:0;height:3px;width:100%;animation:msgShrink 5s linear forwards;"></div>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+    {% block start %}{% endblock %}
+  </div>
+</div>
+
 <script>
-  function toggleAdminMenu() {
-    const adminMenu = document.getElementById("admin-menu");
-    const adminToggle = document.getElementById("admin-toggle");
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    item.classList.add('active');
+  });
+});
 
-    if (!adminMenu || !adminToggle) return;
-
-    adminMenu.classList.toggle("show");
-    adminToggle.classList.toggle("open");
+setTimeout(function () {
+  const container = document.getElementById("messages-container");
+  if (container) {
+    container.style.transition = "opacity 0.5s ease";
+    container.style.opacity = "0";
+    setTimeout(function () { container.remove(); }, 500);
   }
+}, 5000);
 </script>
 </body>
 </html>

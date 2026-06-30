@@ -1,0 +1,136 @@
+{% extends 'admin_base.html' %}
+{% block title %}Manage Brands - ShopMart Admin{% endblock %}
+
+{% block start %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+
+<style>
+  .mgmt-page { font-family: 'Segoe UI', system-ui, sans-serif; background: #f5f5f4; padding: 20px; border-radius: 12px; color: #1a1a1a; }
+  .mgmt-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; flex-wrap: wrap; }
+  .mgmt-title h1 { font-size: 18px; font-weight: 500; margin: 0 0 2px; }
+  .mgmt-title p { color: #888; font-size: 12px; margin: 0; }
+
+  .mgmt-search { display: flex; align-items: center; gap: 8px; background: #fff; border: 0.5px solid #e5e5e5; border-radius: 8px; padding: 8px 12px; margin-bottom: 14px; max-width: 320px; }
+  .mgmt-search input { border: none; outline: none; font-size: 13px; flex: 1; background: transparent; color: #1a1a1a; }
+  .mgmt-search i { color: #bbb; font-size: 15px; }
+
+  .mgmt-table-card { background: #fff; border: 0.5px solid #e5e5e5; border-radius: 10px; padding: 16px; overflow-x: auto; }
+  .mgmt-table-card table { width: 100%; border-collapse: collapse; }
+  .mgmt-table-card thead th { font-size: 10px; font-weight: 600; color: #bbb; text-transform: uppercase; letter-spacing: 0.06em; padding: 0 0 8px; text-align: left; }
+  .mgmt-table-card tbody tr { border-top: 0.5px solid #f5f5f4; }
+  .mgmt-table-card tbody tr:hover { background: #fafafa; }
+  .mgmt-table-card td { padding: 10px 8px 10px 0; font-size: 12px; vertical-align: middle; }
+
+  .entity-cell { display: flex; align-items: center; gap: 10px; }
+  .entity-thumb { width: 34px; height: 34px; border-radius: 8px; background: #f5f5f4; display: flex; align-items: center; justify-content: center; color: #bbb; font-size: 15px; flex-shrink: 0; overflow: hidden; }
+  .entity-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .entity-name { font-size: 12.5px; font-weight: 500; color: #1a1a1a; }
+  .entity-desc { font-size: 10.5px; color: #888; margin-top: 1px; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .count-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 20px; font-size: 10px; font-weight: 600; background: #e8eafd; color: #2931a3; }
+
+  .row-actions { display: flex; gap: 6px; justify-content: flex-end; }
+  .icon-btn { width: 28px; height: 28px; border-radius: 7px; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 13px; border: 0.5px solid #e5e5e5; background: #fff; color: #888; transition: 0.15s ease; }
+  .icon-btn:hover { background: #f0f0f0; color: #1a1a1a; }
+  .icon-btn.danger:hover { background: #f8e3e3; color: #A32D2D; border-color: #e8bcbc; }
+
+  .empty-state { padding: 36px 16px; text-align: center; color: #888; font-size: 12px; }
+
+  .pagination { display: flex; justify-content: center; gap: 6px; margin-top: 16px; }
+  .page-link { padding: 6px 11px; border-radius: 7px; font-size: 12px; text-decoration: none; border: 0.5px solid #e5e5e5; background: #fff; color: #888; }
+  .page-link:hover { background: #f0f0f0; color: #1a1a1a; }
+  .page-link.current { background: #2931a3; border-color: #2931a3; color: #fff; }
+
+  .add-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #2931a3;
+    color: #fff;
+    padding: 9px 15px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    flex-shrink: 0;
+  }
+  .add-btn:hover { opacity: 0.9; }
+</style>
+
+<div class="mgmt-page">
+
+  <div class="mgmt-header">
+    <div class="mgmt-title">
+      <h1>Manage Brands</h1>
+      <p>{{ page_obj.paginator.count }} brand{{ page_obj.paginator.count|pluralize }} total</p>
+    </div>
+    <a href="{% url 'products:brand_add' %}" class="add-btn"><i class="ti ti-plus"></i> Add brand</a>
+  </div>
+
+  <form method="get" class="mgmt-search">
+    <i class="ti ti-search"></i>
+    <input type="text" name="q" value="{{ query }}" placeholder="Search brands...">
+  </form>
+
+  <div class="mgmt-table-card">
+    <table>
+      <thead>
+        <tr>
+          <th>Brand</th>
+          <th>Products</th>
+          <th style="text-align:right">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for brand in page_obj %}
+        <tr>
+          <td>
+            <div class="entity-cell">
+              <div class="entity-thumb">
+                {% if brand.logo %}
+                  <img src="{{ brand.logo.url }}" alt="{{ brand.name }}">
+                {% else %}
+                  <i class="ti ti-tag"></i>
+                {% endif %}
+              </div>
+              <div>
+                <div class="entity-name">{{ brand.name }}</div>
+                {% if brand.description %}
+                  <div class="entity-desc">{{ brand.description }}</div>
+                {% endif %}
+              </div>
+            </div>
+          </td>
+          <td><span class="count-pill">{{ brand.product_count }}</span></td>
+          <td>
+            <div class="row-actions">
+              <a href="{% url 'products:brand_edit' brand.pk %}" class="icon-btn" title="Edit"><i class="ti ti-pencil"></i></a>
+              <a href="{% url 'products:brand_delete_confirm' brand.pk %}" class="icon-btn danger" title="Delete"><i class="ti ti-trash"></i></a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="3" class="empty-state">No brands found{% if query %} for "{{ query }}"{% endif %}.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if page_obj.paginator.num_pages > 1 %}
+  <div class="pagination">
+    {% if page_obj.has_previous %}
+      <a href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}" class="page-link">‹</a>
+    {% endif %}
+    {% for num in page_obj.paginator.page_range %}
+      <a href="?page={{ num }}{% if query %}&q={{ query }}{% endif %}" class="page-link {% if num == page_obj.number %}current{% endif %}">{{ num }}</a>
+    {% endfor %}
+    {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}" class="page-link">›</a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

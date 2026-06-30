@@ -1,0 +1,287 @@
+{% extends 'admin_base.html' %}
+{% block title %}Manage Products - ShopMart Admin{% endblock %}
+
+{% block start %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+
+<style>
+  .mgmt-page {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #f5f5f4;
+    padding: 20px;
+    border-radius: 12px;
+    color: #1a1a1a;
+  }
+
+  .mgmt-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+  }
+
+  .mgmt-title h1 { font-size: 18px; font-weight: 500; margin: 0 0 2px; }
+  .mgmt-title p { color: #888; font-size: 12px; margin: 0; }
+
+  .mgmt-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+
+  .mgmt-search {
+    flex: 1;
+    min-width: 200px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #fff;
+    border: 0.5px solid #e5e5e5;
+    border-radius: 8px;
+    padding: 8px 12px;
+  }
+
+  .mgmt-search input {
+    border: none;
+    outline: none;
+    font-size: 13px;
+    flex: 1;
+    background: transparent;
+    color: #1a1a1a;
+  }
+
+  .mgmt-search i { color: #bbb; font-size: 15px; }
+
+  .filter-btn {
+    padding: 6px 13px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 500;
+    text-decoration: none;
+    background: #fff;
+    border: 0.5px solid #e5e5e5;
+    color: #888;
+    transition: 0.15s ease;
+    white-space: nowrap;
+  }
+
+  .filter-btn:hover { background: #f0f0f0; color: #1a1a1a; }
+  .filter-btn.active { background: #e8eafd; border-color: #b5b8f0; color: #2931a3; }
+
+  .mgmt-table-card {
+    background: #fff;
+    border: 0.5px solid #e5e5e5;
+    border-radius: 10px;
+    padding: 16px;
+    overflow-x: auto;
+  }
+
+  .mgmt-table-card table { width: 100%; border-collapse: collapse; }
+
+  .mgmt-table-card thead th {
+    font-size: 10px;
+    font-weight: 600;
+    color: #bbb;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0 0 8px;
+    text-align: left;
+  }
+
+  .mgmt-table-card tbody tr { border-top: 0.5px solid #f5f5f4; }
+  .mgmt-table-card tbody tr:hover { background: #fafafa; }
+  .mgmt-table-card td { padding: 10px 8px 10px 0; font-size: 12px; vertical-align: middle; }
+
+  .product-cell { display: flex; align-items: center; gap: 10px; }
+
+  .product-thumb {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    background: #f5f5f4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #bbb;
+    font-size: 15px;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  .product-thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+  .product-name { font-size: 12.5px; font-weight: 500; color: #1a1a1a; }
+  .product-meta { font-size: 10.5px; color: #888; margin-top: 1px; }
+
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 7px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 600;
+  }
+
+  .status-pill::before { content: ""; width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
+
+  .status-active { background: #e8f3e1; color: #3a8c1c; }
+  .status-inactive { background: #f0f0f0; color: #888; }
+  .status-outofstock { background: #f8e3e3; color: #A32D2D; }
+
+  .row-actions { display: flex; gap: 6px; justify-content: flex-end; }
+
+  .icon-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    font-size: 13px;
+    border: 0.5px solid #e5e5e5;
+    background: #fff;
+    color: #888;
+    transition: 0.15s ease;
+  }
+
+  .icon-btn:hover { background: #f0f0f0; color: #1a1a1a; }
+  .icon-btn.danger:hover { background: #f8e3e3; color: #A32D2D; border-color: #e8bcbc; }
+
+  .empty-state { padding: 36px 16px; text-align: center; color: #888; font-size: 12px; }
+
+  .pagination { display: flex; justify-content: center; gap: 6px; margin-top: 16px; }
+
+  .page-link {
+    padding: 6px 11px;
+    border-radius: 7px;
+    font-size: 12px;
+    text-decoration: none;
+    border: 0.5px solid #e5e5e5;
+    background: #fff;
+    color: #888;
+  }
+
+  .page-link:hover { background: #f0f0f0; color: #1a1a1a; }
+  .page-link.current { background: #2931a3; border-color: #2931a3; color: #fff; }
+
+  .add-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #2931a3;
+    color: #fff;
+    padding: 9px 15px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    flex-shrink: 0;
+  }
+  .add-btn:hover { opacity: 0.9; }
+
+  @media (max-width: 640px) {
+    .mgmt-header { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+
+<div class="mgmt-page">
+
+  <div class="mgmt-header">
+    <div class="mgmt-title">
+      <h1>Manage Products</h1>
+      <p>{{ page_obj.paginator.count }} product{{ page_obj.paginator.count|pluralize }} total</p>
+    </div>
+    <a href="{% url 'products:product_add' %}" class="add-btn"><i class="ti ti-plus"></i> Add product</a>
+  </div>
+
+  <form method="get" class="mgmt-toolbar">
+    <div class="mgmt-search">
+      <i class="ti ti-search"></i>
+      <input type="text" name="q" value="{{ query }}" placeholder="Search products...">
+    </div>
+    <a href="?status=all{% if query %}&q={{ query }}{% endif %}" class="filter-btn {% if status == 'all' %}active{% endif %}">All</a>
+    <a href="?status=active{% if query %}&q={{ query }}{% endif %}" class="filter-btn {% if status == 'active' %}active{% endif %}">Active</a>
+    <a href="?status=inactive{% if query %}&q={{ query }}{% endif %}" class="filter-btn {% if status == 'inactive' %}active{% endif %}">Inactive</a>
+    <a href="?status=out_of_stock{% if query %}&q={{ query }}{% endif %}" class="filter-btn {% if status == 'out_of_stock' %}active{% endif %}">Out of stock</a>
+  </form>
+
+  <div class="mgmt-table-card">
+    <table>
+      <thead>
+        <tr>
+          <th>Product</th>
+          <th>Category</th>
+          <th>Price</th>
+          <th>Stock</th>
+          <th>Status</th>
+          <th style="text-align:right">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for product in page_obj %}
+        <tr>
+          <td>
+            <div class="product-cell">
+              <div class="product-thumb">
+                {% if product.image %}
+                  <img src="{{ product.image.url }}" alt="{{ product.name }}">
+                {% else %}
+                  <i class="ti ti-shopping-bag"></i>
+                {% endif %}
+              </div>
+              <div>
+                <div class="product-name">{{ product.name }}</div>
+                <div class="product-meta">{{ product.brand.name|default:"No brand" }}</div>
+              </div>
+            </div>
+          </td>
+          <td>{{ product.category.name }}</td>
+          <td>Rs. {{ product.effective_price|floatformat:0 }}</td>
+          <td>{{ product.stock }}</td>
+          <td>
+            {% if product.stock == 0 %}
+              <span class="status-pill status-outofstock">Out of stock</span>
+            {% elif product.is_active %}
+              <span class="status-pill status-active">Active</span>
+            {% else %}
+              <span class="status-pill status-inactive">Inactive</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="row-actions">
+              <a href="{% url 'products:product_edit' product.pk %}" class="icon-btn" title="Edit"><i class="ti ti-pencil"></i></a>
+              <a href="{% url 'products:product_delete_confirm' product.pk %}" class="icon-btn danger" title="Delete"><i class="ti ti-trash"></i></a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="empty-state">No products found{% if query %} for "{{ query }}"{% endif %}.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if page_obj.paginator.num_pages > 1 %}
+  <div class="pagination">
+    {% if page_obj.has_previous %}
+      <a href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if status %}&status={{ status }}{% endif %}" class="page-link">‹</a>
+    {% endif %}
+    {% for num in page_obj.paginator.page_range %}
+      <a href="?page={{ num }}{% if query %}&q={{ query }}{% endif %}{% if status %}&status={{ status }}{% endif %}" class="page-link {% if num == page_obj.number %}current{% endif %}">{{ num }}</a>
+    {% endfor %}
+    {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if status %}&status={{ status }}{% endif %}" class="page-link">›</a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
