@@ -1,0 +1,330 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_head %}
+
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+/>
+
+<style>
+  .address-card {
+    max-width: 900px;
+    margin: auto;
+    border: none;
+    border-radius: 18px;
+    box-shadow: 0 10px 35px rgba(0, 0, 0, 0.08);
+  }
+
+  .address-card .card-body {
+    padding: 35px;
+  }
+
+  .form-control {
+    border-radius: 10px;
+    padding: 10px 14px;
+  }
+
+  #map {
+    width: 100%;
+    height: 420px;
+    border-radius: 15px;
+    overflow: hidden;
+    margin-top: 15px;
+  }
+
+  .map-title {
+    font-weight: 700;
+    margin-top: 30px;
+    margin-bottom: 10px;
+  }
+
+  .btn-save {
+    padding: 12px 30px;
+    border-radius: 10px;
+    font-weight: 600;
+  }
+
+  .location-card {
+    position: absolute;
+
+    top: 15px;
+
+    right: 15px;
+
+    width: 280px;
+
+    background: white;
+
+    border-radius: 14px;
+
+    padding: 18px;
+
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.18);
+
+    z-index: 1000;
+  }
+
+  .location-card h6 {
+    font-weight: 700;
+
+    margin-bottom: 10px;
+  }
+
+  .location-card p {
+    margin-bottom: 8px;
+
+    color: #555;
+
+    font-size: 14px;
+  }
+</style>
+
+{% endblock %} {% block start %}
+
+<div class="container py-5">
+  <div class="card address-card">
+    <div class="card-body">
+      <h3 class="fw-bold mb-4">{{ title }}</h3>
+
+      <form method="post">
+        {% csrf_token %}
+
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Label</label>
+            {{ form.label }}
+          </div>
+
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Full Name</label>
+            {{ form.full_name }}
+          </div>
+
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Phone</label>
+            {{ form.phone }}
+          </div>
+
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Province</label>
+            {{ form.province }}
+          </div>
+
+          <div class="col-md-6 mb-3">
+            <label class="form-label">District</label>
+            {{ form.district }}
+          </div>
+
+          <div class="col-md-6 mb-3">
+            <label class="form-label">City</label>
+            {{ form.city }}
+          </div>
+
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Ward</label>
+            {{ form.ward }}
+          </div>
+
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Street</label>
+            {{ form.street }}
+          </div>
+
+          <div class="col-12 mb-3">
+            <label class="form-label">Landmark</label>
+            {{ form.landmark }}
+          </div>
+        </div>
+
+        {{ form.latitude }} {{ form.longitude }}
+
+        <h5 class="map-title">📍 Select Delivery Location</h5>
+
+        <p class="text-muted mb-3">
+          Click anywhere on the map or drag the marker. Your address will
+          automatically update.
+        </p>
+
+        <div class="position-relative">
+          <div id="map"></div>
+
+          <div id="location-card" class="location-card">
+            <h6>📍 Delivery Location</h6>
+
+            <p id="location-address">Detecting location...</p>
+
+            <hr />
+
+            <small>
+              Latitude:
+              <span id="lat-display">-</span>
+            </small>
+
+            <br />
+
+            <small>
+              Longitude:
+              <span id="lng-display">-</span>
+            </small>
+          </div>
+        </div>
+
+        <div class="mt-4">
+          <button type="submit" class="btn btn-dark btn-save">
+            Save Address
+          </button>
+
+          <a
+            href="{% url 'addresses:address_list' %}"
+            class="btn btn-outline-secondary btn-save"
+          >
+            Cancel
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+
+const savedLat = "{{ form.instance.latitude|default_if_none:'' }}";
+const savedLng = "{{ form.instance.longitude|default_if_none:'' }}";
+
+const defaultLat = savedLat ? parseFloat(savedLat) : 28.2096;
+const defaultLng = savedLng ? parseFloat(savedLng) : 83.9856;
+
+const map = L.map("map").setView([defaultLat, defaultLng], 16);
+
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+    attribution:"© OpenStreetMap contributors",
+}).addTo(map);
+
+const deliveryIcon = L.icon({
+    iconUrl:"https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+    shadowUrl:"https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+    iconSize:[25,41],
+    iconAnchor:[12,41]
+});
+
+const marker = L.marker([defaultLat,defaultLng],{
+    icon:deliveryIcon,
+    draggable:true
+}).addTo(map);
+
+document.getElementById("id_latitude").value = defaultLat.toFixed(6);
+document.getElementById("id_longitude").value = defaultLng.toFixed(6);
+
+document.getElementById("lat-display").textContent = defaultLat.toFixed(6);
+document.getElementById("lng-display").textContent = defaultLng.toFixed(6);
+
+async function reverseGeocode(lat,lng){
+
+    try{
+
+        const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`
+        );
+
+        const data = await response.json();
+
+        if(!data.address) return;
+
+        const a = data.address;
+
+        document.getElementById("location-address").textContent = [
+            a.road,
+            a.suburb,
+            a.city || a.town || a.village,
+            a.state
+        ].filter(Boolean).join(", ");
+
+        document.getElementById("id_province").value = a.state || "";
+        document.getElementById("id_district").value = a.county || "";
+        document.getElementById("id_city").value = a.city || a.town || a.village || "";
+        document.getElementById("id_street").value = a.road || "";
+
+    }catch(err){
+        console.log(err);
+    }
+
+}
+
+function updateCoordinates(lat,lng){
+
+    document.getElementById("id_latitude").value = lat.toFixed(6);
+    document.getElementById("id_longitude").value = lng.toFixed(6);
+
+    document.getElementById("lat-display").textContent = lat.toFixed(6);
+    document.getElementById("lng-display").textContent = lng.toFixed(6);
+
+}
+
+marker.on("dragend",function(){
+
+    const pos = marker.getLatLng();
+
+    updateCoordinates(pos.lat,pos.lng);
+
+    reverseGeocode(pos.lat,pos.lng);
+
+});
+
+map.on("click",function(e){
+
+    marker.setLatLng(e.latlng);
+
+    updateCoordinates(e.latlng.lat,e.latlng.lng);
+
+    reverseGeocode(e.latlng.lat,e.latlng.lng);
+
+});
+
+
+if(savedLat && savedLng){
+
+    reverseGeocode(defaultLat,defaultLng);
+
+}
+else if(navigator.geolocation){
+
+    navigator.geolocation.getCurrentPosition(
+
+        function(position){
+
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+
+            map.setView([lat,lng],17);
+
+            marker.setLatLng([lat,lng]);
+
+            updateCoordinates(lat,lng);
+
+            reverseGeocode(lat,lng);
+
+        },
+
+        function(){
+
+            reverseGeocode(defaultLat,defaultLng);
+
+        }
+
+    );
+
+}
+else{
+
+    reverseGeocode(defaultLat,defaultLng);
+
+}
+
+</script>
+
+{% endblock %}

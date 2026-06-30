@@ -1,15 +1,158 @@
-{% extends 'base.html' %}
-
+{% extends 'base.html' %} 
 {% block title %}Order #{{ order.id }}{% endblock %}
+
+{% block extra_head %}
+
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+/>
+
+<style>
+  .info-card {
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    margin-bottom: 22px;
+  }
+
+  .info-card .card-body {
+    padding: 24px;
+  }
+
+  .status-badge {
+    font-size: 0.9rem;
+    padding: 0.6rem 1rem;
+  }
+
+  #map {
+    height: 320px;
+    border-radius: 14px;
+  }
+
+  .table td,
+  .table th {
+    vertical-align: middle;
+  }
+</style>
+
+{% endblock %}
 
 {% block start %}
 
-<div class="row justify-content-center">
-    <div class="col-lg-7">
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="fw-bold mb-0">Order #{{ order.id }}</h3>
 
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h3 class="fw-bold mb-0">Order #{{ order.id }}</h3>
+    <span
+      class="badge status-badge {% if order.status == 'delivered' %}bg-success {% elif order.status == 'cancelled' %}bg-danger {% elif order.status == 'shipped' %}bg-info {% else %}bg-warning text-dark {% endif %}"
+    >
+      {{ order.get_status_display }}
+    </span>
+  </div>
 
+<<<<<<< feature-activity
+  {% if order.status == "cancelled" %}
+
+  <div class="alert alert-danger shadow-sm mb-4">
+    <h5 class="fw-bold mb-3">🚫 Order Cancelled</h5>
+
+    <p class="mb-2">
+      <strong>Reason:</strong>
+
+      {{ order.get_cancel_reason_display }}
+    </p>
+
+    {% if order.cancel_note %}
+
+    <p class="mb-2">
+      <strong>Note:</strong>
+
+      {{ order.cancel_note }}
+    </p>
+
+    {% endif %}
+
+    <small> Cancelled on {{ order.cancelled_at|date:"F d, Y h:i A" }} </small>
+  </div>
+
+  {% endif %}
+
+  <div class="card info-card">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold mb-0">📦 Ordered Items</h5>
+
+        <small class="text-muted">
+          Placed on {{ order.created_at|date:"F d, Y" }}
+        </small>
+      </div>
+
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Product</th>
+
+            <th class="text-center">Qty</th>
+
+            <th class="text-end">Price</th>
+
+            <th class="text-end">Subtotal</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {% for item in order.items.all %}
+
+          <tr>
+            <td>{{ item.product_name }}</td>
+
+            <td class="text-center">{{ item.quantity }}</td>
+
+            <td class="text-end">Rs. {{ item.price }}</td>
+
+            <td class="text-end fw-semibold">Rs. {{ item.subtotal }}</td>
+          </tr>
+
+          {% endfor %}
+        </tbody>
+
+        <tfoot>
+          <tr>
+            <td colspan="3" class="text-end fw-bold">Grand Total</td>
+
+            <td class="text-end fw-bold text-primary fs-5">
+              Rs. {{ order.total_price }}
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-lg-6">
+      <div class="card info-card">
+        <div class="card-body">
+          <h5 class="fw-bold mb-3">📍 Delivery Address</h5>
+
+          <p class="mb-2">
+            <strong>{{ order.delivery_full_name }}</strong>
+          </p>
+
+          <p class="mb-2">{{ order.delivery_phone }}</p>
+
+          <p class="mb-0">
+            {{ order.delivery_street }} {% if order.delivery_landmark %}
+
+            <br />
+
+            {{ order.delivery_landmark }} {% endif %}
+
+            <br />
+
+            Ward {{ order.delivery_ward }}, {{ order.delivery_city }}
+=======
             <span class="badge
                 {% if order.status == 'delivered' %}bg-success
                 {% elif order.status == 'cancelled' %}bg-danger
@@ -43,67 +186,56 @@
             </div>
             {% endif %}
         </div>
+>>>>>>> main
 
-        <div class="card border-0 shadow-sm mb-3">
-            <div class="card-body p-4">
+            <br />
 
-                <p class="text-muted small mb-3">
-                    Placed on {{ order.created_at|date:"F j, Y" }}
-                </p>
-
-                <table class="table table-borderless mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Product</th>
-                            <th class="text-center">Qty</th>
-                            <th class="text-end">Price</th>
-                            <th class="text-end">Subtotal</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                    {% for item in order.items.all %}
-                    <tr>
-                        <td>{{ item.product_name }}</td>
-                        <td class="text-center">{{ item.quantity }}</td>
-                        <td class="text-end">Rs. {{ item.price }}</td>
-                        <td class="text-end fw-semibold">
-                            Rs. {{ item.subtotal }}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                    </tbody>
-
-                    <tfoot>
-                        <tr>
-                            <td colspan="3" class="text-end fw-bold">
-                                Total
-                            </td>
-                            <td class="text-end fw-bold text-primary fs-5">
-                                Rs. {{ order.total_price }}
-                            </td>
-                        </tr>
-                    </tfoot>
-                </table>
-
-            </div>
+            {{ order.delivery_district }}, {{ order.delivery_province }}
+          </p>
         </div>
+      </div>
+    </div>
 
+    <div class="col-lg-6">
+      <div class="card info-card">
+        <div class="card-body">
+          <h5 class="fw-bold mb-3">💳 Payment Details</h5>
+
+          <p>
+            <strong>Method</strong>
+
+            <br />
+
+            {{ order.payment_method }}
+          </p>
+
+          <p>
+            <strong>Status</strong>
+
+            <br />
+
+<<<<<<< feature-activity
+            <span class="badge bg-success">
+              {{ order.get_payment_status_display }}
+            </span>
+          </p>
+
+          {% if order.transaction_uuid %}
+
+          <p class="mb-0">
+            <strong>Transaction ID</strong>
+=======
         <!-- <div class="d-flex gap-2 flex-wrap">
+>>>>>>> main
 
-            <a href="{% url 'order_list' %}" class="btn btn-outline-dark">
-                Back to Orders
-            </a>
+            <br />
 
-            {% if order.status == 'pending' or order.status == 'processing' %}
-            <form method="post" action="{% url 'cancel_order' order.id %}">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-danger">
-                    Cancel Order
-                </button>
-            </form>
-            {% endif %}
+            {{ order.transaction_uuid }}
+          </p>
 
+<<<<<<< feature-activity
+          {% endif %}
+=======
         </div> -->
 
         <div class="d-flex gap-2">
@@ -117,9 +249,54 @@
                 </a>
             {% endif %}
 
+>>>>>>> main
         </div>
-
+      </div>
     </div>
+  </div>
+
+  {% if order.delivery_latitude and order.delivery_longitude %}
+
+  <div class="card info-card">
+    <div class="card-body">
+      <h5 class="fw-bold mb-3">🗺 Delivery Location</h5>
+
+      <div id="map"></div>
+    </div>
+  </div>
+
+  {% endif %}
+
+  <div class="d-flex gap-2 mt-3">
+    <a href="{% url 'order_list' %}" class="btn btn-outline-dark">
+      Back to Orders
+    </a>
+
+    {% if order.can_cancel %}
+
+    <a href="{% url 'cancel_order' order.id %}" class="btn btn-danger">
+      Cancel Order
+    </a>
+
+    {% endif %}
+  </div>
 </div>
 
-{% endblock %}
+{% if order.delivery_latitude and order.delivery_longitude %}
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+  const lat = parseFloat("{{ order.delivery_latitude }}");
+  const lng = parseFloat("{{ order.delivery_longitude }}");
+
+  const map = L.map("map").setView([lat, lng], 16);
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "© OpenStreetMap contributors",
+  }).addTo(map);
+
+  L.marker([lat, lng]).addTo(map).bindPopup("Delivery Address").openPopup();
+</script>
+
+{% endif %} {% endblock %}

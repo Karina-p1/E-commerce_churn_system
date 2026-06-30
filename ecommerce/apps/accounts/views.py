@@ -4,7 +4,8 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from .forms import RegisterForm, LoginForm, ProfileUpdateForm
 from .utils import get_device_type
-from .utils import update_device_info  
+from .utils import update_device_info
+from apps.addresses.models import Address
 
 def register_view(request):
     """
@@ -69,9 +70,21 @@ def profile_view(request):
     """
     User profile page.
     Shows order history and account details.
-    login_required ensures only authenticated users access this.
     """
-    return render(request, 'accounts/profile.html', {'user': request.user})
+
+    default_address = Address.objects.filter(
+        user=request.user,
+        is_default=True
+    ).first()
+
+    return render(
+        request,
+        "accounts/profile.html",
+        {
+            "user": request.user,
+            "default_address": default_address,
+        }
+    )
 
 
 @login_required

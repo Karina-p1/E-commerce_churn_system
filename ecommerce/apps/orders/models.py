@@ -135,6 +135,69 @@ class Order(models.Model):
         max_digits=10,
         decimal_places=2
     )
+    
+    # ==========================
+    # Delivery Address Snapshot
+    # ==========================
+
+    delivery_label = models.CharField(
+        max_length=30,
+        blank=True
+    )
+
+    delivery_full_name = models.CharField(
+        max_length=150,
+        blank=True
+    )
+
+    delivery_phone = models.CharField(
+        max_length=20,
+        blank=True
+    )
+
+    delivery_province = models.CharField(
+        max_length=100,
+        blank=True
+    )
+
+    delivery_district = models.CharField(
+        max_length=100,
+        blank=True
+    )
+
+    delivery_city = models.CharField(
+        max_length=100,
+        blank=True
+    )
+
+    delivery_ward = models.CharField(
+        max_length=20,
+        blank=True
+    )
+
+    delivery_street = models.CharField(
+        max_length=255,
+        blank=True
+    )
+
+    delivery_landmark = models.CharField(
+        max_length=255,
+        blank=True
+    )
+
+    delivery_latitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        null=True,
+        blank=True
+    )
+
+    delivery_longitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        null=True,
+        blank=True
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

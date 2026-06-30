@@ -15,6 +15,7 @@ from django.contrib import messages
 
 from apps.products.models import Product
 from apps.activity.models import UserEvent
+from apps.addresses.models import Address
 
 from .models import Cart, CartItem, Order, OrderItem
 
@@ -201,6 +202,13 @@ def checkout_view(request):
     cart, _ = Cart.objects.get_or_create(
         user=request.user
     )
+    
+    addresses = Address.objects.filter(
+        user=request.user
+    ).order_by(
+        "-is_default",
+        "-created_at"
+    )
 
     if not cart.items.exists():
         messages.warning(
@@ -208,6 +216,13 @@ def checkout_view(request):
             "Your cart is empty."
         )
         return redirect('cart')
+    
+    if not addresses.exists():
+        messages.warning(
+            request,
+            "Please add a delivery address first."
+        )
+        return redirect("addresses:add_address")
 
     if request.method == 'GET':
         UserEvent.objects.create(
@@ -216,7 +231,23 @@ def checkout_view(request):
         )
 
     if request.method == 'POST':
+        selected_address_id = request.POST.get("address")
+        if not selected_address_id:
+
+            messages.error(
+                request,
+                "Please select a delivery address."
+            )
+
+            return redirect("checkout")
+        
         try:
+            selected_address = get_object_or_404(
+                Address,
+                id=selected_address_id,
+                user=request.user
+            )
+            
             with transaction.atomic():
                 cart_items = cart.items.select_related('product')
 
@@ -239,6 +270,18 @@ def checkout_view(request):
                         return redirect('cart')
 
                 transaction_uuid = f"ORDER-{uuid.uuid4().hex[:12]}"
+                
+                address_id = request.POST.get("address")
+
+                if not address_id:
+                    messages.error(request, "Please select a delivery address.")
+                    return redirect("checkout")
+
+                address = get_object_or_404(
+                    Address,
+                    id=address_id,
+                    user=request.user
+                )
 
                 # Create unpaid order only. Do NOT reduce stock yet.
                 order = Order.objects.create(
@@ -246,7 +289,21 @@ def checkout_view(request):
                     total_price=cart.total_price,
                     payment_status='INITIATED',
                     payment_method='ESEWA',
-                    transaction_uuid=transaction_uuid
+                    transaction_uuid=transaction_uuid,
+                    
+                    delivery_label=selected_address.label,
+                    delivery_full_name=selected_address.full_name,
+                    delivery_phone=selected_address.phone,
+                    
+                    delivery_province=selected_address.province,
+                    delivery_district=selected_address.district,
+                    delivery_city=selected_address.city,
+                    delivery_ward=selected_address.ward,
+                    delivery_street=selected_address.street,
+                    delivery_landmark=selected_address.landmark,
+                    
+                    delivery_latitude=selected_address.latitude,
+                    delivery_longitude=selected_address.longitude,
                 )
                 
                 UserEvent.objects.create(
@@ -323,9 +380,14 @@ def checkout_view(request):
             )
             return redirect('checkout')
 
-    return render(request, 'orders/checkout.html', {
-        'cart': cart
-    })
+    return render(
+        request,
+        "orders/checkout.html",
+        {
+            "cart": cart,
+            "addresses": addresses,
+        }
+    )
 
 
 @login_required

@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     "apps.products",
     "apps.analytics",
     "apps.dashboard",
+    "apps.addresses",
 ]
 
 
