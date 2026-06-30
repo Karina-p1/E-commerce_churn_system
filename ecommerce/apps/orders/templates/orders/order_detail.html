@@ -51,7 +51,6 @@
     </span>
   </div>
 
-<<<<<<< feature-activity
   {% if order.status == "cancelled" %}
 
   <div class="alert alert-danger shadow-sm mb-4">
@@ -152,41 +151,6 @@
             <br />
 
             Ward {{ order.delivery_ward }}, {{ order.delivery_city }}
-=======
-            <span class="badge
-                {% if order.status == 'delivered' %}bg-success
-                {% elif order.status == 'cancelled' %}bg-danger
-                {% elif order.status == 'shipped' %}bg-info
-                {% else %}bg-warning text-dark{% endif %} px-3 py-2">
-                {{ order.get_status_display }}
-            </span>
-            
-            {% if order.status == "cancelled" %}
-            <div class="alert alert-danger mt-3">
-                <h6 class="fw-bold mb-2">
-                    Order Cancelled
-                </h6>
-
-                <p class="mb-1">
-                    <strong>Reason:</strong>
-                    {{ order.get_cancel_reason_display }}
-                </p>
-
-                {% if order.cancel_note %}
-                    <p class="mb-1">
-                        <strong>Note:</strong>
-                        {{ order.cancel_note }}
-                    </p>
-                {% endif %}
-
-                <small class="text-muted">
-                    Cancelled on
-                    {{ order.cancelled_at|date:"F d, Y h:i A" }}
-                </small>
-            </div>
-            {% endif %}
-        </div>
->>>>>>> main
 
             <br />
 
@@ -214,7 +178,6 @@
 
             <br />
 
-<<<<<<< feature-activity
             <span class="badge bg-success">
               {{ order.get_payment_status_display }}
             </span>
@@ -224,32 +187,13 @@
 
           <p class="mb-0">
             <strong>Transaction ID</strong>
-=======
-        <!-- <div class="d-flex gap-2 flex-wrap">
->>>>>>> main
 
             <br />
 
             {{ order.transaction_uuid }}
           </p>
 
-<<<<<<< feature-activity
           {% endif %}
-=======
-        </div> -->
-
-        <div class="d-flex gap-2">
-            <a href="{% url 'order_list' %}" class="btn btn-outline-dark">
-                Back to Orders
-            </a>
-
-            {% if order.can_cancel %}
-                <a href="{% url 'cancel_order' order.id %}" class="btn btn-danger">
-                    Cancel Order
-                </a>
-            {% endif %}
-
->>>>>>> main
         </div>
       </div>
     </div>
