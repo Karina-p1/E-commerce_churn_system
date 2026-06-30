@@ -2,43 +2,46 @@
 {% block title %}Churn Dashboard - ShopMart Admin{% endblock %}
 
 {% block start %}
+
 <style>
   .churn-page {
-    padding: 28px 32px;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #f5f5f4;
+    padding: 20px;
+    border-radius: 12px;
+    color: #1a1a1a;
   }
 
   .churn-header {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: 16px;
-    margin-bottom: 24px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
   }
 
   .churn-title h1 {
-    font-size: 26px;
-    font-weight: 800;
-    letter-spacing: -0.5px;
-    margin: 0;
-    color: var(--text);
+    font-size: 18px;
+    font-weight: 500;
+    margin: 0 0 2px;
   }
 
   .churn-title p {
-    color: var(--muted);
+    color: #888;
     font-size: 12px;
-    margin-top: 3px;
-    font-family: 'Space Mono', monospace;
+    margin: 0;
   }
 
   .refresh-btn {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    background: var(--accent);
+    gap: 6px;
+    background: #2931a3;
     color: #fff;
-    padding: 9px 15px;
+    padding: 8px 14px;
     border-radius: 8px;
-    font-size: 13px;
+    font-size: 12.5px;
     font-weight: 600;
     text-decoration: none;
     transition: 0.15s ease;
@@ -50,21 +53,21 @@
 
   .churn-metrics {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
-    margin-bottom: 20px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
   }
 
   .metric-card {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: var(--card-r);
-    padding: 20px 22px;
+    background: #fff;
+    border: 0.5px solid #e5e5e5;
+    border-radius: 10px;
+    padding: 14px;
     position: relative;
     overflow: hidden;
   }
 
-  .metric-card::before {
+  .metric-card::after {
     content: "";
     position: absolute;
     left: 0;
@@ -73,69 +76,96 @@
     height: 3px;
   }
 
-  .metric-card.total::before { background: var(--blue); }
-  .metric-card.high::before { background: var(--danger); }
-  .metric-card.medium::before { background: var(--warn); }
-  .metric-card.low::before { background: var(--accent); }
+  .metric-card.total::after { background: #1a7ab5; }
+  .metric-card.high::after { background: #A32D2D; }
+  .metric-card.medium::after { background: #d4680a; }
+  .metric-card.low::after { background: #2931a3; }
 
   .metric-label {
-    font-size: 11.5px;
-    font-weight: 600;
-    color: var(--muted);
-    letter-spacing: 0.4px;
+    font-size: 10px;
+    font-weight: 500;
+    color: #888;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
-    margin-bottom: 7px;
+    margin-bottom: 6px;
   }
 
   .metric-value {
-    font-size: 28px;
-    font-weight: 800;
-    letter-spacing: -1px;
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: -0.5px;
     line-height: 1;
-    font-family: 'Space Mono', monospace;
-    color: var(--text);
+    color: #1a1a1a;
   }
 
-  .metric-value.high { color: var(--danger); }
-  .metric-value.medium { color: var(--warn); }
-  .metric-value.low { color: var(--accent); }
+  .metric-value.high { color: #A32D2D; }
+  .metric-value.medium { color: #d4680a; }
+  .metric-value.low { color: #2931a3; }
 
   .filter-bar {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
     flex-wrap: wrap;
   }
 
   .filter-btn {
-    padding: 7px 13px;
+    padding: 6px 13px;
     border-radius: 999px;
-    font-size: 12.5px;
-    font-weight: 600;
+    font-size: 12px;
+    font-weight: 500;
     text-decoration: none;
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    color: var(--muted);
+    background: #fff;
+    border: 0.5px solid #e5e5e5;
+    color: #888;
     transition: 0.15s ease;
   }
 
   .filter-btn:hover {
-    background: var(--bg3);
-    color: var(--text);
+    background: #f0f0f0;
+    color: #1a1a1a;
   }
 
-  .filter-active-all { background: var(--blue-light) !important; border-color: rgba(26,122,181,0.25) !important; color: var(--blue) !important; }
-  .filter-active-high { background: var(--danger-light) !important; border-color: rgba(214,59,59,0.25) !important; color: var(--danger) !important; }
-  .filter-active-medium { background: var(--warn-light) !important; border-color: rgba(212,104,10,0.25) !important; color: var(--warn) !important; }
-  .filter-active-low { background: var(--accent-light) !important; border-color: rgba(58,140,28,0.25) !important; color: var(--accent) !important; }
+  .filter-active-all { background: #e6f1fb !important; border-color: #b8d8ec !important; color: #1a7ab5 !important; }
+  .filter-active-high { background: #f8e3e3 !important; border-color: #e8bcbc !important; color: #A32D2D !important; }
+  .filter-active-medium { background: #faeeda !important; border-color: #ecd2a8 !important; color: #d4680a !important; }
+  .filter-active-low { background: #e8eafd !important; border-color: #b5b8f0 !important; color: #2931a3 !important; }
 
   .churn-table-card {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: var(--card-r);
-    padding: 24px;
+    background: #fff;
+    border: 0.5px solid #e5e5e5;
+    border-radius: 10px;
+    padding: 16px;
     overflow-x: auto;
+  }
+
+  .churn-table-card table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .churn-table-card thead th {
+    font-size: 10px;
+    font-weight: 600;
+    color: #bbb;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0 0 8px;
+    text-align: left;
+  }
+
+  .churn-table-card tbody tr {
+    border-top: 0.5px solid #f5f5f4;
+  }
+
+  .churn-table-card tbody tr:hover {
+    background: #fafafa;
+  }
+
+  .churn-table-card td {
+    padding: 10px 0;
+    font-size: 12px;
   }
 
   .customer-cell {
@@ -145,53 +175,52 @@
   }
 
   .customer-avatar {
-    width: 34px;
-    height: 34px;
-    border-radius: 9px;
-    background: var(--blue-light);
+    width: 30px;
+    height: 30px;
+    border-radius: 7px;
+    background: #e6f1fb;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
-    color: var(--blue);
+    color: #1a7ab5;
     flex-shrink: 0;
-    font-family: 'Space Mono', monospace;
   }
 
   .customer-name {
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--text);
+    font-size: 12px;
+    font-weight: 500;
+    color: #1a1a1a;
   }
 
   .customer-email {
-    font-size: 11.5px;
-    color: var(--muted);
+    font-size: 10.5px;
+    color: #888;
     margin-top: 2px;
   }
 
   .risk-badge {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    padding: 3px 9px;
-    border-radius: 999px;
-    font-size: 11px;
-    font-weight: 700;
+    gap: 4px;
+    padding: 2px 7px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 600;
   }
 
   .risk-badge::before {
     content: "";
-    width: 5px;
-    height: 5px;
+    width: 4px;
+    height: 4px;
     border-radius: 50%;
     background: currentColor;
   }
 
-  .risk-high { background: var(--danger-light); color: var(--danger); }
-  .risk-medium { background: var(--warn-light); color: var(--warn); }
-  .risk-low { background: var(--accent-light); color: var(--accent); }
+  .risk-high { background: #f8e3e3; color: #A32D2D; }
+  .risk-medium { background: #faeeda; color: #d4680a; }
+  .risk-low { background: #e8eafd; color: #2931a3; }
 
   .score-wrap {
     display: flex;
@@ -200,63 +229,62 @@
   }
 
   .score-value {
-    font-family: 'Space Mono', monospace;
     font-size: 12px;
-    font-weight: 700;
-    min-width: 44px;
+    font-weight: 500;
+    min-width: 40px;
+    color: #1a1a1a;
   }
 
   .score-track {
     width: 90px;
-    height: 6px;
-    background: var(--border);
-    border-radius: 999px;
+    height: 3px;
+    background: #f0f0f0;
+    border-radius: 2px;
     overflow: hidden;
   }
 
   .score-bar {
     height: 100%;
-    border-radius: 999px;
+    border-radius: 2px;
   }
 
-  .score-bar-high { background: var(--danger); }
-  .score-bar-medium { background: var(--warn); }
-  .score-bar-low { background: var(--accent); }
+  .score-bar-high { background: #A32D2D; }
+  .score-bar-medium { background: #d4680a; }
+  .score-bar-low { background: #2931a3; }
 
   .empty-state {
-    padding: 42px 16px;
+    padding: 36px 16px;
     text-align: center;
-    color: var(--muted);
+    color: #888;
+    font-size: 12px;
   }
 
   .empty-state code,
   .churn-note code {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    padding: 2px 7px;
+    background: #f5f5f4;
+    border: 0.5px solid #e5e5e5;
+    padding: 2px 6px;
     border-radius: 6px;
-    color: var(--text);
+    color: #1a1a1a;
+    font-size: 11px;
   }
 
   .churn-note {
     font-size: 12px;
-    color: var(--muted);
+    color: #888;
     margin-top: 12px;
   }
 
   @media (max-width: 980px) {
     .churn-metrics {
-      grid-template-columns: repeat(2, 1fr);
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 
   @media (max-width: 640px) {
-    .churn-page {
-      padding: 20px 16px;
-    }
-
     .churn-header {
       flex-direction: column;
+      align-items: flex-start;
     }
 
     .churn-metrics {
@@ -265,108 +293,108 @@
   }
 </style>
 
-<main class="main">
-  <div class="churn-page">
-    <div class="churn-header">
-      <div class="churn-title">
-        <h1>Churn Dashboard</h1>
-        <p>Customer retention risk overview</p>
-      </div>
-      <a href="{% url 'churn:dashboard' %}" class="refresh-btn">Refresh scores</a>
+<div class="churn-page">
+
+  <div class="churn-header">
+    <div class="churn-title">
+      <h1>Churn Dashboard</h1>
+      <p>Customer retention risk overview</p>
     </div>
-
-    <div class="churn-metrics">
-      <div class="metric-card total">
-        <div class="metric-label">Total customers</div>
-        <div class="metric-value">{{ total }}</div>
-      </div>
-
-      <div class="metric-card high">
-        <div class="metric-label">High risk</div>
-        <div class="metric-value high">{{ high_count }}</div>
-      </div>
-
-      <div class="metric-card medium">
-        <div class="metric-label">Medium risk</div>
-        <div class="metric-value medium">{{ med_count }}</div>
-      </div>
-
-      <div class="metric-card low">
-        <div class="metric-label">Low risk</div>
-        <div class="metric-value low">{{ low_count }}</div>
-      </div>
-    </div>
-
-    <div class="filter-bar">
-      <a href="?risk=all" class="filter-btn {% if risk_filter == 'all' %}filter-active-all{% endif %}">All</a>
-      <a href="?risk=high" class="filter-btn {% if risk_filter == 'high' %}filter-active-high{% endif %}">High risk</a>
-      <a href="?risk=medium" class="filter-btn {% if risk_filter == 'medium' %}filter-active-medium{% endif %}">Medium risk</a>
-      <a href="?risk=low" class="filter-btn {% if risk_filter == 'low' %}filter-active-low{% endif %}">Low risk</a>
-    </div>
-
-    <div class="churn-table-card">
-      <table>
-        <thead>
-          <tr>
-            <th>Customer</th>
-            <th>Risk level</th>
-            <th>Churn score</th>
-            <th>Last scored</th>
-            <th>Orders</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for s in scores %}
-          <tr>
-            <td>
-              <div class="customer-cell">
-                <div class="customer-avatar">{{ s.customer.username|slice:":2"|upper }}</div>
-                <div>
-                  <div class="customer-name">{{ s.customer.username }}</div>
-                  <div class="customer-email">{{ s.customer.email }}</div>
-                </div>
-              </div>
-            </td>
-
-            <td>
-              {% if s.risk_level == 'high' %}
-                <span class="risk-badge risk-high">High</span>
-              {% elif s.risk_level == 'medium' %}
-                <span class="risk-badge risk-medium">Medium</span>
-              {% else %}
-                <span class="risk-badge risk-low">Low</span>
-              {% endif %}
-            </td>
-
-            <td>
-              <div class="score-wrap">
-                <span class="score-value">{{ s.score|floatformat:2 }}</span>
-                <div class="score-track">
-                  <div class="score-bar score-bar-{{ s.risk_level }}" data-width="{% widthratio s.score 1 100 %}"></div>
-                </div>
-              </div>
-            </td>
-
-            <td>{{ s.predicted_at|date:"M d, Y" }}</td>
-            <td>{{ s.customer.orders.count }}</td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="5" class="empty-state">
-              No churn scores yet. Run <code>python manage.py score_customers</code> to generate scores.
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-
-    <p class="churn-note">
-      Avg churn score: {{ avg_score }}% &nbsp;.&nbsp; Scores update when you run
-      <code>python manage.py score_customers</code>
-    </p>
+    <a href="{% url 'churn:dashboard' %}" class="refresh-btn"><i class="ti ti-refresh"></i> Refresh scores</a>
   </div>
-</main>
+
+  <div class="churn-metrics">
+    <div class="metric-card total">
+      <div class="metric-label">Total customers</div>
+      <div class="metric-value">{{ total }}</div>
+    </div>
+
+    <div class="metric-card high">
+      <div class="metric-label">High risk</div>
+      <div class="metric-value high">{{ high_count }}</div>
+    </div>
+
+    <div class="metric-card medium">
+      <div class="metric-label">Medium risk</div>
+      <div class="metric-value medium">{{ med_count }}</div>
+    </div>
+
+    <div class="metric-card low">
+      <div class="metric-label">Low risk</div>
+      <div class="metric-value low">{{ low_count }}</div>
+    </div>
+  </div>
+
+  <div class="filter-bar">
+    <a href="?risk=all" class="filter-btn {% if risk_filter == 'all' %}filter-active-all{% endif %}">All</a>
+    <a href="?risk=high" class="filter-btn {% if risk_filter == 'high' %}filter-active-high{% endif %}">High risk</a>
+    <a href="?risk=medium" class="filter-btn {% if risk_filter == 'medium' %}filter-active-medium{% endif %}">Medium risk</a>
+    <a href="?risk=low" class="filter-btn {% if risk_filter == 'low' %}filter-active-low{% endif %}">Low risk</a>
+  </div>
+
+  <div class="churn-table-card">
+    <table>
+      <thead>
+        <tr>
+          <th>Customer</th>
+          <th>Risk level</th>
+          <th>Churn score</th>
+          <th>Last scored</th>
+          <th>Orders</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in scores %}
+        <tr>
+          <td>
+            <div class="customer-cell">
+              <div class="customer-avatar">{{ s.customer.username|slice:":2"|upper }}</div>
+              <div>
+                <div class="customer-name">{{ s.customer.username }}</div>
+                <div class="customer-email">{{ s.customer.email }}</div>
+              </div>
+            </div>
+          </td>
+
+          <td>
+            {% if s.risk_level == 'high' %}
+              <span class="risk-badge risk-high">High</span>
+            {% elif s.risk_level == 'medium' %}
+              <span class="risk-badge risk-medium">Medium</span>
+            {% else %}
+              <span class="risk-badge risk-low">Low</span>
+            {% endif %}
+          </td>
+
+          <td>
+            <div class="score-wrap">
+              <span class="score-value">{{ s.score|floatformat:2 }}</span>
+              <div class="score-track">
+                <div class="score-bar score-bar-{{ s.risk_level }}" data-width="{% widthratio s.score 1 100 %}"></div>
+              </div>
+            </div>
+          </td>
+
+          <td>{{ s.predicted_at|date:"M d, Y" }}</td>
+          <td>{{ s.customer.orders.count }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" class="empty-state">
+            No churn scores yet. Run <code>python manage.py score_customers</code> to generate scores.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <p class="churn-note">
+    Avg churn score: {{ avg_score }}% &nbsp;.&nbsp; Scores update when you run
+    <code>python manage.py score_customers</code>
+  </p>
+
+</div>
 
 <script>
   document.querySelectorAll(".score-bar[data-width]").forEach(function(el) {
