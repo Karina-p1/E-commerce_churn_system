@@ -4,422 +4,561 @@
 
 {% block start %}
 
-<main class="main">
+<style>
+  /* ── Page header ── */
+  .an-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .an-header h1 { font-size: 18px; font-weight: 500; color: #1a1a1a; margin: 0 0 2px; }
+  .an-header p  { font-size: 12px; color: #888; margin: 0; }
+  .an-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #e8eafd; border: 0.5px solid #b5b8f0; color: #2931a3;
+    font-size: 12px; font-weight: 500; padding: 6px 12px; border-radius: 20px;
+  }
+  .an-badge-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #2931a3; animation: an-pulse 2s infinite;
+  }
+  @keyframes an-pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
 
-  <div class="topbar">
-    <div class="page-title">
-      <h1>Analytics</h1>
-      <p>Product performance, customer behavior, stock, and churn overview</p>
+  /* ── KPI grid ── */
+  .an-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .an-kpi {
+    background: #fff;
+    border: 0.5px solid #e5e5e5;
+    border-radius: 10px;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .an-kpi::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 3px;
+  }
+  .an-kpi.revenue::after  { background: #2931a3; }
+  .an-kpi.views::after    { background: #d4900a; }
+  .an-kpi.customers::after{ background: #1a7ab5; }
+  .an-kpi.wishlist::after { background: #d4680a; }
+
+  .an-kpi-icon {
+    width: 34px; height: 34px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 12px; font-size: 16px;
+  }
+  .an-kpi-icon.blue   { background: #e8eafd; color: #2931a3; }
+  .an-kpi-icon.yellow { background: #faeeda; color: #d4900a; }
+  .an-kpi-icon.sky    { background: #e6f1fb; color: #1a7ab5; }
+  .an-kpi-icon.orange { background: #fde8d8; color: #d4680a; }
+  .an-kpi-label { font-size: 11px; color: #888; font-weight: 500; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+  .an-kpi-value { font-size: 22px; font-weight: 500; color: #1a1a1a; margin-bottom: 6px; }
+  .an-kpi-sub {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11px; font-weight: 600; padding: 3px 8px;
+    border-radius: 20px; background: #e8eafd; color: #2931a3;
+  }
+
+  /* ── Section card ── */
+  .an-card {
+    background: #fff;
+    border: 0.5px solid #e5e5e5;
+    border-radius: 10px;
+    padding: 20px;
+  }
+  .an-card-head { margin-bottom: 16px; padding-bottom: 12px; border-bottom: 0.5px solid #f0f0f0; }
+  .an-card-head h2 { font-size: 14px; font-weight: 500; color: #1a1a1a; margin: 0 0 2px; }
+  .an-card-head p  { font-size: 12px; color: #888; margin: 0; }
+
+  /* ── Two-col grids ── */
+  .an-mid   { display: grid; grid-template-columns: 1fr 280px; gap: 12px; margin-bottom: 16px; }
+  .an-2col  { display: grid; grid-template-columns: 1fr 1fr;   gap: 12px; margin-bottom: 16px; }
+
+  /* ── Bar chart ── */
+  .an-bars { display: flex; align-items: flex-end; gap: 6px; height: 130px; margin-bottom: 8px; }
+  .an-bar-group { flex: 1; display: flex; align-items: flex-end; }
+  .an-bar {
+    flex: 1; border-radius: 4px 4px 0 0;
+    background: #2931a3; opacity: .85;
+    height: 8px; transition: opacity .15s;
+    cursor: default;
+  }
+  .an-bar:hover { opacity: 1; }
+  .an-bar-labels { display: flex; gap: 6px; }
+  .an-bar-label { flex: 1; text-align: center; font-size: 10px; color: #aaa; }
+
+  /* ── Activity list ── */
+  .an-activity-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 0; border-bottom: 0.5px solid #f5f5f4;
+  }
+  .an-activity-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .an-activity-item:first-child { padding-top: 0; }
+  .an-activity-icon {
+    width: 34px; height: 34px; border-radius: 8px;
+    background: #f5f5f4; display: flex; align-items: center;
+    justify-content: center; font-size: 16px; flex-shrink: 0; color: #555;
+  }
+  .an-activity-name { font-size: 13px; font-weight: 500; color: #1a1a1a; }
+  .an-activity-sub  { font-size: 11px; color: #888; margin-top: 2px; }
+  .an-activity-val  { margin-left: auto; font-size: 13px; font-weight: 500; color: #2931a3; }
+
+  /* ── Stock bars ── */
+  .an-stock-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 0; border-bottom: 0.5px solid #f5f5f4;
+  }
+  .an-stock-item:last-child { border-bottom: none; }
+  .an-stock-name { font-size: 13px; color: #1a1a1a; margin-bottom: 4px; }
+  .an-stock-bar-bg { height: 4px; border-radius: 2px; background: #f0f0f0; width: 140px; }
+  .an-stock-bar-fill { height: 4px; border-radius: 2px; }
+  .an-stock-val { font-size: 13px; font-weight: 500; margin-left: 16px; }
+  .an-stock-val.good     { color: #1a1a1a; }
+  .an-stock-val.warn     { color: #d4680a; }
+  .an-stock-val.critical { color: #A32D2D; }
+
+  /* ── Churn risk ── */
+  .an-risk-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 11px 0; border-bottom: 0.5px solid #f5f5f4;
+  }
+  .an-risk-item:last-child { border-bottom: none; }
+  .an-risk-label { font-size: 13px; color: #1a1a1a; margin-bottom: 4px; }
+  .an-risk-bar-bg { height: 4px; border-radius: 2px; background: #f0f0f0; width: 120px; }
+  .an-risk-bar-fill { height: 4px; border-radius: 2px; }
+  .an-risk-val { font-size: 13px; font-weight: 500; margin-left: 16px; }
+
+  /* ── Product list ── */
+  .an-product-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 0; border-bottom: 0.5px solid #f5f5f4;
+  }
+  .an-product-item:first-child { padding-top: 0; }
+  .an-product-item:last-child  { border-bottom: none; padding-bottom: 0; }
+  .an-product-thumb {
+    width: 34px; height: 34px; border-radius: 8px;
+    background: #f5f5f4; display: flex; align-items: center;
+    justify-content: center; font-size: 17px; flex-shrink: 0; overflow: hidden;
+  }
+  .an-product-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .an-product-name { font-size: 13px; font-weight: 500; color: #1a1a1a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .an-product-cat  { font-size: 11px; color: #888; margin-top: 2px; }
+  .an-product-val  { margin-left: auto; font-size: 13px; font-weight: 500; color: #2931a3; flex-shrink: 0; }
+
+  /* ── Tables ── */
+  .an-table { width: 100%; border-collapse: collapse; }
+  .an-table thead th {
+    font-size: 11px; font-weight: 600; color: #aaa;
+    text-transform: uppercase; letter-spacing: .06em;
+    padding: 0 0 10px; text-align: left;
+  }
+  .an-table tbody tr { border-top: 0.5px solid #f5f5f4; }
+  .an-table tbody tr:hover { background: #fafafa; }
+  .an-table td { padding: 11px 0; font-size: 13px; color: #1a1a1a; }
+
+  .an-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 600;
+  }
+  .an-pill-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+  .an-pill.green  { background: #e8eafd; color: #2931a3; }
+  .an-pill.blue   { background: #e6f1fb; color: #1a7ab5; }
+
+  /* ── CTA button ── */
+  .an-cta {
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+    width: 100%; margin-top: 14px; padding: 9px 14px;
+    background: #f5f5f4; border: 0.5px solid #d4d4d4;
+    border-radius: 8px; font-size: 13px; font-weight: 500;
+    color: #1a1a1a; text-decoration: none; transition: all .15s;
+  }
+  .an-cta:hover { background: #e8eafd; border-color: #b5b8f0; color: #2931a3; }
+
+  /* ── Responsive ── */
+  @media (max-width: 960px) {
+    .an-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .an-mid      { grid-template-columns: 1fr; }
+    .an-2col     { grid-template-columns: 1fr; }
+    .an-stock-bar-bg { width: 100px; }
+    .an-risk-bar-bg  { width: 90px; }
+  }
+  @media (max-width: 580px) {
+    .an-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .an-header   { flex-direction: column; align-items: flex-start; }
+    .an-stock-bar-bg { display: none; }
+    .an-risk-bar-bg  { display: none; }
+  }
+</style>
+
+<!-- Page header -->
+<div class="an-header">
+  <div>
+    <h1>Analytics</h1>
+    <p>Product performance, customer behavior, stock, and churn overview</p>
+  </div>
+  <div class="an-badge">
+    <span class="an-badge-dot"></span>
+    Analytics report
+  </div>
+</div>
+
+<!-- KPI cards -->
+<div class="an-kpi-grid">
+
+  <div class="an-kpi revenue">
+    <div class="an-kpi-icon blue"><i class="ti ti-currency-rupee" aria-hidden="true"></i></div>
+    <div class="an-kpi-label">Total sales</div>
+    <div class="an-kpi-value">Rs. {{ total_sales|floatformat:0 }}</div>
+    <span class="an-kpi-sub">{{ total_orders }} orders</span>
+  </div>
+
+  <div class="an-kpi views">
+    <div class="an-kpi-icon yellow"><i class="ti ti-eye" aria-hidden="true"></i></div>
+    <div class="an-kpi-label">Product views</div>
+    <div class="an-kpi-value">{{ product_views }}</div>
+    <span class="an-kpi-sub" style="background:#faeeda;color:#d4900a;">View events</span>
+  </div>
+
+  <div class="an-kpi customers">
+    <div class="an-kpi-icon sky"><i class="ti ti-users" aria-hidden="true"></i></div>
+    <div class="an-kpi-label">Customers</div>
+    <div class="an-kpi-value">{{ total_customers }}</div>
+    <span class="an-kpi-sub" style="background:#e6f1fb;color:#1a7ab5;">Registered</span>
+  </div>
+
+  <div class="an-kpi wishlist">
+    <div class="an-kpi-icon orange"><i class="ti ti-heart" aria-hidden="true"></i></div>
+    <div class="an-kpi-label">Wishlist</div>
+    <div class="an-kpi-value">{{ total_wishlist_items }}</div>
+    <span class="an-kpi-sub" style="background:#fde8d8;color:#d4680a;">Saved products</span>
+  </div>
+
+</div>
+
+<!-- Revenue chart + Customer activity -->
+<div class="an-mid">
+
+  <div class="an-card">
+    <div class="an-card-head">
+      <h2>Revenue chart</h2>
+      <p>Last 7 days revenue trend</p>
     </div>
 
-    <div class="promo-badge">
-      <span class="promo-dot"></span>
-      Analytics report
+    <div class="an-bars">
+      {% for item in revenue_chart %}
+        <div class="an-bar-group" title="{{ item.label }}: Rs. {{ item.revenue|floatformat:0 }}">
+          <div class="an-bar" data-value="{{ item.revenue }}" style="height:8px;"></div>
+        </div>
+      {% empty %}
+        <p style="font-size:13px;color:#aaa;align-self:center;">No revenue data available.</p>
+      {% endfor %}
+    </div>
+
+    <div class="an-bar-labels">
+      {% for item in revenue_chart %}
+        <div class="an-bar-label">{{ item.label }}</div>
+      {% endfor %}
     </div>
   </div>
 
-  <div class="kpi-grid">
-
-    <div class="kpi-card revenue">
-      <div class="kpi-icon green">
-        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path d="M12 1v22"/>
-          <path d="M17 5H9.5a3.5 3.5 0 000 7H14a3.5 3.5 0 010 7H6"/>
-        </svg>
-      </div>
-      <div class="kpi-label">Total sales</div>
-      <div class="kpi-value">Rs. {{ total_sales|floatformat:0 }}</div>
-      <span class="kpi-badge up">{{ total_orders }} orders</span>
+  <div class="an-card">
+    <div class="an-card-head">
+      <h2>Customer activity</h2>
+      <p>Events across the platform</p>
     </div>
 
-    <div class="kpi-card orders">
-      <div class="kpi-icon yellow">
-        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path d="M3 3v18h18"/>
-          <path d="M7 14l4-4 4 4 5-7"/>
-        </svg>
+    <div class="an-activity-item">
+      <div class="an-activity-icon"><i class="ti ti-eye" aria-hidden="true"></i></div>
+      <div>
+        <div class="an-activity-name">Product views</div>
+        <div class="an-activity-sub">Users viewed products</div>
       </div>
-      <div class="kpi-label">Product views</div>
-      <div class="kpi-value">{{ product_views }}</div>
-      <span class="kpi-badge up">View events</span>
+      <div class="an-activity-val">{{ product_views }}</div>
     </div>
 
-    <div class="kpi-card customers">
-      <div class="kpi-icon blue">
-        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
-          <circle cx="9" cy="7" r="4"/>
-          <path d="M23 21v-2a4 4 0 00-3-3.87"/>
-        </svg>
+    <div class="an-activity-item">
+      <div class="an-activity-icon"><i class="ti ti-shopping-cart" aria-hidden="true"></i></div>
+      <div>
+        <div class="an-activity-name">Cart activity</div>
+        <div class="an-activity-sub">Add / remove events</div>
       </div>
-      <div class="kpi-label">Customers</div>
-      <div class="kpi-value">{{ total_customers }}</div>
-      <span class="kpi-badge up">Registered</span>
+      <div class="an-activity-val">{{ cart_activity }}</div>
     </div>
 
-    <div class="kpi-card avg">
-      <div class="kpi-icon orange">
-        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 000-7.78z"/>
-        </svg>
+    <div class="an-activity-item">
+      <div class="an-activity-icon"><i class="ti ti-heart" aria-hidden="true"></i></div>
+      <div>
+        <div class="an-activity-name">Wishlist activity</div>
+        <div class="an-activity-sub">Wishlist event tracking</div>
       </div>
-      <div class="kpi-label">Wishlist</div>
-      <div class="kpi-value">{{ total_wishlist_items }}</div>
-      <span class="kpi-badge up">Saved products</span>
+      <div class="an-activity-val">{{ wishlist_activity_events }}</div>
     </div>
 
+    <div class="an-activity-item">
+      <div class="an-activity-icon"><i class="ti ti-package" aria-hidden="true"></i></div>
+      <div>
+        <div class="an-activity-name">Order activity</div>
+        <div class="an-activity-sub">Order event tracking</div>
+      </div>
+      <div class="an-activity-val">{{ order_activity }}</div>
+    </div>
   </div>
 
-  <div class="mid-grid">
+</div>
 
-    <div class="chart-card">
-      <div class="card-header">
-        <div>
-          <div class="card-title">Revenue chart</div>
-          <p style="font-size: 12px; color: var(--muted); margin-top: 3px;">
-            Last 7 days revenue trend
-          </p>
+<!-- Stock + Churn -->
+<div class="an-2col">
+
+  <div class="an-card">
+    <div class="an-card-head">
+      <h2>Stock overview</h2>
+      <p>Product inventory health</p>
+    </div>
+
+    <div class="an-stock-item">
+      <div>
+        <div class="an-stock-name">Total products</div>
+        <div class="an-stock-bar-bg">
+          <div class="an-stock-bar-fill" style="width:90%;background:#2931a3;"></div>
         </div>
       </div>
+      <div class="an-stock-val good">{{ total_products }}</div>
+    </div>
 
-      <div class="bar-chart">
-        {% for item in revenue_chart %}
-          <div class="bar-group" title="{{ item.label }}: Rs. {{ item.revenue|floatformat:0 }}">
-            <div class="bar current" data-value="{{ item.revenue }}" style="height: 8px;"></div>
-          </div>
+    <div class="an-stock-item">
+      <div>
+        <div class="an-stock-name">Active products</div>
+        <div class="an-stock-bar-bg">
+          <div class="an-stock-bar-fill" style="width:80%;background:#2931a3;"></div>
+        </div>
+      </div>
+      <div class="an-stock-val good">{{ active_products }}</div>
+    </div>
+
+    <div class="an-stock-item">
+      <div>
+        <div class="an-stock-name">Inactive products</div>
+        <div class="an-stock-bar-bg">
+          <div class="an-stock-bar-fill" style="width:40%;background:#d4680a;"></div>
+        </div>
+      </div>
+      <div class="an-stock-val warn">{{ inactive_products }}</div>
+    </div>
+
+    <div class="an-stock-item">
+      <div>
+        <div class="an-stock-name">Low stock</div>
+        <div class="an-stock-bar-bg">
+          <div class="an-stock-bar-fill" style="width:50%;background:#d4680a;"></div>
+        </div>
+      </div>
+      <div class="an-stock-val warn">{{ low_stock_products }}</div>
+    </div>
+
+    <div class="an-stock-item">
+      <div>
+        <div class="an-stock-name">Out of stock</div>
+        <div class="an-stock-bar-bg">
+          <div class="an-stock-bar-fill" style="width:35%;background:#A32D2D;"></div>
+        </div>
+      </div>
+      <div class="an-stock-val critical">{{ out_of_stock_products }}</div>
+    </div>
+
+    <div class="an-stock-item">
+      <div class="an-stock-name">Stock value</div>
+      <div class="an-stock-val good">Rs. {{ stock_value|floatformat:0 }}</div>
+    </div>
+  </div>
+
+  <div class="an-card">
+    <div class="an-card-head">
+      <h2>Churn risk summary</h2>
+      <p>Customer retention risk overview</p>
+    </div>
+
+    <div class="an-risk-item">
+      <div>
+        <div class="an-risk-label">High risk</div>
+        <div class="an-risk-bar-bg">
+          <div class="an-risk-bar-fill" style="width:80%;background:#A32D2D;"></div>
+        </div>
+      </div>
+      <div class="an-risk-val" style="color:#A32D2D;">{{ high_risk }}</div>
+    </div>
+
+    <div class="an-risk-item">
+      <div>
+        <div class="an-risk-label">Medium risk</div>
+        <div class="an-risk-bar-bg">
+          <div class="an-risk-bar-fill" style="width:55%;background:#d4680a;"></div>
+        </div>
+      </div>
+      <div class="an-risk-val" style="color:#d4680a;">{{ medium_risk }}</div>
+    </div>
+
+    <div class="an-risk-item">
+      <div>
+        <div class="an-risk-label">Low risk</div>
+        <div class="an-risk-bar-bg">
+          <div class="an-risk-bar-fill" style="width:35%;background:#2931a3;"></div>
+        </div>
+      </div>
+      <div class="an-risk-val" style="color:#2931a3;">{{ low_risk }}</div>
+    </div>
+
+    <a href="{% url 'churn:dashboard' %}" class="an-cta">
+      <i class="ti ti-arrow-right" aria-hidden="true"></i>
+      Open churn dashboard
+    </a>
+  </div>
+
+</div>
+
+<!-- Wishlisted products + Category analysis -->
+<div class="an-2col">
+
+  <div class="an-card">
+    <div class="an-card-head">
+      <h2>Most wishlisted products</h2>
+      <p>Products users saved the most</p>
+    </div>
+
+    {% for product in most_wishlisted_products %}
+      <div class="an-product-item">
+        <div class="an-product-thumb">
+          {% if product.image %}
+            <img src="{{ product.image.url }}" alt="{{ product.name }}">
+          {% else %}
+            <i class="ti ti-shopping-bag" aria-hidden="true"></i>
+          {% endif %}
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div class="an-product-name">{{ product.name }}</div>
+          <div class="an-product-cat">{{ product.category.name }}</div>
+        </div>
+        <div class="an-product-val">{{ product.wishlist_count }}</div>
+      </div>
+    {% empty %}
+      <p style="font-size:13px;color:#aaa;">No wishlist data available.</p>
+    {% endfor %}
+  </div>
+
+  <div class="an-card">
+    <div class="an-card-head">
+      <h2>Category analysis</h2>
+      <p>Product count by category</p>
+    </div>
+
+    {% for category in category_analysis %}
+      <div class="an-product-item">
+        <div class="an-product-thumb">
+          <i class="ti ti-tag" aria-hidden="true"></i>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div class="an-product-name">{{ category.name }}</div>
+          <div class="an-product-cat">Category</div>
+        </div>
+        <div class="an-product-val">{{ category.product_count }}</div>
+      </div>
+    {% empty %}
+      <p style="font-size:13px;color:#aaa;">No category data available.</p>
+    {% endfor %}
+  </div>
+
+</div>
+
+<!-- Best-rated products + Brand analysis -->
+<div class="an-2col">
+
+  <div class="an-card">
+    <div class="an-card-head">
+      <h2>Best-rated products</h2>
+      <p>Based on customer reviews</p>
+    </div>
+
+    <table class="an-table">
+      <thead>
+        <tr>
+          <th>Product</th>
+          <th>Rating</th>
+          <th>Reviews</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for product in best_rated_products %}
+          <tr>
+            <td>{{ product.name }}</td>
+            <td>
+              <span class="an-pill green">
+                <span class="an-pill-dot"></span>
+                {{ product.avg_rating|floatformat:1 }}
+              </span>
+            </td>
+            <td style="color:#888;">{{ product.review_total }}</td>
+          </tr>
         {% empty %}
-          <p style="font-size: 13px; color: var(--muted);">No revenue data available.</p>
-        {% endfor %}
-      </div>
-
-      <div class="chart-labels">
-        {% for item in revenue_chart %}
-          <div class="chart-label">{{ item.label }}</div>
-        {% endfor %}
-      </div>
-    </div>
-
-    <div class="products-card">
-      <div class="card-header">
-        <div class="card-title">Customer activity</div>
-      </div>
-
-      <div class="product-item">
-        <div class="product-icon">👁</div>
-        <div class="product-info">
-          <div class="product-name">Product views</div>
-          <div class="product-cat">Users viewed products</div>
-        </div>
-        <div class="product-rev">{{ product_views }}</div>
-      </div>
-
-      <div class="product-item">
-        <div class="product-icon">🛒</div>
-        <div class="product-info">
-          <div class="product-name">Cart activity</div>
-          <div class="product-cat">Add/remove cart events</div>
-        </div>
-        <div class="product-rev">{{ cart_activity }}</div>
-      </div>
-
-      <div class="product-item">
-        <div class="product-icon">♡</div>
-        <div class="product-info">
-          <div class="product-name">Wishlist activity</div>
-          <div class="product-cat">Wishlist event tracking</div>
-        </div>
-        <div class="product-rev">{{ wishlist_activity_events }}</div>
-      </div>
-
-      <div class="product-item">
-        <div class="product-icon">📦</div>
-        <div class="product-info">
-          <div class="product-name">Order activity</div>
-          <div class="product-cat">Order event tracking</div>
-        </div>
-        <div class="product-rev">{{ order_activity }}</div>
-      </div>
-    </div>
-
-  </div>
-
-  <div class="bottom-grid">
-
-    <div class="stock-card">
-      <div class="card-header">
-        <div>
-          <div class="card-title">Stock overview</div>
-          <p style="font-size: 12px; color: var(--muted); margin-top: 3px;">
-            Product inventory health
-          </p>
-        </div>
-      </div>
-
-      <div class="stock-item">
-        <div>
-          <div class="stock-name">Total products</div>
-          <div class="stock-bar-bg">
-            <div class="stock-bar-fill" style="width: 90%; background: var(--accent);"></div>
-          </div>
-        </div>
-        <div class="stock-left">{{ total_products }}</div>
-      </div>
-
-      <div class="stock-item">
-        <div>
-          <div class="stock-name">Active products</div>
-          <div class="stock-bar-bg">
-            <div class="stock-bar-fill" style="width: 80%; background: var(--accent);"></div>
-          </div>
-        </div>
-        <div class="stock-left">{{ active_products }}</div>
-      </div>
-
-      <div class="stock-item">
-        <div>
-          <div class="stock-name">Inactive products</div>
-          <div class="stock-bar-bg">
-            <div class="stock-bar-fill" style="width: 40%; background: var(--warn);"></div>
-          </div>
-        </div>
-        <div class="stock-left low">{{ inactive_products }}</div>
-      </div>
-
-      <div class="stock-item">
-        <div>
-          <div class="stock-name">Low stock products</div>
-          <div class="stock-bar-bg">
-            <div class="stock-bar-fill" style="width: 50%; background: var(--warn);"></div>
-          </div>
-        </div>
-        <div class="stock-left low">{{ low_stock_products }}</div>
-      </div>
-
-      <div class="stock-item">
-        <div>
-          <div class="stock-name">Out of stock products</div>
-          <div class="stock-bar-bg">
-            <div class="stock-bar-fill" style="width: 35%; background: var(--danger);"></div>
-          </div>
-        </div>
-        <div class="stock-left critical">{{ out_of_stock_products }}</div>
-      </div>
-
-      <div class="stock-item">
-        <div class="stock-name">Stock value</div>
-        <div class="stock-left">Rs. {{ stock_value|floatformat:0 }}</div>
-      </div>
-    </div>
-
-    <div class="channel-card">
-      <div class="card-header">
-        <div>
-          <div class="card-title">Churn risk summary</div>
-          <p style="font-size: 12px; color: var(--muted); margin-top: 3px;">
-            Customer retention risk overview
-          </p>
-        </div>
-      </div>
-
-      <div class="stock-item">
-        <div>
-          <div class="stock-name">High risk customers</div>
-          <div class="stock-bar-bg">
-            <div class="stock-bar-fill" style="width: 80%; background: var(--danger);"></div>
-          </div>
-        </div>
-        <div class="stock-left critical">{{ high_risk }}</div>
-      </div>
-
-      <div class="stock-item">
-        <div>
-          <div class="stock-name">Medium risk customers</div>
-          <div class="stock-bar-bg">
-            <div class="stock-bar-fill" style="width: 55%; background: var(--warn);"></div>
-          </div>
-        </div>
-        <div class="stock-left low">{{ medium_risk }}</div>
-      </div>
-
-      <div class="stock-item">
-        <div>
-          <div class="stock-name">Low risk customers</div>
-          <div class="stock-bar-bg">
-            <div class="stock-bar-fill" style="width: 35%; background: var(--accent);"></div>
-          </div>
-        </div>
-        <div class="stock-left">{{ low_risk }}</div>
-      </div>
-
-      <a href="{% url 'churn:dashboard' %}" class="restock-btn" style="text-decoration: none;">
-        Open churn dashboard
-      </a>
-    </div>
-
-  </div>
-
-  <div class="mid-grid" style="margin-top: 20px;">
-
-    <div class="products-card">
-      <div class="card-header">
-        <div>
-          <div class="card-title">Most wishlisted products</div>
-          <p style="font-size: 12px; color: var(--muted); margin-top: 3px;">
-            Products users saved the most
-          </p>
-        </div>
-      </div>
-
-      {% for product in most_wishlisted_products %}
-        <div class="product-item">
-          <div class="product-icon">
-            {% if product.image %}
-              <img src="{{ product.image.url }}" alt="{{ product.name }}"
-                   style="width: 36px; height: 36px; object-fit: cover; border-radius: 8px;">
-            {% else %}
-              🛍
-            {% endif %}
-          </div>
-
-          <div class="product-info">
-            <div class="product-name">{{ product.name }}</div>
-            <div class="product-cat">{{ product.category.name }}</div>
-          </div>
-
-          <div class="product-rev">{{ product.wishlist_count }}</div>
-        </div>
-      {% empty %}
-        <p style="font-size: 13px; color: var(--muted);">No wishlist data available.</p>
-      {% endfor %}
-    </div>
-
-    <div class="products-card">
-      <div class="card-header">
-        <div>
-          <div class="card-title">Category analysis</div>
-          <p style="font-size: 12px; color: var(--muted); margin-top: 3px;">
-            Product count by category
-          </p>
-        </div>
-      </div>
-
-      {% for category in category_analysis %}
-        <div class="product-item">
-          <div class="product-icon">📦</div>
-
-          <div class="product-info">
-            <div class="product-name">{{ category.name }}</div>
-            <div class="product-cat">Category</div>
-          </div>
-
-          <div class="product-rev">{{ category.product_count }}</div>
-        </div>
-      {% empty %}
-        <p style="font-size: 13px; color: var(--muted);">No category data available.</p>
-      {% endfor %}
-    </div>
-
-  </div>
-
-  <div class="bottom-grid" style="margin-top: 20px;">
-
-    <div class="orders-card">
-      <div class="card-header">
-        <div>
-          <div class="card-title">Best-rated products</div>
-          <p style="font-size: 12px; color: var(--muted); margin-top: 3px;">
-            Based on customer reviews
-          </p>
-        </div>
-      </div>
-
-      <table>
-        <thead>
           <tr>
-            <th>Product</th>
-            <th>Rating</th>
-            <th>Reviews</th>
+            <td colspan="3" style="color:#aaa;">No review data available.</td>
           </tr>
-        </thead>
-
-        <tbody>
-          {% for product in best_rated_products %}
-            <tr>
-              <td>{{ product.name }}</td>
-              <td>
-                <span class="status-badge delivered">
-                  <span class="status-dot"></span>
-                  {{ product.avg_rating|floatformat:1 }}
-                </span>
-              </td>
-              <td>{{ product.review_total }}</td>
-            </tr>
-          {% empty %}
-            <tr>
-              <td colspan="3" style="color: var(--muted);">No review data available.</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-
-    <div class="orders-card">
-      <div class="card-header">
-        <div>
-          <div class="card-title">Brand analysis</div>
-          <p style="font-size: 12px; color: var(--muted); margin-top: 3px;">
-            Product count by brand
-          </p>
-        </div>
-      </div>
-
-      <table>
-        <thead>
-          <tr>
-            <th>Brand</th>
-            <th>Products</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {% for brand in brand_analysis %}
-            <tr>
-              <td>{{ brand.name }}</td>
-              <td>
-                <span class="status-badge processing">
-                  <span class="status-dot"></span>
-                  {{ brand.product_count }}
-                </span>
-              </td>
-            </tr>
-          {% empty %}
-            <tr>
-              <td colspan="2" style="color: var(--muted);">No brand data available.</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
 
-</main>
+  <div class="an-card">
+    <div class="an-card-head">
+      <h2>Brand analysis</h2>
+      <p>Product count by brand</p>
+    </div>
+
+    <table class="an-table">
+      <thead>
+        <tr>
+          <th>Brand</th>
+          <th>Products</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for brand in brand_analysis %}
+          <tr>
+            <td>{{ brand.name }}</td>
+            <td>
+              <span class="an-pill blue">
+                <span class="an-pill-dot"></span>
+                {{ brand.product_count }}
+              </span>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="2" style="color:#aaa;">No brand data available.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
 
 <script>
-  const bars = document.querySelectorAll(".bar.current[data-value]");
-  let maxValue = 0;
-
-  bars.forEach(function(bar) {
-    const value = Number(bar.dataset.value || 0);
-    if (value > maxValue) {
-      maxValue = value;
-    }
-  });
-
-  bars.forEach(function(bar) {
-    const value = Number(bar.dataset.value || 0);
-    const height = maxValue > 0 ? Math.max((value / maxValue) * 140, 8) : 8;
-    bar.style.height = height + "px";
+  const bars = document.querySelectorAll(".an-bar[data-value]");
+  let maxVal = 0;
+  bars.forEach(b => { const v = Number(b.dataset.value || 0); if (v > maxVal) maxVal = v; });
+  bars.forEach(b => {
+    const v = Number(b.dataset.value || 0);
+    b.style.height = (maxVal > 0 ? Math.max((v / maxVal) * 130, 8) : 8) + "px";
   });
 </script>
 
