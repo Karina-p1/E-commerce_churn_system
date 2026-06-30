@@ -11,6 +11,8 @@ from django.utils import timezone
 from flask import Response
 from django.core.paginator import Paginator
 from apps.accounts.models import User
+from django.http import JsonResponse                          # ← replaces flask import
+
 from apps.products.models import Category, Brand, Product, Review, Wishlist
 from apps.analytics.services import get_top_products
 from apps.activity.models import UserEvent
@@ -19,7 +21,7 @@ from apps.activity.models import UserEvent
 def view_products(request):
     categories = Category.objects.all()
     top_products = get_top_products(limit=10)
-    brands = Brand.objects.all()
+    brands = Brand.objects.all().order_by('name')
 
     products = Product.objects.filter(
         is_active=True
@@ -29,7 +31,6 @@ def view_products(request):
     )
 
     # Special offer products: discount 30% or more and available in stock
-    # This is calculated before filters/search so the slider always shows homepage offers.
     all_active_products = Product.objects.filter(
         is_active=True,
         stock__gt=0
@@ -46,28 +47,20 @@ def view_products(request):
     # Filter by brand
     brand_slug = request.GET.get('brand')
     if brand_slug:
-        products = products.filter(
-            brand__slug=brand_slug
-        )
+        products = products.filter(brand__slug=brand_slug)
 
     # Filter by category
     category_slug = request.GET.get('category')
     if category_slug:
-        products = products.filter(
-            category__slug=category_slug
-        )
+        products = products.filter(category__slug=category_slug)
 
     # Get wishlist product IDs for current user
     wishlist_ids = set()
-
     if request.user.is_authenticated:
         wishlist_ids = set(
             Wishlist.objects.filter(
                 user=request.user
-            ).values_list(
-                'product_id',
-                flat=True
-            )
+            ).values_list('product_id', flat=True)
         )
 
     # Search by name, brand name, category name, and description
@@ -93,23 +86,12 @@ def view_products(request):
 
 
 def build_stars(rating):
-    """
-    Returns list of booleans:
-    True = filled star
-    False = empty star
-    """
     return [i < round(rating) for i in range(5)]
 
 
 def product_detail(request, slug):
-    product = get_object_or_404(
-        Product,
-        slug=slug,
-        is_active=True
-    )
+    product = get_object_or_404(Product, slug=slug, is_active=True)
 
-    # Activity tracking: product view
-    # Logs VIEW only once per product per user within 5 minutes.
     if request.user.is_authenticated:
         recent_view_exists = UserEvent.objects.filter(
             user=request.user,
@@ -125,24 +107,11 @@ def product_detail(request, slug):
                 event_type='VIEW'
             )
 
-    reviews_qs = product.reviews.select_related(
-        'customer'
-    ).order_by(
-        '-created_at'
-    )
-
+    reviews_qs = product.reviews.select_related('customer').order_by('-created_at')
     total = reviews_qs.count()
 
-    dist_raw = reviews_qs.values(
-        'rating'
-    ).annotate(
-        count=Count('rating')
-    )
-
-    dist_map = {
-        d['rating']: d['count']
-        for d in dist_raw
-    }
+    dist_raw = reviews_qs.values('rating').annotate(count=Count('rating'))
+    dist_map = {d['rating']: d['count'] for d in dist_raw}
 
     rating_distribution = [
         {
@@ -154,11 +123,7 @@ def product_detail(request, slug):
     ]
 
     product_stars = build_stars(product.rating)
-
-    review_stars = {
-        review.id: build_stars(review.rating)
-        for review in reviews_qs
-    }
+    review_stars = {review.id: build_stars(review.rating) for review in reviews_qs}
 
     return render(request, 'products/product_detail.html', {
         'product': product,
@@ -171,65 +136,29 @@ def product_detail(request, slug):
 
 @login_required
 def post_review(request, slug):
-    product = get_object_or_404(
-        Product,
-        slug=slug,
-        is_active=True
-    )
+    product = get_object_or_404(Product, slug=slug, is_active=True)
 
     if request.method == 'POST':
-
-        if Review.objects.filter(
-            product=product,
-            customer=request.user
-        ).exists():
-            messages.warning(
-                request,
-                'You have already reviewed this product.'
-            )
-
-            return redirect(
-                'products:product_detail',
-                slug=slug
-            )
+        if Review.objects.filter(product=product, customer=request.user).exists():
+            messages.warning(request, 'You have already reviewed this product.')
+            return redirect('products:product_detail', slug=slug)
 
         rating = request.POST.get('rating')
         comment = request.POST.get('comment', '').strip()
 
         if not rating or not comment:
-            messages.error(
-                request,
-                'Please provide both a rating and a comment.'
-            )
-
-            return redirect(
-                'products:product_detail',
-                slug=slug
-            )
+            messages.error(request, 'Please provide both a rating and a comment.')
+            return redirect('products:product_detail', slug=slug)
 
         try:
             rating = int(rating)
         except ValueError:
-            messages.error(
-                request,
-                'Invalid rating value.'
-            )
-
-            return redirect(
-                'products:product_detail',
-                slug=slug
-            )
+            messages.error(request, 'Invalid rating value.')
+            return redirect('products:product_detail', slug=slug)
 
         if not (1 <= rating <= 5):
-            messages.error(
-                request,
-                'Rating must be between 1 and 5.'
-            )
-
-            return redirect(
-                'products:product_detail',
-                slug=slug
-            )
+            messages.error(request, 'Rating must be between 1 and 5.')
+            return redirect('products:product_detail', slug=slug)
 
         Review.objects.create(
             product=product,
@@ -244,73 +173,32 @@ def post_review(request, slug):
             event_type='REVIEW'
         )
 
-        messages.success(
-            request,
-            'Your review has been posted.'
-        )
+        messages.success(request, 'Your review has been posted.')
 
-    return redirect(
-        'products:product_detail',
-        slug=slug
-    )
+    return redirect('products:product_detail', slug=slug)
 
 
 @login_required
 def add_to_wishlist(request, product_id):
-    product = get_object_or_404(
-        Product,
-        id=product_id,
-        is_active=True
-    )
+    product = get_object_or_404(Product, id=product_id, is_active=True)
 
-    wishlist_item = Wishlist.objects.filter(
-        user=request.user,
-        product=product
-    ).first()
+    wishlist_item = Wishlist.objects.filter(user=request.user, product=product).first()
 
     if wishlist_item:
         wishlist_item.delete()
-
-        UserEvent.objects.create(
-            user=request.user,
-            product=product,
-            event_type='REMOVE_WISHLIST'
-        )
-
-        messages.info(
-            request,
-            f"'{product.name}' removed from wishlist."
-        )
-
+        UserEvent.objects.create(user=request.user, product=product, event_type='REMOVE_WISHLIST')
+        messages.info(request, f"'{product.name}' removed from wishlist.")
     else:
-        Wishlist.objects.create(
-            user=request.user,
-            product=product
-        )
+        Wishlist.objects.create(user=request.user, product=product)
+        UserEvent.objects.create(user=request.user, product=product, event_type='WISHLIST')
+        messages.success(request, f"'{product.name}' added to wishlist ❤️")
 
-        UserEvent.objects.create(
-            user=request.user,
-            product=product,
-            event_type='WISHLIST'
-        )
-
-        messages.success(
-            request,
-            f"'{product.name}' added to wishlist ❤️"
-        )
-
-    return redirect(
-        request.META.get(
-            'HTTP_REFERER',
-            'products:view_products'
-        )
-    )
+    return redirect(request.META.get('HTTP_REFERER', 'products:view_products'))
 
 
 @login_required
 def wishlist_view(request):
-    items = Wishlist.objects.filter(
-        user=request.user).select_related('product')
+    items = Wishlist.objects.filter(user=request.user).select_related('product')
     return render(request, 'products/wishlist.html', {'items': items})
 
 
@@ -323,31 +211,18 @@ def remove_from_wishlist(request, product_id):
 
     if wishlist_item:
         product = wishlist_item.product
-
         wishlist_item.delete()
-
-        UserEvent.objects.create(
-            user=request.user,
-            product=product,
-            event_type='REMOVE_WISHLIST'
-        )
-
-        messages.info(
-            request,
-            f"'{product.name}' removed from wishlist."
-        )
+        UserEvent.objects.create(user=request.user, product=product, event_type='REMOVE_WISHLIST')
+        messages.info(request, f"'{product.name}' removed from wishlist.")
     else:
-        messages.warning(
-            request,
-            "This product was not in your wishlist."
-        )
+        messages.warning(request, "This product was not in your wishlist.")
 
     return redirect('products:wishlist')
 
+
 def top_products(request):
     today = timezone.now()
-    month_start = today.replace(
-        day=1, hour=0, minute=0, second=0, microsecond=0)
+    month_start = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
     top = (
         Product.objects
@@ -381,13 +256,13 @@ def top_products(request):
 
     data = [
         {
-            'name':          p.name,
-            'category':      p.category.name if p.category else 'Uncategorized',
-            'brand':         p.brand.name if p.brand else '',
-            'rating':        float(p.rating) if p.rating else 0,
-            'order_count':   p.order_count,
+            'name':           p.name,
+            'category':       p.category.name if p.category else 'Uncategorized',
+            'brand':          p.brand.name if p.brand else '',
+            'rating':         float(p.rating) if p.rating else 0,
+            'order_count':    p.order_count,
             'wishlist_count': p.wishlist_count,
-            'view_count':    p.view_count,
+            'view_count':     p.view_count,
         }
         for p in top
     ]
@@ -893,3 +768,20 @@ def product_add(request):
         'brands': brands,
         'form_data': {},
     })
+
+    return JsonResponse({'results': data})              # ← was Flask Response, now fixed too
+
+
+# ─── NEW: Search Autocomplete ──────────────────────────────────────────────────
+def search_autocomplete(request):
+    q = request.GET.get('q', '').strip()
+    if len(q) < 1:
+        return JsonResponse({'results': []})
+
+    products = Product.objects.filter(
+        name__istartswith=q,
+        is_active=True
+    ).values('name', 'slug')[:8]
+
+    return JsonResponse({'results': list(products)})
+

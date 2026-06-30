@@ -1,95 +1,73 @@
-{% extends 'base.html' %} {% block title %}Logged Out — ShopMart{% endblock %}
-{% block start %}
+{% extends 'base.html' %}
+{% block title %}Logged Out — ShopMart{% endblock %}
 
-<div
-  style="
-    min-height: 60vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 40px 16px;
-  "
->
-  <div
-    style="
-      background: #fff;
-      border: 1px solid #e5e7eb;
-      border-radius: 8px;
-      padding: 48px 40px;
-      text-align: center;
-      max-width: 420px;
-      width: 100%;
-    "
-  >
-    <div
-      style="
-        width: 72px;
-        height: 72px;
-        background: #f0f9ff;
-        border-radius: 50%;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        margin-bottom: 20px;
-      "
-    >
-      <svg
-        width="30"
-        height="30"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="#0ea5e9"
-        stroke-width="1.8"
-      >
-        <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
-        <polyline points="16 17 21 12 16 7" />
-        <line x1="21" y1="12" x2="9" y2="12" />
+{% block extra_head %}
+<style>
+  .brand-strip-wrapper, .cat-bar { display: none !important; }
+  body { padding-top: 60px !important; }
+
+  .logout-root {
+    min-height: calc(100vh - 60px);
+    display: flex; align-items: center; justify-content: center;
+    background: #f8fafc; padding: 40px 16px;
+  }
+  .logout-card {
+    background: #fff; border: 1px solid #e5e7eb;
+    border-radius: 16px; padding: 52px 44px;
+    text-align: center; max-width: 400px; width: 100%;
+    box-shadow: 0 4px 24px rgba(14,58,92,0.07);
+  }
+  .logout-icon {
+    width: 76px; height: 76px;
+    background: linear-gradient(135deg, #e0f2fe, #bae6fd);
+    border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    margin-bottom: 24px;
+  }
+  .logout-card h3 {
+    font-size: 22px; font-weight: 800;
+    color: #0e3a5c; margin: 0 0 8px;
+  }
+  .logout-card p {
+    font-size: 14px; color: #6b7280;
+    margin: 0 0 32px; line-height: 1.6;
+  }
+  .btn-login-again {
+    display: block; width: 100%; padding: 13px;
+    background: #0e3a5c; color: #fff;
+    border-radius: 8px; text-decoration: none;
+    font-size: 15px; font-weight: 700;
+    font-family: "DM Sans", sans-serif;
+    margin-bottom: 10px;
+    transition: background 0.2s;
+  }
+  .btn-login-again:hover { background: #1e5a8a; color: #fff; }
+  .btn-browse {
+    display: block; width: 100%; padding: 12px;
+    background: #fff; color: #374151;
+    border: 1.5px solid #e5e7eb; border-radius: 8px;
+    text-decoration: none; font-size: 14px; font-weight: 600;
+    font-family: "DM Sans", sans-serif;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .btn-browse:hover { border-color: #9ca3af; background: #f9fafb; color: #374151; }
+</style>
+{% endblock %}
+
+{% block start %}
+<div class="logout-root">
+  <div class="logout-card">
+    <div class="logout-icon">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" stroke-width="1.8">
+        <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+        <polyline points="16 17 21 12 16 7"/>
+        <line x1="21" y1="12" x2="9" y2="12"/>
       </svg>
     </div>
-    <h4 style="font-weight: 700; margin-bottom: 8px; color: #0e3a5c">
-      You've been logged out
-    </h4>
-    <p style="color: #6b7280; margin-bottom: 28px; font-size: 14px">
-      Thanks for visiting ShopMart. See you again soon!
-    </p>
-    <a
-      href="{% url 'login' %}"
-      style="
-        display: block;
-        width: 100%;
-        padding: 12px;
-        background: #0e3a5c;
-        color: #fff;
-        border-radius: 6px;
-        text-decoration: none;
-        font-weight: 700;
-        font-size: 15px;
-        margin-bottom: 10px;
-        transition: background 0.2s;
-      "
-      onmouseover="this.style.background = '#1e5a8a'"
-      onmouseout="this.style.background = '#0e3a5c'"
-    >
-      Login Again
-    </a>
-    <a
-      href="{% url 'products:view_products' %}"
-      style="
-        display: block;
-        width: 100%;
-        padding: 12px;
-        background: #fff;
-        color: #374151;
-        border: 1px solid #d1d5db;
-        border-radius: 6px;
-        text-decoration: none;
-        font-weight: 600;
-        font-size: 14px;
-      "
-    >
-      Continue Browsing
-    </a>
+    <h3>You've been signed out</h3>
+    <p>Thanks for shopping with ShopMart.<br>See you again soon!</p>
+    <a href="{% url 'login' %}" class="btn-login-again">Sign back in</a>
+    <a href="{% url 'products:view_products' %}" class="btn-browse">Continue browsing</a>
   </div>
 </div>
-
 {% endblock %}
