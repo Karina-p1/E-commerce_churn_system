@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Cart, CartItem, Order, OrderItem,OrderStatusHistory
+from .models import Cart, CartItem, Order, OrderItem, OrderStatusHistory, Coupon
 
 class CartItemInline(admin.TabularInline):
     model = CartItem
@@ -22,3 +22,18 @@ class OrderAdmin(admin.ModelAdmin):
     inlines = [OrderItemInline]
 
 admin.site.register(OrderStatusHistory)
+
+
+@admin.register(Coupon)
+class CouponAdmin(admin.ModelAdmin):
+    list_display = [
+        'code',
+        'discount_type',
+        'discount_value',
+        'min_order_amount',
+        'max_uses',
+        'used_count',
+        'is_active',
+    ]
+    list_filter = ['discount_type', 'is_active']
+    search_fields = ['code']

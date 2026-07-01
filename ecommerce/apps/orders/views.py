@@ -7,6 +7,8 @@ from decimal import Decimal
 from django.contrib.admin.views.decorators import staff_member_required
 from django.conf import settings
 from django.db import transaction
+from django.db.models import F
+from django.http import JsonResponse
 from django.urls import reverse
 from django.utils import timezone
 from django.shortcuts import render, redirect, get_object_or_404
@@ -17,9 +19,43 @@ from apps.products.models import Product
 from apps.activity.models import UserEvent
 from apps.addresses.models import Address
 
-from .models import Cart, CartItem, Order, OrderItem
+from .models import Cart, CartItem, Order, OrderItem, Coupon
 from django.core.paginator import Paginator
 from django.db.models import Q
+
+SESSION_COUPON_KEY = 'applied_coupon_code'
+
+
+def _get_session_coupon(request, order_amount):
+    """
+    Looks up the coupon code (if any) stored in session, re-validates it
+    against the current order_amount, and returns a tuple:
+        (coupon_or_None, discount_amount)
+
+    If the stored coupon is no longer valid (expired, cart total dropped
+    below min_order_amount, etc.), it is silently cleared from the session
+    and (None, Decimal('0')) is returned.
+    """
+    code = request.session.get(SESSION_COUPON_KEY)
+
+    if not code:
+        return None, Decimal('0')
+
+    try:
+        coupon = Coupon.objects.get(code__iexact=code)
+    except Coupon.DoesNotExist:
+        request.session.pop(SESSION_COUPON_KEY, None)
+        return None, Decimal('0')
+
+    is_valid, _ = coupon.is_valid(order_amount=order_amount)
+
+    if not is_valid:
+        request.session.pop(SESSION_COUPON_KEY, None)
+        return None, Decimal('0')
+
+    discount_amount = coupon.calculate_discount(order_amount)
+    return coupon, discount_amount
+
 
 @login_required
 def cart_view(request):
@@ -199,6 +235,49 @@ def decode_esewa_response(encoded_data):
 
 
 @login_required
+def apply_coupon(request):
+    if request.method != 'POST':
+        return JsonResponse(
+            {'success': False, 'error': 'Invalid request method.'},
+            status=405
+        )
+
+    code = (request.POST.get('code') or '').strip().upper()
+
+    if not code:
+        return JsonResponse({'success': False, 'error': 'Please enter a coupon code.'})
+
+    cart, _ = Cart.objects.get_or_create(user=request.user)
+
+    if not cart.items.exists():
+        return JsonResponse({'success': False, 'error': 'Your cart is empty.'})
+
+    try:
+        coupon = Coupon.objects.get(code__iexact=code)
+    except Coupon.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Invalid coupon code.'})
+
+    cart_total = cart.total_price
+
+    is_valid, error_message = coupon.is_valid(order_amount=cart_total)
+
+    if not is_valid:
+        return JsonResponse({'success': False, 'error': error_message})
+
+    discount_amount = coupon.calculate_discount(cart_total)
+    final_total = cart_total - discount_amount
+
+    request.session[SESSION_COUPON_KEY] = coupon.code
+
+    return JsonResponse({
+        'success': True,
+        'message': f"Coupon '{coupon.code}' applied successfully.",
+        'discount_amount': str(discount_amount),
+        'final_total': str(final_total),
+    })
+
+
+@login_required
 def checkout_view(request):
     cart, _ = Cart.objects.get_or_create(
         user=request.user
@@ -286,10 +365,17 @@ def checkout_view(request):
                     user=request.user
                 )
 
+                # Coupon (if a valid one is stored in session for this cart)
+                cart_total = cart.total_price
+                coupon_obj, discount_amount = _get_session_coupon(request, cart_total)
+                final_total = cart_total - discount_amount
+
                 # Create unpaid order only. Do NOT reduce stock yet.
                 order = Order.objects.create(
                     user=request.user,
-                    total_price=cart.total_price,
+                    total_price=final_total,
+                    coupon=coupon_obj,
+                    discount_amount=discount_amount,
                     payment_status='INITIATED',
                     payment_method=payment_method,
                     transaction_uuid=transaction_uuid,
@@ -330,6 +416,13 @@ def checkout_view(request):
 
                     order.payment_status = "UNPAID"
                     order.save()
+
+                    if order.coupon:
+                        Coupon.objects.filter(pk=order.coupon_id).update(
+                            used_count=F('used_count') + 1
+                        )
+
+                    request.session.pop(SESSION_COUPON_KEY, None)
 
                     cart.items.all().delete()
 
@@ -386,6 +479,10 @@ def checkout_view(request):
                     'signature': signature,
                 }
 
+                # Coupon is now snapshotted on the order; used_count is
+                # incremented only once payment is confirmed (esewa_success).
+                request.session.pop(SESSION_COUPON_KEY, None)
+
                 return render(request, 'orders/esewa_redirect.html', {
                     'esewa_payment_url': settings.ESEWA_PAYMENT_URL,
                     'esewa_data': esewa_data,
@@ -398,12 +495,21 @@ def checkout_view(request):
             )
             return redirect('checkout')
 
+    # GET: show current coupon state (if any) alongside cart/addresses
+    cart_total = cart.total_price
+    applied_coupon, discount_amount = _get_session_coupon(request, cart_total)
+    final_total = cart_total - discount_amount
+
     return render(
         request,
         "orders/checkout.html",
         {
             "cart": cart,
             "addresses": addresses,
+            "coupon": applied_coupon,
+            "discount_amount": discount_amount,
+            "cart_total": cart_total,
+            "final_total": final_total,
         }
     )
 
@@ -515,6 +621,13 @@ def esewa_success(request):
             order.esewa_ref_id = response_data.get('transaction_code')
             order.paid_at = timezone.now()
             order.save()
+
+            # Coupon usage is only counted once payment is confirmed,
+            # so failed/abandoned checkouts never consume a redemption.
+            if order.coupon:
+                Coupon.objects.filter(pk=order.coupon_id).update(
+                    used_count=F('used_count') + 1
+                )
 
             cart = Cart.objects.filter(
                 user=request.user

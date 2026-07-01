@@ -1,7 +1,89 @@
+from decimal import Decimal
 from django.db import models
 from django.conf import settings
 from apps.products.models import Product
 from django.utils import timezone
+
+
+class Coupon(models.Model):
+    DISCOUNT_TYPE_CHOICES = [
+        ('PERCENTAGE', 'Percentage'),
+        ('FLAT', 'Flat Amount'),
+    ]
+
+    code = models.CharField(max_length=50, unique=True)
+
+    discount_type = models.CharField(
+        max_length=20,
+        choices=DISCOUNT_TYPE_CHOICES,
+        default='PERCENTAGE'
+    )
+
+    discount_value = models.DecimalField(
+        max_digits=10,
+        decimal_places=2
+    )
+
+    min_order_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0
+    )
+
+    max_uses = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Leave blank for unlimited uses."
+    )
+
+    used_count = models.PositiveIntegerField(default=0)
+
+    is_active = models.BooleanField(default=True)
+
+    valid_from = models.DateTimeField(null=True, blank=True)
+    valid_until = models.DateTimeField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.code
+
+    def is_valid(self, order_amount=None):
+        """
+        Returns (is_valid: bool, error_message: str)
+        """
+        now = timezone.now()
+
+        if not self.is_active:
+            return False, "This coupon is no longer active."
+
+        if self.valid_from and now < self.valid_from:
+            return False, "This coupon is not yet valid."
+
+        if self.valid_until and now > self.valid_until:
+            return False, "This coupon has expired."
+
+        if self.max_uses is not None and self.used_count >= self.max_uses:
+            return False, "This coupon has reached its usage limit."
+
+        if order_amount is not None and Decimal(order_amount) < self.min_order_amount:
+            return False, f"Minimum order amount for this coupon is Rs.{self.min_order_amount}."
+
+        return True, ""
+
+    def calculate_discount(self, amount):
+        amount = Decimal(amount)
+
+        if self.discount_type == 'PERCENTAGE':
+            discount = (amount * self.discount_value) / Decimal('100')
+        else:
+            discount = self.discount_value
+
+        if discount > amount:
+            discount = amount
+
+        return discount.quantize(Decimal('0.01'))
+
 
 class Cart(models.Model):
     user = models.OneToOneField(
@@ -135,7 +217,25 @@ class Order(models.Model):
         max_digits=10,
         decimal_places=2
     )
-    
+
+    # ==========================
+    # Coupon / Discount
+    # ==========================
+
+    coupon = models.ForeignKey(
+        Coupon,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='orders'
+    )
+
+    discount_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0
+    )
+
     # ==========================
     # Delivery Address Snapshot
     # ==========================

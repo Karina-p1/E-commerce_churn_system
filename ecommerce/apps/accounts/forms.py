@@ -5,7 +5,9 @@ from .models import User
 class RegisterForm(UserCreationForm):
     """
     Registration form.
-    Collects email, name, phone — all useful for churn analysis.
+    Collects email, name, phone, gender, and marital status — all useful
+    for churn analysis. Gender and marital status are required so the
+    churn model always receives real data instead of a guessed default.
     """
     email = forms.EmailField(
         required=True,
@@ -35,6 +37,20 @@ class RegisterForm(UserCreationForm):
             'placeholder': 'Phone number (optional)'
         })
     )
+    gender = forms.ChoiceField(
+        required=True,
+        choices=User.GENDER_CHOICES,
+        widget=forms.Select(attrs={
+            'class': 'form-control'
+        })
+    )
+    marital_status = forms.ChoiceField(
+        required=True,
+        choices=User.MARITAL_STATUS_CHOICES,
+        widget=forms.Select(attrs={
+            'class': 'form-control'
+        })
+    )
 
     class Meta:
         model = User
@@ -44,6 +60,8 @@ class RegisterForm(UserCreationForm):
             'first_name',
             'last_name',
             'phone_number',
+            'gender',
+            'marital_status',
             'password1',
             'password2'
         ]

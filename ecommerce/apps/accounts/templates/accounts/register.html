@@ -78,6 +78,7 @@
   }
   .f-input:focus { border-color: #0ea5e9; box-shadow: 0 0 0 3px rgba(14,165,233,0.12); }
   .f-input.err { border-color: #ef4444; }
+  select.f-input { cursor: pointer; }
   .pw-toggle {
     position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
     background: none; border: none; cursor: pointer; color: #9ca3af;
@@ -203,6 +204,31 @@
             type="tel" name="phone_number" placeholder="Phone number (optional)"
             value="{{ form.phone_number.value|default_if_none:'' }}" />
           {% if form.phone_number.errors %}<div class="f-error">{{ form.phone_number.errors.0 }}</div>{% endif %}
+        </div>
+
+        <div class="f-row">
+          <div class="f-group" style="margin-bottom:0">
+            <label class="f-label">Gender <span class="req">*</span></label>
+            <select class="f-input {% if form.gender.errors %}err{% endif %}"
+              name="gender" required>
+              <option value="" {% if not form.gender.value %}selected{% endif %} disabled>Select gender</option>
+              {% for value, label in form.fields.gender.choices %}
+              <option value="{{ value }}" {% if form.gender.value == value %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+            {% if form.gender.errors %}<div class="f-error">{{ form.gender.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="f-group" style="margin-bottom:0">
+            <label class="f-label">Marital Status <span class="req">*</span></label>
+            <select class="f-input {% if form.marital_status.errors %}err{% endif %}"
+              name="marital_status" required>
+              <option value="" {% if not form.marital_status.value %}selected{% endif %} disabled>Select status</option>
+              {% for value, label in form.fields.marital_status.choices %}
+              <option value="{{ value }}" {% if form.marital_status.value == value %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+            {% if form.marital_status.errors %}<div class="f-error">{{ form.marital_status.errors.0 }}</div>{% endif %}
+          </div>
         </div>
 
         <div class="f-row">

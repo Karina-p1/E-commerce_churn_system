@@ -188,7 +188,7 @@
             <div class="d-flex justify-content-between">
               <span>Subtotal</span>
 
-              <span> Rs. {{ cart.total_price }} </span>
+              <span> Rs. {{ cart_total|default:cart.total_price }} </span>
             </div>
 
             <div class="d-flex justify-content-between mt-2">
@@ -197,12 +197,51 @@
               <span class="text-success"> FREE </span>
             </div>
 
+            <!-- Coupon -->
+
+            <hr />
+
+            <div id="coupon-section">
+              {% if coupon %}
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <span class="badge bg-success">{{ coupon.code }}</span>
+                  <small class="text-muted d-block mt-1">Coupon applied</small>
+                </div>
+                <span class="text-success fw-semibold">
+                  − Rs. {{ discount_amount }}
+                </span>
+              </div>
+              {% else %}
+              <div class="input-group">
+                <input
+                  type="text"
+                  id="coupon-input"
+                  class="form-control"
+                  placeholder="Enter coupon code"
+                  autocomplete="off"
+                />
+                <button
+                  type="button"
+                  class="btn btn-outline-dark"
+                  id="apply-coupon-btn"
+                  onclick="applyCoupon()"
+                >
+                  Apply
+                </button>
+              </div>
+              <div id="coupon-message" class="small mt-2"></div>
+              {% endif %}
+            </div>
+
             <hr />
 
             <div class="d-flex justify-content-between">
               <h5>Total</h5>
 
-              <h4 class="text-primary">Rs. {{ cart.total_price }}</h4>
+              <h4 class="text-primary">
+                Rs. {{ final_total|default:cart.total_price }}
+              </h4>
             </div>
 
             {% if addresses %}
@@ -290,5 +329,49 @@
     transform:scale(1.2);
     }
 </style>
+
+<script>
+  function applyCoupon() {
+    const input = document.getElementById("coupon-input");
+    const btn = document.getElementById("apply-coupon-btn");
+    const messageEl = document.getElementById("coupon-message");
+    const code = input.value.trim();
+
+    if (!code) {
+      messageEl.className = "small mt-2 text-danger";
+      messageEl.textContent = "Please enter a coupon code.";
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = "Applying...";
+
+    fetch("{% url 'apply_coupon' %}", {
+      method: "POST",
+      headers: {
+        "X-CSRFToken": "{{ csrf_token }}",
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: "code=" + encodeURIComponent(code),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success) {
+          location.reload();
+        } else {
+          btn.disabled = false;
+          btn.textContent = "Apply";
+          messageEl.className = "small mt-2 text-danger";
+          messageEl.textContent = data.error || "Could not apply coupon.";
+        }
+      })
+      .catch(() => {
+        btn.disabled = false;
+        btn.textContent = "Apply";
+        messageEl.className = "small mt-2 text-danger";
+        messageEl.textContent = "Something went wrong. Please try again.";
+      });
+  }
+</script>
 
 {% endblock %}

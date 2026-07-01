@@ -46,7 +46,10 @@ def extract_features(user) -> dict:
         .count()
     )
     hours_on_app = round(min(active_days / lookback_days * 5, 5.0), 1)
-    coupon_used  = 0  # TODO: wire up real coupon tracking if/when available
+
+    # Real coupon usage: count of this user's non-cancelled orders that
+    # had a coupon attached at checkout.
+    coupon_used  = orders.filter(coupon__isnull=False).count()
 
     # ── Spend ─────────────────────────────────────────
     # NOTE: training data's CashbackAmount was a real monthly reward
