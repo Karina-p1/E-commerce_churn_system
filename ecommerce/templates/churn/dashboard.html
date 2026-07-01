@@ -47,13 +47,12 @@
     transition: 0.15s ease;
   }
 
-  .refresh-btn:hover {
-    opacity: 0.9;
-  }
+  .refresh-btn:hover { opacity: 0.9; }
 
+  /* 3-column grid now — medium card removed */
   .churn-metrics {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 10px;
     margin-bottom: 14px;
   }
@@ -70,16 +69,13 @@
   .metric-card::after {
     content: "";
     position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    left: 0; right: 0; bottom: 0;
     height: 3px;
   }
 
-  .metric-card.total::after { background: #1a7ab5; }
-  .metric-card.high::after { background: #A32D2D; }
-  .metric-card.medium::after { background: #d4680a; }
-  .metric-card.low::after { background: #2931a3; }
+  .metric-card.total::after  { background: #1a7ab5; }
+  .metric-card.high::after   { background: #A32D2D; }
+  .metric-card.low::after    { background: #2931a3; }
 
   .metric-label {
     font-size: 10px;
@@ -99,8 +95,7 @@
   }
 
   .metric-value.high { color: #A32D2D; }
-  .metric-value.medium { color: #d4680a; }
-  .metric-value.low { color: #2931a3; }
+  .metric-value.low  { color: #2931a3; }
 
   .filter-bar {
     display: flex;
@@ -122,15 +117,11 @@
     transition: 0.15s ease;
   }
 
-  .filter-btn:hover {
-    background: #f0f0f0;
-    color: #1a1a1a;
-  }
+  .filter-btn:hover { background: #f0f0f0; color: #1a1a1a; }
 
-  .filter-active-all { background: #e6f1fb !important; border-color: #b8d8ec !important; color: #1a7ab5 !important; }
+  .filter-active-all  { background: #e6f1fb !important; border-color: #b8d8ec !important; color: #1a7ab5 !important; }
   .filter-active-high { background: #f8e3e3 !important; border-color: #e8bcbc !important; color: #A32D2D !important; }
-  .filter-active-medium { background: #faeeda !important; border-color: #ecd2a8 !important; color: #d4680a !important; }
-  .filter-active-low { background: #e8eafd !important; border-color: #b5b8f0 !important; color: #2931a3 !important; }
+  .filter-active-low  { background: #e8eafd !important; border-color: #b5b8f0 !important; color: #2931a3 !important; }
 
   .churn-table-card {
     background: #fff;
@@ -140,10 +131,7 @@
     overflow-x: auto;
   }
 
-  .churn-table-card table {
-    width: 100%;
-    border-collapse: collapse;
-  }
+  .churn-table-card table { width: 100%; border-collapse: collapse; }
 
   .churn-table-card thead th {
     font-size: 10px;
@@ -155,141 +143,70 @@
     text-align: left;
   }
 
-  .churn-table-card tbody tr {
-    border-top: 0.5px solid #f5f5f4;
-  }
+  .churn-table-card tbody tr { border-top: 0.5px solid #f5f5f4; }
+  .churn-table-card tbody tr:hover { background: #fafafa; }
+  .churn-table-card td { padding: 10px 0; font-size: 12px; }
 
-  .churn-table-card tbody tr:hover {
-    background: #fafafa;
-  }
-
-  .churn-table-card td {
-    padding: 10px 0;
-    font-size: 12px;
-  }
-
-  .customer-cell {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
+  .customer-cell { display: flex; align-items: center; gap: 10px; }
 
   .customer-avatar {
-    width: 30px;
-    height: 30px;
+    width: 30px; height: 30px;
     border-radius: 7px;
     background: #e6f1fb;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 11px;
-    font-weight: 700;
-    color: #1a7ab5;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: #1a7ab5;
     flex-shrink: 0;
   }
 
-  .customer-name {
-    font-size: 12px;
-    font-weight: 500;
-    color: #1a1a1a;
-  }
-
-  .customer-email {
-    font-size: 10.5px;
-    color: #888;
-    margin-top: 2px;
-  }
+  .customer-name  { font-size: 12px; font-weight: 500; color: #1a1a1a; }
+  .customer-email { font-size: 10.5px; color: #888; margin-top: 2px; }
 
   .risk-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 2px 7px;
-    border-radius: 20px;
-    font-size: 10px;
-    font-weight: 600;
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 7px; border-radius: 20px;
+    font-size: 10px; font-weight: 600;
   }
 
   .risk-badge::before {
-    content: "";
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background: currentColor;
+    content: ""; width: 4px; height: 4px;
+    border-radius: 50%; background: currentColor;
   }
 
   .risk-high { background: #f8e3e3; color: #A32D2D; }
-  .risk-medium { background: #faeeda; color: #d4680a; }
-  .risk-low { background: #e8eafd; color: #2931a3; }
+  .risk-low  { background: #e8eafd; color: #2931a3; }
 
-  .score-wrap {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
+  .score-wrap { display: flex; align-items: center; gap: 8px; }
 
   .score-value {
-    font-size: 12px;
-    font-weight: 500;
-    min-width: 40px;
-    color: #1a1a1a;
+    font-size: 12px; font-weight: 500;
+    min-width: 40px; color: #1a1a1a;
   }
 
   .score-track {
-    width: 90px;
-    height: 3px;
-    background: #f0f0f0;
-    border-radius: 2px;
-    overflow: hidden;
+    width: 90px; height: 3px;
+    background: #f0f0f0; border-radius: 2px; overflow: hidden;
   }
 
-  .score-bar {
-    height: 100%;
-    border-radius: 2px;
-  }
-
+  .score-bar { height: 100%; border-radius: 2px; }
   .score-bar-high { background: #A32D2D; }
-  .score-bar-medium { background: #d4680a; }
-  .score-bar-low { background: #2931a3; }
+  .score-bar-low  { background: #2931a3; }
 
   .empty-state {
-    padding: 36px 16px;
-    text-align: center;
-    color: #888;
-    font-size: 12px;
+    padding: 36px 16px; text-align: center;
+    color: #888; font-size: 12px;
   }
 
-  .empty-state code,
-  .churn-note code {
-    background: #f5f5f4;
-    border: 0.5px solid #e5e5e5;
-    padding: 2px 6px;
-    border-radius: 6px;
-    color: #1a1a1a;
-    font-size: 11px;
+  .empty-state code, .churn-note code {
+    background: #f5f5f4; border: 0.5px solid #e5e5e5;
+    padding: 2px 6px; border-radius: 6px;
+    color: #1a1a1a; font-size: 11px;
   }
 
-  .churn-note {
-    font-size: 12px;
-    color: #888;
-    margin-top: 12px;
-  }
-
-  @media (max-width: 980px) {
-    .churn-metrics {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
+  .churn-note { font-size: 12px; color: #888; margin-top: 12px; }
 
   @media (max-width: 640px) {
-    .churn-header {
-      flex-direction: column;
-      align-items: flex-start;
-    }
-
-    .churn-metrics {
-      grid-template-columns: 1fr;
-    }
+    .churn-header { flex-direction: column; align-items: flex-start; }
+    .churn-metrics { grid-template-columns: 1fr; }
   }
 </style>
 
@@ -300,36 +217,32 @@
       <h1>Churn Dashboard</h1>
       <p>Customer retention risk overview</p>
     </div>
-    <a href="{% url 'churn:dashboard' %}" class="refresh-btn"><i class="ti ti-refresh"></i> Refresh scores</a>
+    <a href="{% url 'churn:dashboard' %}" class="refresh-btn">
+      <i class="ti ti-refresh"></i> Refresh scores
+    </a>
   </div>
 
+  <!-- 3 cards only — medium removed (model only predicts high/low) -->
   <div class="churn-metrics">
     <div class="metric-card total">
       <div class="metric-label">Total customers</div>
       <div class="metric-value">{{ total }}</div>
     </div>
-
     <div class="metric-card high">
       <div class="metric-label">High risk</div>
       <div class="metric-value high">{{ high_count }}</div>
     </div>
-
-    <div class="metric-card medium">
-      <div class="metric-label">Medium risk</div>
-      <div class="metric-value medium">{{ med_count }}</div>
-    </div>
-
     <div class="metric-card low">
       <div class="metric-label">Low risk</div>
       <div class="metric-value low">{{ low_count }}</div>
     </div>
   </div>
 
+  <!-- Medium risk filter removed -->
   <div class="filter-bar">
-    <a href="?risk=all" class="filter-btn {% if risk_filter == 'all' %}filter-active-all{% endif %}">All</a>
+    <a href="?risk=all"  class="filter-btn {% if risk_filter == 'all'  %}filter-active-all{% endif %}">All</a>
     <a href="?risk=high" class="filter-btn {% if risk_filter == 'high' %}filter-active-high{% endif %}">High risk</a>
-    <a href="?risk=medium" class="filter-btn {% if risk_filter == 'medium' %}filter-active-medium{% endif %}">Medium risk</a>
-    <a href="?risk=low" class="filter-btn {% if risk_filter == 'low' %}filter-active-low{% endif %}">Low risk</a>
+    <a href="?risk=low"  class="filter-btn {% if risk_filter == 'low'  %}filter-active-low{% endif %}">Low risk</a>
   </div>
 
   <div class="churn-table-card">
@@ -359,8 +272,6 @@
           <td>
             {% if s.risk_level == 'high' %}
               <span class="risk-badge risk-high">High</span>
-            {% elif s.risk_level == 'medium' %}
-              <span class="risk-badge risk-medium">Medium</span>
             {% else %}
               <span class="risk-badge risk-low">Low</span>
             {% endif %}
@@ -370,7 +281,8 @@
             <div class="score-wrap">
               <span class="score-value">{{ s.score|floatformat:2 }}</span>
               <div class="score-track">
-                <div class="score-bar score-bar-{{ s.risk_level }}" data-width="{% widthratio s.score 1 100 %}"></div>
+                <div class="score-bar score-bar-{{ s.risk_level }}"
+                     data-width="{% widthratio s.score 1 100 %}"></div>
               </div>
             </div>
           </td>
@@ -390,7 +302,7 @@
   </div>
 
   <p class="churn-note">
-    Avg churn score: {{ avg_score }}% &nbsp;.&nbsp; Scores update when you run
+    Avg churn score: {{ avg_score }}% &nbsp;·&nbsp; Scores update when you run
     <code>python manage.py score_customers</code>
   </p>
 

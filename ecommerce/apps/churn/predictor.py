@@ -68,4 +68,5 @@ def predict_churn(feature_dict: dict) -> dict:
         'score':      proba,
         'risk_level': risk,
         'will_churn': proba >= 0.5,
+        'debug':      {k: enc.get(k) for k in _columns},  # full computed feature row
     }

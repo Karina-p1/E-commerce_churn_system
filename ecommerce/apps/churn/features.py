@@ -27,13 +27,36 @@ def extract_features(user) -> dict:
     tenure_months = max(1, (timezone.now() - user.date_joined).days // 30)
 
     # ── Activity ──────────────────────────────────────
-    logins       = UserEvent.objects.filter(user=user, event_type='LOGIN').count()
-    hours_on_app = round(logins * 0.5, 1)
+    # NOTE: training data's HourSpendOnApp was a self-reported daily
+    # average bounded 0-5. We don't track real session duration yet,
+    # so this is a synthetic proxy based on DISTINCT ACTIVE DAYS in the
+    # last 30 (or since account creation, if younger than 30 days) —
+    # this avoids unfairly penalizing brand-new accounts that simply
+    # haven't existed long enough to rack up 30 days of activity.
+    account_age_days = max((timezone.now() - user.date_joined).days, 1)
+    lookback_days = min(account_age_days, 30)
+    lookback_start = timezone.now() - timezone.timedelta(days=lookback_days)
+
+    active_days = (
+        UserEvent.objects
+        .filter(user=user, event_type='LOGIN', created_at__gte=lookback_start)
+        .annotate(day=django_models.functions.TruncDate('created_at'))
+        .values('day')
+        .distinct()
+        .count()
+    )
+    hours_on_app = round(min(active_days / lookback_days * 5, 5.0), 1)
     coupon_used  = 0  # TODO: wire up real coupon tracking if/when available
 
     # ── Spend ─────────────────────────────────────────
+    # NOTE: training data's CashbackAmount was a real monthly reward
+    # amount bounded 0-324.99 (mean ~177). We don't track real cashback
+    # yet, so this is a synthetic proxy from total spend — capped at
+    # 300 to stay in-range. High spenders will all cap out at 300,
+    # which loses some granularity, but keeps predictions reliable
+    # rather than extrapolating wildly beyond the trained distribution.
     total_spent = sum(float(o.total_price) for o in orders)
-    cashback    = round(total_spent * 0.02, 2)
+    cashback    = round(min(total_spent * 0.02, 300.0), 2)
 
     # ── Satisfaction score & complaints ───────────────
     reviews = Review.objects.filter(customer=user)

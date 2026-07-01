@@ -10,7 +10,16 @@ User = get_user_model()
 class Command(BaseCommand):
     help = 'Score all customers for churn risk using their UserEvent data'
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--debug',
+            action='store_true',
+            help='Print the full computed feature breakdown for each customer'
+        )
+
     def handle(self, *args, **kwargs):
+        debug = kwargs.get('debug', False)
+
         users = User.objects.filter(
             is_staff=False,
             is_superuser=False,
@@ -26,12 +35,12 @@ class Command(BaseCommand):
                 result   = predict_churn(features)
 
                 ChurnScore.objects.update_or_create(
-    customer   = user,
-    defaults   = {
-        'score':      result['score'],
-        'risk_level': result['risk_level'],
-    }
-)
+                    customer=user,
+                    defaults={
+                        'score':      result['score'],
+                        'risk_level': result['risk_level'],
+                    }
+                )
 
                 if result['risk_level'] == 'high':
                     high += 1
@@ -43,6 +52,15 @@ class Command(BaseCommand):
                     f"{result['risk_level']:<8} "
                     f"score={result['score']}"
                 )
+
+                if debug:
+                    self.stdout.write("    Raw inputs:")
+                    for k, v in features.items():
+                        self.stdout.write(f"      {k}: {v}")
+                    self.stdout.write("    Computed feature row (model input order):")
+                    for k, v in result['debug'].items():
+                        self.stdout.write(f"      {k}: {v}")
+                    self.stdout.write("")
 
             except Exception as e:
                 errors += 1
