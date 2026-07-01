@@ -5,11 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{% block title %}ShopMart{% endblock %}</title>
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet" />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
+    />
+
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap"
+      rel="stylesheet"
+    />
 
     <style>
-      * { box-sizing: border-box; }
+      * {
+        box-sizing: border-box;
+      }
       body {
         font-family: "DM Sans", sans-serif;
         font-optical-sizing: auto;
@@ -17,185 +31,288 @@
       }
       /* MAIN NAVBAR */
       .main-nav {
-        position: fixed; top: 0; left: 0; width: 100%; z-index: 1000;
-        background: #fff; border-bottom: 1px solid #e8eaed;
-        box-shadow: 0 2px 12px rgba(0,0,0,0.07);
-        padding: 0 24px; display: flex; align-items: center; gap: 14px; height: 60px;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        z-index: 1000;
+        background: #fff;
+        border-bottom: 1px solid #e8eaed;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.07);
+        padding: 0 24px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        height: 60px;
       }
       .nav-logo {
-        font-size: 22px; font-weight: 700; color: #0e3a5c;
-        text-decoration: none; white-space: nowrap; letter-spacing: -0.5px; flex-shrink: 0;
+        font-size: 22px;
+        font-weight: 700;
+        color: #0e3a5c;
+        text-decoration: none;
+        white-space: nowrap;
+        letter-spacing: -0.5px;
+        flex-shrink: 0;
       }
-      .nav-logo span { color: #0ea5e9; }
+      .nav-logo span {
+        color: #0ea5e9;
+      }
       .btn-categories {
-        display: flex; align-items: center; gap: 7px;
-        background: #0e3a5c; color: #fff; border: none; border-radius: 8px;
-        padding: 8px 14px; font-size: 13.5px; font-weight: 600; cursor: pointer;
-        white-space: nowrap; font-family: "DM Sans", sans-serif;
-        transition: background 0.2s; flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        background: #0e3a5c;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: 8px 14px;
+        font-size: 13.5px;
+        font-weight: 600;
+        cursor: pointer;
+        white-space: nowrap;
+        font-family: "DM Sans", sans-serif;
+        transition: background 0.2s;
+        flex-shrink: 0;
       }
-      .btn-categories:hover { background: #1e5a8a; }
-.search-wrap {
-  flex: 1; min-width: 0; display: flex; align-items: center;
-  border: 1.5px solid #d1d5db; border-radius: 10px; overflow: visible;
-  background: #f9fafb; transition: border-color 0.2s, box-shadow 0.2s;
-  position: relative;
-}
-.search-wrap input {
-  flex: 1; min-width: 0; border: none; background: transparent;
-  padding: 9px 14px; font-size: 13.5px; font-family: "DM Sans", sans-serif;
-  color: #1f2937; outline: none;
-  border-radius: 10px 0 0 10px;
-}
-.search-wrap input::placeholder { color: #9ca3af; }
-.btn-search {
-  background: #0ea5e9; border: none; padding: 9px 18px; cursor: pointer;
-  display: flex; align-items: center; color: #fff; transition: background 0.2s;
-  flex-shrink: 0; border-radius: 0 10px 10px 0;
-}
-.btn-search:hover { background: #0284c7; }
+      .btn-categories:hover {
+        background: #1e5a8a;
+      }
+      .search-wrap {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        border: 1.5px solid #d1d5db;
+        border-radius: 10px;
+        overflow: visible;
+        background: #f9fafb;
+        transition:
+          border-color 0.2s,
+          box-shadow 0.2s;
+        position: relative;
+      }
+      .search-wrap input {
+        flex: 1;
+        min-width: 0;
+        border: none;
+        background: transparent;
+        padding: 9px 14px;
+        font-size: 13.5px;
+        font-family: "DM Sans", sans-serif;
+        color: #1f2937;
+        outline: none;
+        border-radius: 10px 0 0 10px;
+      }
+      .search-wrap input::placeholder {
+        color: #9ca3af;
+      }
+      .btn-search {
+        background: #0ea5e9;
+        border: none;
+        padding: 9px 18px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        color: #fff;
+        transition: background 0.2s;
+        flex-shrink: 0;
+        border-radius: 0 10px 10px 0;
+      }
+      .btn-search:hover {
+        background: #0284c7;
+      }
       .search-wrap:focus-within {
-        border-color: #0ea5e9; box-shadow: 0 0 0 3px rgba(14,165,233,0.12); background: #fff;
+        border-color: #0ea5e9;
+        box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.12);
+        background: #fff;
       }
 
-      .nav-divider { width: 1px; height: 32px; background: #e5e7eb; margin: 0 4px; flex-shrink: 0; }
-      .nav-right { display: flex; align-items: center; gap: 4px; margin-left: auto; flex-shrink: 0; }
-      .icon-btn {
-        display: flex; flex-direction: column; align-items: center; gap: 2px;
-        padding: 6px 10px; border-radius: 8px; cursor: pointer; text-decoration: none;
-        color: #374151; font-size: 10.5px; font-weight: 600; letter-spacing: 0.2px;
-        border: none; background: transparent; font-family: "DM Sans", sans-serif;
-        transition: background 0.18s, color 0.18s; white-space: nowrap; position: relative;
+      .nav-divider {
+        width: 1px;
+        height: 32px;
+        background: #e5e7eb;
+        margin: 0 4px;
+        flex-shrink: 0;
       }
-      .icon-btn:hover { background: #f0f9ff; color: #0ea5e9; }
-      .icon-btn svg { stroke: #374151; transition: stroke 0.18s; }
-      .icon-btn:hover svg { stroke: #0ea5e9; }
-      .icon-btn.active-link { color: #0ea5e9; }
-      .icon-btn.active-link svg { stroke: #0ea5e9; }
+      .nav-right {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin-left: auto;
+        flex-shrink: 0;
+      }
+      .icon-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        padding: 6px 10px;
+        border-radius: 8px;
+        cursor: pointer;
+        text-decoration: none;
+        color: #374151;
+        font-size: 10.5px;
+        font-weight: 600;
+        letter-spacing: 0.2px;
+        border: none;
+        background: transparent;
+        font-family: "DM Sans", sans-serif;
+        transition:
+          background 0.18s,
+          color 0.18s;
+        white-space: nowrap;
+        position: relative;
+      }
+      .icon-btn:hover {
+        background: #f0f9ff;
+        color: #0ea5e9;
+      }
+      .icon-btn svg {
+        stroke: #374151;
+        transition: stroke 0.18s;
+      }
+      .icon-btn:hover svg {
+        stroke: #0ea5e9;
+      }
+      .icon-btn.active-link {
+        color: #0ea5e9;
+      }
+      .icon-btn.active-link svg {
+        stroke: #0ea5e9;
+      }
       .cart-badge {
-        position: absolute; top: 4px; right: 6px; background: #0ea5e9; color: #fff;
-        font-size: 9px; font-weight: 700; border-radius: 99px; padding: 1px 5px;
-        min-width: 16px; text-align: center; border: 1.5px solid #fff;
+        position: absolute;
+        top: 4px;
+        right: 6px;
+        background: #0ea5e9;
+        color: #fff;
+        font-size: 9px;
+        font-weight: 700;
+        border-radius: 99px;
+        padding: 1px 5px;
+        min-width: 16px;
+        text-align: center;
+        border: 1.5px solid #fff;
       }
 
       /* BRAND STRIP */
       .brand-strip-wrapper {
-          position: fixed;
-          top: 60px;
-          left: 0;
-          width: 100%;
-          z-index: 999;
+        position: fixed;
+        top: 60px;
+        left: 0;
+        width: 100%;
+        z-index: 999;
       }
 
       .cat-bar {
-          background: #fff;
-          border-bottom: 1px solid #e8eaed;
+        background: #fff;
+        border-bottom: 1px solid #e8eaed;
 
-          display: flex;
-          align-items: center;
+        display: flex;
+        align-items: center;
 
-          overflow-x: auto;
-          overflow-y: hidden;
+        overflow-x: auto;
+        overflow-y: hidden;
 
-          white-space: nowrap;
-          scroll-behavior: smooth;
+        white-space: nowrap;
+        scroll-behavior: smooth;
 
-          padding: 0 42px;
+        padding: 0 42px;
 
-          height: 42px;
+        height: 42px;
 
-          scrollbar-width: thin;
-          scrollbar-color: #0ea5e9 transparent;
+        scrollbar-width: thin;
+        scrollbar-color: #0ea5e9 transparent;
       }
 
       .cat-bar::-webkit-scrollbar {
-          height: 4px;
+        height: 4px;
       }
 
       .cat-bar::-webkit-scrollbar-thumb {
-          background: #0ea5e9;
-          border-radius: 50px;
+        background: #0ea5e9;
+        border-radius: 50px;
       }
 
       .brand-wrap {
-          flex: 0 0 auto;
+        flex: 0 0 auto;
       }
 
       .brand-item {
-          display: flex;
-          align-items: center;
-          gap: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
       }
 
       .brand-item img {
-          width: 22px;
-          height: 22px;
-          object-fit: contain;
-          flex-shrink: 0;
+        width: 22px;
+        height: 22px;
+        object-fit: contain;
+        flex-shrink: 0;
       }
 
       .cat-link {
-          display: flex;
-          align-items: center;
+        display: flex;
+        align-items: center;
 
-          flex: 0 0 auto;
+        flex: 0 0 auto;
 
-          height: 42px;
+        height: 42px;
 
-          padding: 0 16px;
+        padding: 0 16px;
 
-          text-decoration: none;
+        text-decoration: none;
 
-          font-size: 12.5px;
-          font-weight: 600;
+        font-size: 12.5px;
+        font-weight: 600;
 
-          color: #374151;
+        color: #374151;
 
-          border-bottom: 2px solid transparent;
+        border-bottom: 2px solid transparent;
 
-          transition: all .2s ease;
+        transition: all 0.2s ease;
       }
 
       .cat-link:hover,
       .cat-link.active {
-          color: #0ea5e9;
-          border-bottom-color: #0ea5e9;
+        color: #0ea5e9;
+        border-bottom-color: #0ea5e9;
       }
 
       .brand-scroll-btn {
-          position: absolute;
+        position: absolute;
 
-          top: 50%;
-          transform: translateY(-50%);
+        top: 50%;
+        transform: translateY(-50%);
 
-          width: 30px;
-          height: 30px;
+        width: 30px;
+        height: 30px;
 
-          border: none;
-          border-radius: 50%;
+        border: none;
+        border-radius: 50%;
 
-          background: #fff;
+        background: #fff;
 
-          box-shadow: 0 2px 10px rgba(0,0,0,.15);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
 
-          cursor: pointer;
+        cursor: pointer;
 
-          z-index: 1001;
+        z-index: 1001;
 
-          transition: all .2s ease;
+        transition: all 0.2s ease;
       }
 
       .brand-scroll-btn:hover {
-          background: #0ea5e9;
-          color: white;
+        background: #0ea5e9;
+        color: white;
       }
 
       .brand-scroll-btn.left {
-          left: 6px;
+        left: 6px;
       }
 
       .brand-scroll-btn.right {
-          right: 6px;
+        right: 6px;
       }
 
       /* BRAND POPUP — fixed, positioned by JS */
@@ -205,13 +322,15 @@
         background: #fff;
         border-radius: 14px;
         border: 1px solid #e5e7eb;
-        box-shadow: 0 8px 32px rgba(14,58,92,0.15);
+        box-shadow: 0 8px 32px rgba(14, 58, 92, 0.15);
         width: min(260px, calc(100vw - 20px));
         overflow: hidden;
         opacity: 0;
         pointer-events: none;
         transform: translateY(6px);
-        transition: opacity 0.15s, transform 0.15s;
+        transition:
+          opacity 0.15s,
+          transform 0.15s;
       }
       .brand-popup.show {
         opacity: 1;
@@ -219,77 +338,326 @@
         transform: translateY(0);
       }
       .bp-hero {
-        height: 72px; position: relative;
-        display: flex; align-items: flex-end; padding: 10px 14px;
+        height: 72px;
+        position: relative;
+        display: flex;
+        align-items: flex-end;
+        padding: 10px 14px;
       }
       .bp-logo-wrap {
-        position: absolute; bottom: -20px; left: 14px;
-        width: 44px; height: 44px; border-radius: 10px;
-        background: #f3f4f6; border: 3px solid #fff;
-        overflow: hidden; display: flex; align-items: center; justify-content: center;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+        position: absolute;
+        bottom: -20px;
+        left: 14px;
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        background: #f3f4f6;
+        border: 3px solid #fff;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
       }
-      .bp-logo-wrap img { width: 100%; height: 100%; object-fit: contain; }
-      .bp-logo-initials { font-size: 16px; font-weight: 700; color: #fff; }
-      .bp-body { padding: 28px 14px 14px; }
-      .bp-name { font-size: 15px; font-weight: 700; color: #0e3a5c; margin: 0 0 6px; }
+      .bp-logo-wrap img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+      .bp-logo-initials {
+        font-size: 16px;
+        font-weight: 700;
+        color: #fff;
+      }
+      .bp-body {
+        padding: 28px 14px 14px;
+      }
+      .bp-name {
+        font-size: 15px;
+        font-weight: 700;
+        color: #0e3a5c;
+        margin: 0 0 6px;
+      }
       .bp-desc {
-        font-size: 12px; color: #4b5563; line-height: 1.55;
-        margin: 0 0 12px; max-height: 54px; overflow: hidden;
+        font-size: 12px;
+        color: #4b5563;
+        line-height: 1.55;
+        margin: 0 0 12px;
+        max-height: 54px;
+        overflow: hidden;
       }
-      .bp-actions { display: flex; }
+      .bp-actions {
+        display: flex;
+      }
       .bp-btn-primary {
-        flex: 1; background: #0ea5e9; color: #fff; border: none;
-        border-radius: 8px; padding: 7px 0; font-size: 12px; font-weight: 600;
-        cursor: pointer; font-family: "DM Sans", sans-serif; transition: background 0.15s;
-        text-align: center; text-decoration: none;
-        display: flex; align-items: center; justify-content: center;
+        flex: 1;
+        background: #0ea5e9;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: 7px 0;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: "DM Sans", sans-serif;
+        transition: background 0.15s;
+        text-align: center;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
-      .bp-btn-primary:hover { background: #0284c7; color: #fff; }
+      .bp-btn-primary:hover {
+        background: #0284c7;
+        color: #fff;
+      }
 
-      .page-container { padding: 24px 16px; }
+      .page-container {
+        padding: 24px 16px;
+      }
+
+      /* ==========================
+        Modern Toast
+      ========================== */
+
+      #toast-container{
+          position:fixed;
+          top:25px;
+          left:50%;
+          transform:translateX(-50%);
+          z-index:9999;
+          width:420px;
+          max-width:92%;
+      }
+
+      .custom-toast{
+          position:relative;
+          overflow:hidden;
+          display:flex;
+          align-items:center;
+          gap:14px;
+          padding:16px 18px;
+          margin-bottom:14px;
+          border-radius:14px;
+
+          background:#fff;
+          color:#1f2937;
+
+          border:1px solid rgba(0,0,0,.08);
+
+          box-shadow:
+              0 12px 30px rgba(0,0,0,.10),
+              0 2px 8px rgba(0,0,0,.05);
+
+          backdrop-filter:blur(12px);
+
+          animation:toastIn .35s ease;
+      }
+
+      .toast-icon{
+          width:42px;
+          height:42px;
+          border-radius:50%;
+
+          display:flex;
+          align-items:center;
+          justify-content:center;
+
+          font-size:18px;
+          flex-shrink:0;
+      }
+
+      .toast-body{
+          flex:1;
+      }
+
+      .toast-title{
+          font-weight:600;
+          font-size:15px;
+          margin-bottom:2px;
+      }
+
+      .toast-message{
+          font-size:14px;
+          color:#6b7280;
+      }
+
+      .custom-toast.success .toast-icon{
+          background:#e8f7ee;
+          color:#16a34a;
+      }
+
+      .custom-toast.error .toast-icon{
+          background:#fdecec;
+          color:#dc2626;
+      }
+
+      .custom-toast.warning .toast-icon{
+          background:#fff7e6;
+          color:#d97706;
+      }
+
+      .custom-toast.info .toast-icon{
+          background:#e9f4ff;
+          color:#2563eb;
+      }
+
+      /* Progress */
+
+      .toast-progress{
+          position:absolute;
+          left:0;
+          bottom:0;
+
+          width:100%;
+          height:3px;
+
+          background:#0d6efd;
+
+          transform:scaleX(0);
+          transform-origin:left;
+
+          animation:progress 4s linear forwards;
+      }
+
+      .custom-toast.success .toast-progress{
+          background:#22c55e;
+      }
+
+      .custom-toast.error .toast-progress{
+          background:#ef4444;
+      }
+
+      .custom-toast.warning .toast-progress{
+          background:#f59e0b;
+      }
+
+      .custom-toast.info .toast-progress{
+          background:#3b82f6;
+      }
+
+      @keyframes progress{
+
+      from{
+      transform:scaleX(0);
+      }
+
+      to{
+      transform:scaleX(1);
+      }
+
+      }
+
+      .fade-out{
+      animation:toastOut .3s forwards;
+      }
+
+      @keyframes toastIn{
+
+      from{
+      opacity:0;
+      transform:translateY(-18px);
+      }
+
+      to{
+      opacity:1;
+      transform:translateY(0);
+      }
+
+      }
+
+      @keyframes toastOut{
+
+      to{
+      opacity:0;
+      transform:translateY(-18px);
+      }
+
+      }
 
       @media (max-width: 768px) {
-        body { padding-top: 108px; }
-        .main-nav { padding: 0 12px; gap: 8px; height: 56px; }
-        .nav-logo { font-size: 18px; }
-        .btn-categories span { display: none; }
-        .btn-categories { padding: 8px 10px; }
-        .nav-divider { display: none; }
-        .search-wrap input { padding: 8px 10px; font-size: 13px; }
-        .btn-search { padding: 8px 12px; }
-        .icon-btn span { display: none; }
-        .icon-btn { padding: 6px 7px; }
-        .cat-bar { top: 88px; padding: 0 12px; height: 32px; }
-        .cat-link { font-size: 12px; padding: 0 10px; }
-        .page-container { padding: 16px 12px; }
-        .brand-popup { width: 220px; }
+        body {
+          padding-top: 108px;
+        }
+        .main-nav {
+          padding: 0 12px;
+          gap: 8px;
+          height: 56px;
+        }
+        .nav-logo {
+          font-size: 18px;
+        }
+        .btn-categories span {
+          display: none;
+        }
+        .btn-categories {
+          padding: 8px 10px;
+        }
+        .nav-divider {
+          display: none;
+        }
+        .search-wrap input {
+          padding: 8px 10px;
+          font-size: 13px;
+        }
+        .btn-search {
+          padding: 8px 12px;
+        }
+        .icon-btn span {
+          display: none;
+        }
+        .icon-btn {
+          padding: 6px 7px;
+        }
         .cat-bar {
-        top: 88px;
-        height: 40px;
-        padding: 0 36px;
+          top: 88px;
+          padding: 0 12px;
+          height: 32px;
+        }
+        .cat-link {
+          font-size: 12px;
+          padding: 0 10px;
+        }
+        .page-container {
+          padding: 16px 12px;
+        }
+        .brand-popup {
+          width: 220px;
+        }
+        .cat-bar {
+          top: 88px;
+          height: 40px;
+          padding: 0 36px;
         }
 
         .cat-link {
-            font-size: 12px;
-            padding: 0 12px;
+          font-size: 12px;
+          padding: 0 12px;
         }
 
         .brand-item img {
-            width: 20px;
-            height: 20px;
+          width: 20px;
+          height: 20px;
         }
 
         .brand-scroll-btn {
-            width: 26px;
-            height: 26px;
-            font-size: 12px;
+          width: 26px;
+          height: 26px;
+          font-size: 12px;
         }
       }
       @media (max-width: 480px) {
-        .top-bar { font-size: 10px; gap: 4px; padding: 6px 10px; }
-        .nav-logo { font-size: 16px; }
-        .icon-btn { padding: 6px 5px; }
+        .top-bar {
+          font-size: 10px;
+          gap: 4px;
+          padding: 6px 10px;
+        }
+        .nav-logo {
+          font-size: 16px;
+        }
+        .icon-btn {
+          padding: 6px 5px;
+        }
       }
     </style>
 
@@ -304,252 +672,402 @@
       </a>
 
       <div class="nav-item dropdown" style="list-style: none">
-        <button class="btn-categories dropdown-toggle" type="button"
-          data-bs-toggle="dropdown" aria-expanded="false">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <line x1="3" y1="6" x2="21" y2="6"/>
-            <line x1="3" y1="12" x2="21" y2="12"/>
-            <line x1="3" y1="18" x2="21" y2="18"/>
+        <button
+          class="btn-categories dropdown-toggle"
+          type="button"
+          data-bs-toggle="dropdown"
+          aria-expanded="false"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+          >
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
           </svg>
           <span>Categories</span>
         </button>
         <ul class="dropdown-menu">
           {% for cat in all_categories %}
           <li>
-            <a class="dropdown-item" href="{% url 'products:view_products' %}?category={{ cat.slug }}">
+            <a
+              class="dropdown-item"
+              href="{% url 'products:view_products' %}?category={{ cat.slug }}"
+            >
               {{ cat.name }}
             </a>
           </li>
           {% empty %}
-          <li><a class="dropdown-item disabled" href="#">No categories found</a></li>
+          <li>
+            <a class="dropdown-item disabled" href="#">No categories found</a>
+          </li>
           {% endfor %}
         </ul>
       </div>
 
-<form class="search-wrap" method="GET" action="{% url 'products:view_products' %}"
-            style="position:relative;" autocomplete="off">
-        <input type="search" id="search-input" name="q"
-               placeholder="Search for products, brands..."
-               value="{{ request.GET.q }}" />
+      <form
+        class="search-wrap"
+        method="GET"
+        action="{% url 'products:view_products' %}"
+        style="position: relative"
+        autocomplete="off"
+      >
+        <input
+          type="search"
+          id="search-input"
+          name="q"
+          placeholder="Search for products, brands..."
+          value="{{ request.GET.q }}"
+        />
         <button class="btn-search" type="submit">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <circle cx="11" cy="11" r="8"/>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
         </button>
-        <div id="search-dropdown" style="
-          display:none; position:absolute; top:100%; left:0; right:0;
-          background:#fff; border:1.5px solid #e5e7eb; border-top:none;
-          border-radius:0 0 10px 10px;
-          box-shadow:0 8px 24px rgba(0,0,0,0.10); z-index:2000; overflow:hidden;
-        "></div>
+        <div
+          id="search-dropdown"
+          style="
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #fff;
+            border: 1.5px solid #e5e7eb;
+            border-top: none;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            z-index: 2000;
+            overflow: hidden;
+          "
+        ></div>
       </form>
 
       <div class="nav-divider"></div>
 
       <div class="nav-right">
         {% if request.user.is_authenticated %}
-          <a href="{% url 'profile' %}" class="icon-btn">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke-width="2">
-              <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
-              <circle cx="12" cy="7" r="4"/>
+        <a href="{% url 'profile' %}" class="icon-btn">
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke-width="2"
+          >
+            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+          <span>{{ request.user.username }}</span>
+        </a>
+
+        <a href="{% url 'products:wishlist' %}" class="icon-btn">
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke-width="2"
+          >
+            <path
+              d="M20.8 4.6c-1.5-1.4-4-1.4-5.5 0L12 7.9 8.7 4.6c-1.5-1.4-4-1.4-5.5 0-1.5 1.5-1.5 4 0 5.5L12 20l8.8-9.9c1.5-1.5 1.5-4 0-5.5z"
+            />
+          </svg>
+          <span>Wishlist</span>
+        </a>
+
+        <a href="{% url 'cart' %}" class="icon-btn">
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke-width="2"
+          >
+            <circle cx="9" cy="21" r="1" />
+            <circle cx="20" cy="21" r="1" />
+            <path
+              d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"
+            />
+          </svg>
+          <span>Cart</span>
+          {% with cart_count=request.user.cart.total_items %} {% if cart_count %}
+          <span class="cart-badge">{{ cart_count }}</span>
+          {% endif %} 
+          
+          {% endwith %}
+        </a>
+
+        <a href="{% url 'order_list' %}" class="icon-btn">
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke-width="2"
+          >
+            <path
+              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"
+            />
+            <rect x="9" y="3" width="6" height="4" rx="2" />
+            <line x1="9" y1="12" x2="15" y2="12" />
+            <line x1="9" y1="16" x2="13" y2="16" />
+          </svg>
+          <span>Orders</span>
+        </a>
+
+        <div class="nav-divider"></div>
+
+        {% if request.user.is_staff %}
+        <div style="position: relative" id="admin-dropdown-wrap">
+          <button
+            onclick="toggleAdminMenu()"
+            class="icon-btn"
+            style="
+              color: #f59e0b;
+              border: none;
+              cursor: pointer;
+              background: transparent;
+            "
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#f59e0b"
+              stroke-width="2"
+            >
+              <circle cx="12" cy="12" r="3" />
+              <path
+                d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"
+              />
             </svg>
-            <span>{{ request.user.username }}</span>
-          </a>
+            <span>Admin ▾</span>
+          </button>
 
-          <a href="{% url 'products:wishlist' %}" class="icon-btn">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke-width="2">
-              <path d="M20.8 4.6c-1.5-1.4-4-1.4-5.5 0L12 7.9 8.7 4.6c-1.5-1.4-4-1.4-5.5 0-1.5 1.5-1.5 4 0 5.5L12 20l8.8-9.9c1.5-1.5 1.5-4 0-5.5z"/>
-            </svg>
-            <span>Wishlist</span>
-          </a>
-
-          <a href="{% url 'cart' %}" class="icon-btn">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke-width="2">
-              <circle cx="9" cy="21" r="1"/>
-              <circle cx="20" cy="21" r="1"/>
-              <path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/>
-            </svg>
-            <span>Cart</span>
-            {% with cart_count=request.user.cart.total_items %}
-              {% if cart_count %}<span class="cart-badge">{{ cart_count }}</span>{% endif %}
-            {% endwith %}
-          </a>
-
-          <a href="{% url 'order_list' %}" class="icon-btn">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke-width="2">
-              <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
-              <rect x="9" y="3" width="6" height="4" rx="2"/>
-              <line x1="9" y1="12" x2="15" y2="12"/>
-              <line x1="9" y1="16" x2="13" y2="16"/>
-            </svg>
-            <span>Orders</span>
-          </a>
-
-          <div class="nav-divider"></div>
-
-{% if request.user.is_staff %}
-<div style="position:relative;" id="admin-dropdown-wrap">
-
-  <button onclick="toggleAdminMenu()" class="icon-btn"
-          style="color:#f59e0b; border:none; cursor:pointer; background:transparent;">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2">
-      <circle cx="12" cy="12" r="3"/>
-      <path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/>
-    </svg>
-    <span>Admin ▾</span>
-  </button>
-
-  <div id="admin-menu" style="
-    display: none;
-    position: absolute;
-    right: 0;
-    top: 52px;
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 10px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-    min-width: 185px;
-    z-index: 9999;
-    overflow: hidden;
-  ">
-    <!-- Django Admin -->
-    <a href="/admin/" style="
-      display: flex; align-items: center; gap: 10px;
-      padding: 11px 16px; font-size: 13px; font-weight: 500;
-      color: #374151; text-decoration: none;
-      border-bottom: 1px solid #f3f4f6;
-      font-family: 'DM Sans', sans-serif;
-    "
-    onmouseenter="this.style.background='#f9fafb'"
-    onmouseleave="this.style.background=''">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2">
-        <rect x="3" y="3" width="7" height="7"/>
-        <rect x="14" y="3" width="7" height="7"/>
-        <rect x="14" y="14" width="7" height="7"/>
-        <rect x="3" y="14" width="7" height="7"/>
-      </svg>
-      Django Admin
-    </a>
-
-    <!-- Churn Dashboard -->
-    <a href="{% url 'churn:dashboard' %}" style="
-      display: flex; align-items: center; gap: 10px;
-      padding: 11px 16px; font-size: 13px; font-weight: 500;
-      color: #374151; text-decoration: none;
-      font-family: 'DM Sans', sans-serif;
-    "
-    onmouseenter="this.style.background='#f9fafb'"
-    onmouseleave="this.style.background=''">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2">
-        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
-        <circle cx="9" cy="7" r="4"/>
-        <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
-      </svg>
-      Churn Dashboard
-    </a>
-  </div>
-
-</div>
-<div class="nav-divider"></div>
-{% endif %}
-
-          <form action="{% url 'logout' %}" method="post" style="display: inline">
-            {% csrf_token %}
-            <button type="submit" class="icon-btn active-link">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke-width="2">
-                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
-                <polyline points="16 17 21 12 16 7"/>
-                <line x1="21" y1="12" x2="9" y2="12"/>
+          <div
+            id="admin-menu"
+            style="
+              display: none;
+              position: absolute;
+              right: 0;
+              top: 52px;
+              background: #fff;
+              border: 1px solid #e5e7eb;
+              border-radius: 10px;
+              box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+              min-width: 185px;
+              z-index: 9999;
+              overflow: hidden;
+            "
+          >
+            <!-- Django Admin -->
+            <a
+              href="/admin/"
+              style="
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 11px 16px;
+                font-size: 13px;
+                font-weight: 500;
+                color: #374151;
+                text-decoration: none;
+                border-bottom: 1px solid #f3f4f6;
+                font-family: &quot;DM Sans&quot;, sans-serif;
+              "
+              onmouseenter="this.style.background = '#f9fafb'"
+              onmouseleave="this.style.background = ''"
+            >
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#6b7280"
+                stroke-width="2"
+              >
+                <rect x="3" y="3" width="7" height="7" />
+                <rect x="14" y="3" width="7" height="7" />
+                <rect x="14" y="14" width="7" height="7" />
+                <rect x="3" y="14" width="7" height="7" />
               </svg>
-              <span>Logout</span>
-            </button>
-          </form>
+              Django Admin
+            </a>
+
+            <!-- Churn Dashboard -->
+            <a
+              href="{% url 'churn:dashboard' %}"
+              style="
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 11px 16px;
+                font-size: 13px;
+                font-weight: 500;
+                color: #374151;
+                text-decoration: none;
+                font-family: &quot;DM Sans&quot;, sans-serif;
+              "
+              onmouseenter="this.style.background = '#f9fafb'"
+              onmouseleave="this.style.background = ''"
+            >
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#6b7280"
+                stroke-width="2"
+              >
+                <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+              </svg>
+              Churn Dashboard
+            </a>
+          </div>
+        </div>
+        <div class="nav-divider"></div>
+        {% endif %}
+
+        <form action="{% url 'logout' %}" method="post" style="display: inline">
+          {% csrf_token %}
+          <button type="submit" class="icon-btn active-link">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke-width="2"
+            >
+              <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            <span>Logout</span>
+          </button>
+        </form>
 
         {% else %}
-          <a href="{% url 'cart' %}" class="icon-btn">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke-width="2">
-              <circle cx="9" cy="21" r="1"/>
-              <circle cx="20" cy="21" r="1"/>
-              <path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/>
-            </svg>
-            <span>Cart</span>
-          </a>
+        <a href="{% url 'cart' %}" class="icon-btn">
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke-width="2"
+          >
+            <circle cx="9" cy="21" r="1" />
+            <circle cx="20" cy="21" r="1" />
+            <path
+              d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"
+            />
+          </svg>
+          <span>Cart</span>
+        </a>
 
-          <div class="nav-divider"></div>
+        <div class="nav-divider"></div>
 
-          <a href="{% url 'login' %}" class="icon-btn active-link">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" stroke-width="2">
-              <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/>
-              <polyline points="10 17 15 12 10 7"/>
-              <line x1="15" y1="12" x2="3" y2="12"/>
-            </svg>
-            <span>Login</span>
-          </a>
+        <a href="{% url 'login' %}" class="icon-btn active-link">
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#0ea5e9"
+            stroke-width="2"
+          >
+            <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4" />
+            <polyline points="10 17 15 12 10 7" />
+            <line x1="15" y1="12" x2="3" y2="12" />
+          </svg>
+          <span>Login</span>
+        </a>
 
-          <a href="{% url 'register' %}" class="icon-btn">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke-width="2">
-              <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/>
-              <circle cx="9" cy="7" r="4"/>
-              <line x1="19" y1="8" x2="19" y2="14"/>
-              <line x1="22" y1="11" x2="16" y2="11"/>
-            </svg>
-            <span>Register</span>
-          </a>
+        <a href="{% url 'register' %}" class="icon-btn">
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke-width="2"
+          >
+            <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <line x1="19" y1="8" x2="19" y2="14" />
+            <line x1="22" y1="11" x2="16" y2="11" />
+          </svg>
+          <span>Register</span>
+        </a>
         {% endif %}
       </div>
     </nav>
 
     <!-- BRAND STRIP -->
     <!-- BRAND STRIP -->
-<div class="brand-strip-wrapper">
+    <div class="brand-strip-wrapper">
+      <button
+        class="brand-scroll-btn left"
+        type="button"
+        onclick="scrollBrands(-300)"
+      >
+        ❮
+      </button>
 
-  <button class="brand-scroll-btn left"
-          type="button"
-          onclick="scrollBrands(-300)">
-    ❮
-  </button>
+      <div class="cat-bar" id="brandStrip">
+        {% for brand in all_brands %}
+        <div class="brand-wrap">
+          <a
+            href="{% url 'products:view_products' %}?brand={{ brand.slug }}"
+            class="cat-link brand-item {% if active_brand == brand.slug %}active{% endif %}"
+            data-brand-name="{{ brand.name }}"
+            data-brand-desc="{{ brand.description|default:''|escapejs }}"
+            data-brand-logo="{% if brand.logo %}{{ brand.logo.url }}{% endif %}"
+            data-brand-slug="{{ brand.slug }}"
+            onmouseenter="showBrandPopup(this)"
+            onmouseleave="hideBrandPopup()"
+          >
+            {% if brand.logo %}
+            <img src="{{ brand.logo.url }}" alt="{{ brand.name }}" />
+            {% endif %}
 
-  <div class="cat-bar" id="brandStrip">
+            <span>{{ brand.name }}</span>
+          </a>
+        </div>
+        {% endfor %}
+      </div>
 
-    {% for brand in all_brands %}
-    <div class="brand-wrap">
-
-      <a href="{% url 'products:view_products' %}?brand={{ brand.slug }}"
-         class="cat-link brand-item {% if active_brand == brand.slug %}active{% endif %}"
-
-         data-brand-name="{{ brand.name }}"
-         data-brand-desc="{{ brand.description|default:''|escapejs }}"
-         data-brand-logo="{% if brand.logo %}{{ brand.logo.url }}{% endif %}"
-         data-brand-slug="{{ brand.slug }}"
-
-         onmouseenter="showBrandPopup(this)"
-         onmouseleave="hideBrandPopup()">
-
-          {% if brand.logo %}
-          <img src="{{ brand.logo.url }}"
-               alt="{{ brand.name }}">
-          {% endif %}
-
-          <span>{{ brand.name }}</span>
-
-      </a>
-
+      <button
+        class="brand-scroll-btn right"
+        type="button"
+        onclick="scrollBrands(300)"
+      >
+        ❯
+      </button>
     </div>
-    {% endfor %}
-
-  </div>
-
-  <button class="brand-scroll-btn right"
-          type="button"
-          onclick="scrollBrands(300)">
-    ❯
-  </button>
-
-</div>
 
     <!-- SINGLE SHARED POPUP — lives outside cat-bar, positioned by JS -->
-    <div class="brand-popup" id="brandPopup" onmouseenter="cancelHide()" onmouseleave="hideBrandPopup()">
+    <div
+      class="brand-popup"
+      id="brandPopup"
+      onmouseenter="cancelHide()"
+      onmouseleave="hideBrandPopup()"
+    >
       <div class="bp-hero" id="bpHero">
         <div class="bp-logo-wrap" id="bpLogoWrap"></div>
       </div>
@@ -563,15 +1081,41 @@
     </div>
 
     <!-- FLASH MESSAGES -->
+
     {% if messages %}
-    <div style="position: fixed; top: 135px; right: 16px; z-index: 9999; min-width: 280px;">
-      {% for message in messages %}
-      <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm"
-        role="alert" style="font-size: 13.5px">
-        {{ message }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-      </div>
-      {% endfor %}
+    <div id="toast-container">
+    {% for message in messages %}
+    <div class="custom-toast {{ message.tags }}">
+        <div class="toast-icon">
+            {% if message.tags == "success" %}
+                <i class="fas fa-check"></i>
+            {% elif message.tags == "error" %}
+                <i class="fas fa-times"></i>
+            {% elif message.tags == "warning" %}
+                <i class="fas fa-exclamation"></i>
+            {% else %}
+                <i class="fas fa-info"></i>
+            {% endif %}
+        </div>
+        <div class="toast-body">
+            <div class="toast-title">
+                {% if message.tags == "success" %}
+                    Success
+                {% elif message.tags == "error" %}
+                    Error
+                {% elif message.tags == "warning" %}
+                    Warning
+                {% else %}
+                    Information
+                {% endif %}
+            </div>
+            <div class="toast-message">
+                {{ message }}
+            </div>
+        </div>
+        <div class="toast-progress"></div>
+    </div>
+    {% endfor %}
     </div>
     {% endif %}
 
@@ -581,22 +1125,22 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-      const popup      = document.getElementById('brandPopup');
-      const bpHero     = document.getElementById('bpHero');
-      const bpLogoWrap = document.getElementById('bpLogoWrap');
-      const bpName     = document.getElementById('bpName');
-      const bpDesc     = document.getElementById('bpDesc');
-      const bpBtn      = document.getElementById('bpBtn');
+      const popup = document.getElementById("brandPopup");
+      const bpHero = document.getElementById("bpHero");
+      const bpLogoWrap = document.getElementById("bpLogoWrap");
+      const bpName = document.getElementById("bpName");
+      const bpDesc = document.getElementById("bpDesc");
+      const bpBtn = document.getElementById("bpBtn");
 
       const heroGradients = [
-        'linear-gradient(135deg,#0e3a5c,#1e5a8a)',
-        'linear-gradient(135deg,#1428a0,#2d4de0)',
-        'linear-gradient(135deg,#111827,#374151)',
-        'linear-gradient(135deg,#7c3aed,#a78bfa)',
-        'linear-gradient(135deg,#0f766e,#2dd4bf)',
-        'linear-gradient(135deg,#b45309,#fbbf24)',
-        'linear-gradient(135deg,#be123c,#f43f5e)',
-        'linear-gradient(135deg,#065f46,#34d399)',
+        "linear-gradient(135deg,#0e3a5c,#1e5a8a)",
+        "linear-gradient(135deg,#1428a0,#2d4de0)",
+        "linear-gradient(135deg,#111827,#374151)",
+        "linear-gradient(135deg,#7c3aed,#a78bfa)",
+        "linear-gradient(135deg,#0f766e,#2dd4bf)",
+        "linear-gradient(135deg,#b45309,#fbbf24)",
+        "linear-gradient(135deg,#be123c,#f43f5e)",
+        "linear-gradient(135deg,#065f46,#34d399)",
       ];
 
       function getGradient(name) {
@@ -616,9 +1160,9 @@
 
         if (logo) {
           bpLogoWrap.innerHTML = `<img src="${logo}" alt="${name}">`;
-          bpLogoWrap.style.background = '#f9fafb';
+          bpLogoWrap.style.background = "#f9fafb";
         } else {
-          bpLogoWrap.innerHTML = `<span class="bp-logo-initials">${name.substring(0,2).toUpperCase()}</span>`;
+          bpLogoWrap.innerHTML = `<span class="bp-logo-initials">${name.substring(0, 2).toUpperCase()}</span>`;
           bpLogoWrap.style.background = getGradient(name);
         }
 
@@ -626,10 +1170,10 @@
 
         if (desc && desc.trim()) {
           bpDesc.textContent = desc;
-          bpDesc.style.display = 'block';
+          bpDesc.style.display = "block";
         } else {
-          bpDesc.textContent = '';
-          bpDesc.style.display = 'none';
+          bpDesc.textContent = "";
+          bpDesc.style.display = "none";
         }
 
         bpBtn.href = "{% url 'products:view_products' %}?brand=" + slug;
@@ -639,14 +1183,14 @@
         if (left + 260 > window.innerWidth - 8) {
           left = window.innerWidth - 268;
         }
-        popup.style.top  = (rect.bottom + 6) + 'px';
-        popup.style.left = left + 'px';
-        popup.classList.add('show');
+        popup.style.top = rect.bottom + 6 + "px";
+        popup.style.left = left + "px";
+        popup.classList.add("show");
       }
 
       function hideBrandPopup() {
         hideTimer = setTimeout(() => {
-          popup.classList.remove('show');
+          popup.classList.remove("show");
         }, 150);
       }
 
@@ -655,114 +1199,152 @@
       }
 
       function scrollBrands(amount) {
-          const strip = document.getElementById('brandStrip');
+        const strip = document.getElementById("brandStrip");
 
-          strip.scrollBy({
-              left: amount,
-              behavior: 'smooth'
-          });
+        strip.scrollBy({
+          left: amount,
+          behavior: "smooth",
+        });
       }
 
-      // Admin dropdown toggle
-function toggleAdminMenu() {
-  const menu = document.getElementById('admin-menu');
-  menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
-}
+      //Toast Progress Bar
+      document.addEventListener("DOMContentLoaded", function () {
+        const toasts = document.querySelectorAll(".custom-toast");
 
-// Close admin dropdown when clicking outside
-document.addEventListener('click', function(e) {
-  const wrap = document.getElementById('admin-dropdown-wrap');
-  if (wrap && !wrap.contains(e.target)) {
-    const menu = document.getElementById('admin-menu');
-    if (menu) menu.style.display = 'none';
-  }
-});
+        toasts.forEach(function (toast) {
+          setTimeout(function () {
+            toast.classList.add("fade-out");
 
-// ── Search Autocomplete ──────────────────────────────────────────
-(function () {
-  const input    = document.getElementById('search-input');
-  const dropdown = document.getElementById('search-dropdown');
-  let timer;
-
-  input.addEventListener('input', function () {
-    clearTimeout(timer);
-    const q = this.value.trim();
-    if (!q) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; return; }
-
-    timer = setTimeout(() => {
-      fetch('/api/search/?q=' + encodeURIComponent(q))
-        .then(r => r.json())
-        .then(data => {
-          dropdown.innerHTML = '';
-          if (!data.results.length) { dropdown.style.display = 'none'; return; }
-
-          data.results.forEach(p => {
-            const a = document.createElement('a');
-            a.href = '/' + p.slug + '/';   // ← fixed URL
-            a.style.cssText = [
-              'display:flex', 'align-items:center', 'gap:10px',
-              'padding:11px 16px', 'text-decoration:none',
-              'font-size:14px', 'color:#1f2937',
-              "font-family:'DM Sans',sans-serif",
-              'border-bottom:1px solid #f3f4f6',
-              'transition:background 0.15s',
-              'cursor:pointer'
-            ].join(';');
-            a.onmouseenter = () => a.style.background = '#f0f9ff';
-            a.onmouseleave = () => a.style.background = '';
-
-            // Search icon
-            const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-            icon.setAttribute('width', '14');
-            icon.setAttribute('height', '14');
-            icon.setAttribute('viewBox', '0 0 24 24');
-            icon.setAttribute('fill', 'none');
-            icon.setAttribute('stroke', '#9ca3af');
-            icon.setAttribute('stroke-width', '2.5');
-            icon.style.flexShrink = '0';
-            icon.innerHTML = '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>';
-
-            // Text container
-            const textWrap = document.createElement('span');
-            textWrap.style.cssText = 'flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;';
-
-            // Find where query matches in name (case-insensitive)
-            const lowerName = p.name.toLowerCase();
-            const lowerQ = q.toLowerCase();
-            const matchIdx = lowerName.indexOf(lowerQ);
-
-            if (matchIdx !== -1) {
-              const before = document.createTextNode(p.name.substring(0, matchIdx));
-              const bold = document.createElement('strong');
-              bold.style.color = '#0ea5e9';
-              bold.textContent = p.name.substring(matchIdx, matchIdx + q.length);
-              const after = document.createTextNode(p.name.substring(matchIdx + q.length));
-              textWrap.appendChild(before);
-              textWrap.appendChild(bold);
-              textWrap.appendChild(after);
-            } else {
-              textWrap.textContent = p.name;
-            }
-
-            a.appendChild(icon);
-            a.appendChild(textWrap);
-            dropdown.appendChild(a);
-          });
-
-          dropdown.style.display = 'block';
+            setTimeout(function () {
+              toast.remove();
+            }, 400);
+          }, 4000);
         });
-    }, 300);
-  });
+      });
 
-  // Close on outside click or Escape
-  document.addEventListener('click', e => {
-    if (!input.contains(e.target) && !dropdown.contains(e.target))
-      dropdown.style.display = 'none';
-  });
-  input.addEventListener('keydown', e => {
-    if (e.key === 'Escape') dropdown.style.display = 'none';
-  });
-})();
+      // Admin dropdown toggle
+      function toggleAdminMenu() {
+        const menu = document.getElementById("admin-menu");
+        menu.style.display = menu.style.display === "none" ? "block" : "none";
+      }
+
+      // Close admin dropdown when clicking outside
+      document.addEventListener("click", function (e) {
+        const wrap = document.getElementById("admin-dropdown-wrap");
+        if (wrap && !wrap.contains(e.target)) {
+          const menu = document.getElementById("admin-menu");
+          if (menu) menu.style.display = "none";
+        }
+      });
+
+      // ── Search Autocomplete ──────────────────────────────────────────
+      (function () {
+        const input = document.getElementById("search-input");
+        const dropdown = document.getElementById("search-dropdown");
+        let timer;
+
+        input.addEventListener("input", function () {
+          clearTimeout(timer);
+          const q = this.value.trim();
+          if (!q) {
+            dropdown.style.display = "none";
+            dropdown.innerHTML = "";
+            return;
+          }
+
+          timer = setTimeout(() => {
+            fetch("/api/search/?q=" + encodeURIComponent(q))
+              .then((r) => r.json())
+              .then((data) => {
+                dropdown.innerHTML = "";
+                if (!data.results.length) {
+                  dropdown.style.display = "none";
+                  return;
+                }
+
+                data.results.forEach((p) => {
+                  const a = document.createElement("a");
+                  a.href = "/" + p.slug + "/"; // ← fixed URL
+                  a.style.cssText = [
+                    "display:flex",
+                    "align-items:center",
+                    "gap:10px",
+                    "padding:11px 16px",
+                    "text-decoration:none",
+                    "font-size:14px",
+                    "color:#1f2937",
+                    "font-family:'DM Sans',sans-serif",
+                    "border-bottom:1px solid #f3f4f6",
+                    "transition:background 0.15s",
+                    "cursor:pointer",
+                  ].join(";");
+                  a.onmouseenter = () => (a.style.background = "#f0f9ff");
+                  a.onmouseleave = () => (a.style.background = "");
+
+                  // Search icon
+                  const icon = document.createElementNS(
+                    "http://www.w3.org/2000/svg",
+                    "svg",
+                  );
+                  icon.setAttribute("width", "14");
+                  icon.setAttribute("height", "14");
+                  icon.setAttribute("viewBox", "0 0 24 24");
+                  icon.setAttribute("fill", "none");
+                  icon.setAttribute("stroke", "#9ca3af");
+                  icon.setAttribute("stroke-width", "2.5");
+                  icon.style.flexShrink = "0";
+                  icon.innerHTML =
+                    '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>';
+
+                  // Text container
+                  const textWrap = document.createElement("span");
+                  textWrap.style.cssText =
+                    "flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;";
+
+                  // Find where query matches in name (case-insensitive)
+                  const lowerName = p.name.toLowerCase();
+                  const lowerQ = q.toLowerCase();
+                  const matchIdx = lowerName.indexOf(lowerQ);
+
+                  if (matchIdx !== -1) {
+                    const before = document.createTextNode(
+                      p.name.substring(0, matchIdx),
+                    );
+                    const bold = document.createElement("strong");
+                    bold.style.color = "#0ea5e9";
+                    bold.textContent = p.name.substring(
+                      matchIdx,
+                      matchIdx + q.length,
+                    );
+                    const after = document.createTextNode(
+                      p.name.substring(matchIdx + q.length),
+                    );
+                    textWrap.appendChild(before);
+                    textWrap.appendChild(bold);
+                    textWrap.appendChild(after);
+                  } else {
+                    textWrap.textContent = p.name;
+                  }
+
+                  a.appendChild(icon);
+                  a.appendChild(textWrap);
+                  dropdown.appendChild(a);
+                });
+
+                dropdown.style.display = "block";
+              });
+          }, 300);
+        });
+
+        // Close on outside click or Escape
+        document.addEventListener("click", (e) => {
+          if (!input.contains(e.target) && !dropdown.contains(e.target))
+            dropdown.style.display = "none";
+        });
+        input.addEventListener("keydown", (e) => {
+          if (e.key === "Escape") dropdown.style.display = "none";
+        });
+      })();
     </script>
 
     {% block extra_js %}{% endblock %}
