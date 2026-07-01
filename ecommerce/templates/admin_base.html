@@ -4,6 +4,11 @@
   <title>ShopAdmin</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
+    />
+
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f5f5f4; color: #1a1a1a; }
@@ -57,26 +62,187 @@
     .nav-subitem.active { background: #e8eafd; color: #2931a3; font-weight: 600; }
     .nav-subitem i { font-size: 15px; }
 
-    /* Flash Messages */
-    @keyframes msgShrink { from { width: 100%; } to { width: 0%; } }
-    .alert-success { background: #f0fdf4; border-color: #86efac; color: #166534; }
-    .alert-success .msg-timer { background: #16a34a; opacity: .4; }
-    .alert-error, .alert-danger { background: #fef2f2; border-color: #fca5a5; color: #991b1b; }
-    .alert-error .msg-timer, .alert-danger .msg-timer { background: #dc2626; opacity: .4; }
-    .alert-warning { background: #fffbeb; border-color: #fcd34d; color: #92400e; }
-    .alert-warning .msg-timer { background: #d97706; opacity: .4; }
-    .alert-info { background: #eff6ff; border-color: #93c5fd; color: #1e40af; }
-    .alert-info .msg-timer { background: #2563eb; opacity: .4; }
-
     /* Logout as nav item */
     .nav-item.logout-nav { border: none; background: transparent; font-family: inherit; width: 100%; text-align: left; }
     .nav-item.logout-nav:hover { background: #fef2f2; color: #991b1b; }
+
+    /* Toasts */
+
+    .toast-container{
+        position:fixed;
+        top:25px;
+        left:50%;
+        transform:translateX(-50%);
+        z-index:99999;
+        display:flex;
+        flex-direction:column;
+        gap:14px;
+        width:420px;
+        max-width:92%;
+    }
+
+    .custom-toast{
+        position:relative;
+        overflow:hidden;
+        display:flex;
+        align-items:center;
+        gap:16px;
+        padding:16px 20px;
+        background:#fff;
+        border-radius:14px;
+        border-left:5px solid;
+        box-shadow:
+            0 10px 30px rgba(0,0,0,.12);
+        animation:toastIn .35s ease;
+    }
+
+    .toast-icon{
+        font-size:22px;
+        flex-shrink:0;
+    }
+
+    .toast-content{
+        flex:1;
+        font-size:15px;
+        font-weight:500;
+    }
+
+    .toast-close{
+        border:none;
+        background:none;
+        color:#888;
+        cursor:pointer;
+        font-size:15px;
+    }
+
+    .toast-close:hover{
+        color:#222;
+    }
+
+    .toast-success{
+        border-color:#16a34a;
+    }
+
+    .toast-success .toast-icon{
+        color:#16a34a;
+    }
+
+    .toast-error{
+        border-color:#dc2626;
+    }
+
+    .toast-error .toast-icon{
+        color:#dc2626;
+    }
+
+    .toast-warning{
+        border-color:#d97706;
+    }
+
+    .toast-warning .toast-icon{
+        color:#d97706;
+    }
+
+    .toast-info{
+        border-color:#2563eb;
+    }
+
+    .toast-info .toast-icon{
+        color:#2563eb;
+    }
+
+    .toast-progress{
+        position:absolute;
+        left:0;
+        bottom:0;
+        height:4px;
+        width:100%;
+        background:currentColor;
+        opacity:.18;
+        animation:progress 5s linear forwards;
+    }
+
+    .toast-success .toast-progress{
+        color:#16a34a;
+    }
+
+    .toast-error .toast-progress{
+        color:#dc2626;
+    }
+
+    .toast-warning .toast-progress{
+        color:#d97706;
+    }
+
+    .toast-info .toast-progress{
+        color:#2563eb;
+    }
+
+    @keyframes progress{
+        from{
+            width:0%;
+        }
+        to{
+            width:100%;
+        }
+    }
+
+    @keyframes toastIn{
+        from{
+            opacity:0;
+            transform:translateY(-15px);
+        }
+        to{
+            opacity:1;
+            transform:translateY(0);
+        }
+    }
+
+    @keyframes toastOut{
+        to{
+            opacity:0;
+            transform:translateY(-15px);
+        }
+    }
   </style>
   <script src="https://unpkg.com/htmx.org@1.9.10"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </head>
 <body>
+{% if messages %}
+<div class="toast-container">
+    {% for message in messages %}
+    <div class="custom-toast
+        {% if message.tags == 'success' %}toast-success
+        {% elif message.tags == 'error' %}toast-error
+        {% elif message.tags == 'warning' %}toast-warning
+        {% else %}toast-info{% endif %}">
 
+        <div class="toast-icon">
+            {% if message.tags == 'success' %}
+                <i class="fas fa-check-circle"></i>
+            {% elif message.tags == 'error' %}
+                <i class="fas fa-times-circle"></i>
+            {% elif message.tags == 'warning' %}
+                <i class="fas fa-exclamation-triangle"></i>
+            {% else %}
+                <i class="fas fa-info-circle"></i>
+            {% endif %}
+        </div>
+
+        <div class="toast-content">
+            {{ message }}
+        </div>
+
+        <button class="toast-close">
+            <i class="fas fa-times"></i>
+        </button>
+
+        <div class="toast-progress"></div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
 <div class="topbar">
   <div class="topbar-left">
     <div class="logo-sm">S</div>
@@ -178,37 +344,22 @@
   </div>
 
   <div class="main">
-    {% if messages %}
-      <div id="messages-container" style="position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:10px;min-width:320px;max-width:420px;">
-        {% for message in messages %}
-          <div class="alert alert-{{ message.tags }}" style="display:flex;align-items:flex-start;gap:12px;padding:13px 16px;border-radius:12px;border:0.5px solid;font-size:14px;line-height:1.5;position:relative;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.08);">
-            <div style="flex:1;">{{ message }}</div>
-            <button onclick="this.closest('.alert').remove()" style="background:none;border:none;cursor:pointer;font-size:18px;opacity:.5;padding:0;line-height:1;">&times;</button>
-            <div class="msg-timer" style="position:absolute;bottom:0;left:0;height:3px;width:100%;animation:msgShrink 5s linear forwards;"></div>
-          </div>
-        {% endfor %}
-      </div>
-    {% endif %}
     {% block start %}{% endblock %}
   </div>
 </div>
 
 <script>
-document.querySelectorAll('.nav-item').forEach(item => {
-  item.addEventListener('click', () => {
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    item.classList.add('active');
-  });
+document.querySelectorAll(".custom-toast").forEach(function(toast){
+    const closeBtn = toast.querySelector(".toast-close");
+    const removeToast = function(){
+        toast.style.animation = "toastOut .3s forwards";
+        setTimeout(function(){
+            toast.remove();
+        },300);
+    };
+    closeBtn.addEventListener("click", removeToast);
+    setTimeout(removeToast,5000);
 });
-
-setTimeout(function () {
-  const container = document.getElementById("messages-container");
-  if (container) {
-    container.style.transition = "opacity 0.5s ease";
-    container.style.opacity = "0";
-    setTimeout(function () { container.remove(); }, 500);
-  }
-}, 5000);
 </script>
 </body>
 </html>
