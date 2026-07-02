@@ -34,6 +34,25 @@
   .table th {
     vertical-align: middle;
   }
+
+  .coupon-row td {
+    color: #16a34a;
+    font-size: 14px;
+  }
+
+  .coupon-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #dcfce7;
+    color: #15803d;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 6px;
+    margin-left: 8px;
+    letter-spacing: 0.3px;
+  }
 </style>
 
 {% endblock %}
@@ -45,154 +64,158 @@
     <h3 class="fw-bold mb-0">Order #{{ order.id }}</h3>
 
     <span
-      class="badge status-badge {% if order.status == 'delivered' %}bg-success {% elif order.status == 'cancelled' %}bg-danger {% elif order.status == 'shipped' %}bg-info {% else %}bg-warning text-dark {% endif %}"
+      class="badge status-badge
+        {% if order.status == 'delivered' %}bg-success
+        {% elif order.status == 'cancelled' %}bg-danger
+        {% elif order.status == 'shipped' %}bg-info
+        {% else %}bg-warning text-dark
+        {% endif %}"
     >
       {{ order.get_status_display }}
     </span>
   </div>
 
   {% if order.status == "cancelled" %}
-
   <div class="alert alert-danger shadow-sm mb-4">
     <h5 class="fw-bold mb-3">🚫 Order Cancelled</h5>
-
-    <p class="mb-2">
-      <strong>Reason:</strong>
-
-      {{ order.get_cancel_reason_display }}
-    </p>
-
+    <p class="mb-2"><strong>Reason:</strong> {{ order.get_cancel_reason_display }}</p>
     {% if order.cancel_note %}
-
-    <p class="mb-2">
-      <strong>Note:</strong>
-
-      {{ order.cancel_note }}
-    </p>
-
+    <p class="mb-2"><strong>Note:</strong> {{ order.cancel_note }}</p>
     {% endif %}
-
-    <small> Cancelled on {{ order.cancelled_at|date:"F d, Y h:i A" }} </small>
+    <small>Cancelled on {{ order.cancelled_at|date:"F d, Y h:i A" }}</small>
   </div>
-
   {% endif %}
 
+  <!-- ── Ordered Items ── -->
   <div class="card info-card">
     <div class="card-body">
       <div class="d-flex justify-content-between align-items-center mb-3">
         <h5 class="fw-bold mb-0">📦 Ordered Items</h5>
-
-        <small class="text-muted">
-          Placed on {{ order.created_at|date:"F d, Y" }}
-        </small>
+        <small class="text-muted">Placed on {{ order.created_at|date:"F d, Y" }}</small>
       </div>
 
       <table class="table">
         <thead>
           <tr>
             <th>Product</th>
-
             <th class="text-center">Qty</th>
-
             <th class="text-end">Price</th>
-
             <th class="text-end">Subtotal</th>
           </tr>
         </thead>
 
         <tbody>
           {% for item in order.items.all %}
-
           <tr>
             <td>{{ item.product_name }}</td>
-
             <td class="text-center">{{ item.quantity }}</td>
-
             <td class="text-end">Rs. {{ item.price }}</td>
-
             <td class="text-end fw-semibold">Rs. {{ item.subtotal }}</td>
           </tr>
-
           {% endfor %}
         </tbody>
 
         <tfoot>
+          <!-- Subtotal row -->
+          <tr class="text-muted">
+            <td colspan="3" class="text-end">Subtotal</td>
+            <td class="text-end">Rs. {{ order.total_price }}</td>
+          </tr>
+
+          <!-- Coupon discount row — only shown if a coupon was applied -->
+          {% if order.coupon and order.discount_amount %}
+          <tr class="coupon-row">
+            <td colspan="3" class="text-end">
+              Coupon Discount
+              <span class="coupon-tag">🎟 {{ order.coupon.code }}</span>
+            </td>
+            <td class="text-end fw-semibold">− Rs. {{ order.discount_amount }}</td>
+          </tr>
+          {% endif %}
+
+          <!-- Grand Total row -->
           <tr>
             <td colspan="3" class="text-end fw-bold">Grand Total</td>
-
             <td class="text-end fw-bold text-primary fs-5">
-              Rs. {{ order.total_price }}
+              {% if order.coupon and order.discount_amount %}
+                Rs. {{ order.final_price }}
+              {% else %}
+                Rs. {{ order.total_price }}
+              {% endif %}
             </td>
           </tr>
         </tfoot>
       </table>
+
+      <!-- Savings callout — only when a coupon was used -->
+      {% if order.coupon and order.discount_amount %}
+      <div class="alert alert-success d-flex align-items-center gap-2 py-2 px-3 mb-0 mt-2"
+           style="border-radius:10px; font-size:13.5px;">
+        <span style="font-size:18px;">🎉</span>
+        <span>
+          You saved <strong>Rs. {{ order.discount_amount }}</strong> on this order
+          using coupon <strong>{{ order.coupon.code }}</strong>!
+        </span>
+      </div>
+      {% endif %}
+
     </div>
   </div>
 
   <div class="row">
+    <!-- Delivery Address -->
     <div class="col-lg-6">
       <div class="card info-card">
         <div class="card-body">
           <h5 class="fw-bold mb-3">📍 Delivery Address</h5>
-
-          <p class="mb-2">
-            <strong>{{ order.delivery_full_name }}</strong>
-          </p>
-
+          <p class="mb-2"><strong>{{ order.delivery_full_name }}</strong></p>
           <p class="mb-2">{{ order.delivery_phone }}</p>
-
           <p class="mb-0">
-            {{ order.delivery_street }} {% if order.delivery_landmark %}
-
-            <br />
-
-            {{ order.delivery_landmark }} {% endif %}
-
-            <br />
-
-            Ward {{ order.delivery_ward }}, {{ order.delivery_city }}
-
-            <br />
-
-            {{ order.delivery_district }}, {{ order.delivery_province }}
+            {{ order.delivery_street }}
+            {% if order.delivery_landmark %}<br>{{ order.delivery_landmark }}{% endif %}
+            <br>Ward {{ order.delivery_ward }}, {{ order.delivery_city }}
+            <br>{{ order.delivery_district }}, {{ order.delivery_province }}
           </p>
         </div>
       </div>
     </div>
 
+    <!-- Payment Details -->
     <div class="col-lg-6">
       <div class="card info-card">
         <div class="card-body">
           <h5 class="fw-bold mb-3">💳 Payment Details</h5>
 
           <p>
-            <strong>Method</strong>
-
-            <br />
-
+            <strong>Method</strong><br>
             {{ order.payment_method }}
           </p>
 
           <p>
-            <strong>Status</strong>
-
-            <br />
-
-            <span class="badge bg-success">
+            <strong>Status</strong><br>
+            <span class="badge
+              {% if order.payment_status == 'PAID' %}bg-success
+              {% elif order.payment_status == 'FAILED' %}bg-danger
+              {% elif order.payment_status == 'INITIATED' %}bg-info
+              {% else %}bg-secondary
+              {% endif %}">
               {{ order.get_payment_status_display }}
             </span>
           </p>
 
+          {% if order.coupon %}
+          <p>
+            <strong>Coupon Applied</strong><br>
+            <span class="coupon-tag" style="font-size:12px;">🎟 {{ order.coupon.code }}</span>
+            &nbsp;− Rs. {{ order.discount_amount }}
+          </p>
+          {% endif %}
+
           {% if order.transaction_uuid %}
-
           <p class="mb-0">
-            <strong>Transaction ID</strong>
-
-            <br />
-
+            <strong>Transaction ID</strong><br>
             {{ order.transaction_uuid }}
           </p>
-
           {% endif %}
         </div>
       </div>
@@ -200,47 +223,33 @@
   </div>
 
   {% if order.delivery_latitude and order.delivery_longitude %}
-
   <div class="card info-card">
     <div class="card-body">
       <h5 class="fw-bold mb-3">🗺 Delivery Location</h5>
-
       <div id="map"></div>
     </div>
   </div>
-
   {% endif %}
 
   <div class="d-flex gap-2 mt-3">
-    <a href="{% url 'order_list' %}" class="btn btn-outline-dark">
-      Back to Orders
-    </a>
-
+    <a href="{% url 'order_list' %}" class="btn btn-outline-dark">Back to Orders</a>
     {% if order.can_cancel %}
-
-    <a href="{% url 'cancel_order' order.id %}" class="btn btn-danger">
-      Cancel Order
-    </a>
-
+    <a href="{% url 'cancel_order' order.id %}" class="btn btn-danger">Cancel Order</a>
     {% endif %}
   </div>
 </div>
 
 {% if order.delivery_latitude and order.delivery_longitude %}
-
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
 <script>
   const lat = parseFloat("{{ order.delivery_latitude }}");
   const lng = parseFloat("{{ order.delivery_longitude }}");
-
   const map = L.map("map").setView([lat, lng], 16);
-
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     attribution: "© OpenStreetMap contributors",
   }).addTo(map);
-
   L.marker([lat, lng]).addTo(map).bindPopup("Delivery Address").openPopup();
 </script>
+{% endif %}
 
-{% endif %} {% endblock %}
+{% endblock %}

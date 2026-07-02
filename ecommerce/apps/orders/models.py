@@ -304,7 +304,13 @@ class Order(models.Model):
 
     class Meta:
         ordering = ['-created_at']
-        
+    
+    @property
+    def final_price(self):
+        """Amount the customer actually pays — total_price minus coupon discount."""
+        discount = self.discount_amount or Decimal('0')
+        return self.total_price - discount
+    
     @property
     def can_cancel(self):
         return self.status in [
@@ -354,6 +360,7 @@ class OrderItem(models.Model):
     def subtotal(self):
         return self.price * self.quantity
     
+
 class OrderStatusHistory(models.Model):
     order = models.ForeignKey(
         Order,

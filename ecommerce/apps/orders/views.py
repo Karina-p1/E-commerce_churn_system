@@ -373,7 +373,7 @@ def checkout_view(request):
                 # Create unpaid order only. Do NOT reduce stock yet.
                 order = Order.objects.create(
                     user=request.user,
-                    total_price=final_total,
+                    total_price=cart_total,
                     coupon=coupon_obj,
                     discount_amount=discount_amount,
                     payment_status='INITIATED',
