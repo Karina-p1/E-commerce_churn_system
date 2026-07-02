@@ -772,6 +772,15 @@ def cancel_order(request, order_id):
             "order_detail",
             order_id=order.id
         )
+        
+    if order.payment_method == "COD":
+        order.payment_status = "UNPAID"
+        
+    if (
+        order.payment_method == "ESEWA"
+        and order.payment_status == "PAID"
+    ):
+        order.payment_status = "REFUND_PENDING"
 
     if request.method == "POST":
 

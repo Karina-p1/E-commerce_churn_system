@@ -145,6 +145,18 @@ class Order(models.Model):
         ("REFUND_PENDING", "Refund Pending"),
         ("REFUNDED", "Refunded"),
     ]
+    
+    REFUND_STATUS_CHOICES = [
+        ("NONE", "Not Required"),
+        ("PENDING", "Pending"),
+        ("REFUNDED", "Refunded"),
+    ]
+
+    refund_status = models.CharField(
+        max_length=20,
+        choices=REFUND_STATUS_CHOICES,
+        default="NONE",
+    )
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,

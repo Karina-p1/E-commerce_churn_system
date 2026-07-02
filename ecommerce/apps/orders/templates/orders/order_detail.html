@@ -60,20 +60,38 @@
 {% block start %}
 
 <div class="container py-4">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h3 class="fw-bold mb-0">Order #{{ order.id }}</h3>
+  {% with first_item=order.items.first %}
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">
+                {{ first_item.product_name }}
+                {% if order.items.count > 1 %}
+                    <span class="fw-normal text-muted">
+                        + {{ order.items.count|add:"-1" }} more
+                    </span>
+                {% endif %}
+            </h2>
 
-    <span
-      class="badge status-badge
-        {% if order.status == 'delivered' %}bg-success
-        {% elif order.status == 'cancelled' %}bg-danger
-        {% elif order.status == 'shipped' %}bg-info
-        {% else %}bg-warning text-dark
-        {% endif %}"
-    >
-      {{ order.get_status_display }}
-    </span>
-  </div>
+            <div class="text-muted">
+                Order
+                <strong>
+                    ORD-{{ order.id|stringformat:"06d" }}
+                </strong>
+                •
+                {{ order.items.count }}
+                Item{{ order.items.count|pluralize }}
+            </div>
+        </div>
+        <span 
+          class="badge status-badge
+          {% if order.status == 'delivered' %}bg-success
+          {% elif order.status == 'cancelled' %}bg-danger
+          {% elif order.status == 'shipped' %}bg-info
+          {% else %}bg-warning text-dark{% endif %}">
+            {{ order.get_status_display }}
+        </span>
+    </div>
+  {% endwith %}
 
   {% if order.status == "cancelled" %}
   <div class="alert alert-danger shadow-sm mb-4">
