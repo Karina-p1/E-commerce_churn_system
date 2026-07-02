@@ -347,10 +347,27 @@ class Order(models.Model):
     
     def set_status(self, new_status, note=None, changed_by=None):
         self.status = new_status
-        update_fields = ['status', 'updated_at']
-        if new_status == 'cancelled':
+
+        update_fields = ["status", "updated_at"]
+
+        revenue_needs_update = False
+
+        if new_status == "delivered":
+            if (
+                self.payment_method == "COD"
+                and self.payment_status == "UNPAID"
+            ):
+                self.payment_status = "PAID"
+                self.paid_at = timezone.now()
+
+                update_fields.extend(["payment_status", "paid_at"])
+
+                revenue_needs_update = True
+
+        if new_status == "cancelled":
             self.cancelled_at = timezone.now()
-            update_fields.append('cancelled_at')
+            update_fields.append("cancelled_at")
+
         self.save(update_fields=update_fields)
 
         self.status_history.create(
@@ -359,6 +376,13 @@ class Order(models.Model):
             changed_by=changed_by,
         )
 
+        if revenue_needs_update:
+            from django.db import transaction
+            from apps.analytics.tasks import paid_order_created
+
+            transaction.on_commit(
+                lambda: paid_order_created.delay(self.id)
+            )
     def __str__(self):
         return f"Order #{self.id} by {self.user.username}"
 

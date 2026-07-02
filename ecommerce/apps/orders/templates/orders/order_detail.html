@@ -96,11 +96,27 @@
   {% if order.status == "cancelled" %}
   <div class="alert alert-danger shadow-sm mb-4">
     <h5 class="fw-bold mb-3">🚫 Order Cancelled</h5>
-    <p class="mb-2"><strong>Reason:</strong> {{ order.get_cancel_reason_display }}</p>
-    {% if order.cancel_note %}
-    <p class="mb-2"><strong>Note:</strong> {{ order.cancel_note }}</p>
+
+    {% if order.cancel_reason %}
+      <p class="mb-2">
+        <strong>Reason:</strong> {{ order.get_cancel_reason_display }}
+      </p>
     {% endif %}
-    <small>Cancelled on {{ order.cancelled_at|date:"F d, Y h:i A" }}</small>
+
+    {% if order.cancel_note %}
+      <p class="mb-2">
+        <strong>Note:</strong> {{ order.cancel_note }}
+      </p>
+    {% else %}
+      <p class="mb-2">
+        <strong>Note:</strong> Cancelled by admin
+      </p>
+    {% endif %}
+
+    {% if order.cancelled_at %}
+      <small>Cancelled on {{ order.cancelled_at|date:"F d, Y h:i A" }}</small>
+    {% endif %}
+
   </div>
   {% endif %}
 
