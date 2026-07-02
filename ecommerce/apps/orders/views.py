@@ -700,7 +700,7 @@ def order_list(request):
         #     "REFUND_PENDING",
         #     "REFUNDED",
         # ]
-    ).order_by("-created_at")
+    ).prefetch_related("items").order_by("-created_at")
 
     return render(request, 'orders/order_list.html', {
         'orders': orders
