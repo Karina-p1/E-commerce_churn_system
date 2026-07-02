@@ -1,9 +1,14 @@
 from collections import defaultdict
+from decimal import Decimal
 
 from cloudinary.utils import cloudinary_url
 
 from apps.activity.models import UserEvent
+from django.db.models import Avg, Sum
+from django.utils import timezone
 
+from apps.orders.models import Order
+from .models import RevenueSnapshot, RevenueSummary
 
 def get_top_products(limit=5):
     events = UserEvent.objects.filter(product__isnull=False)
@@ -60,3 +65,130 @@ def get_top_products(limit=5):
         key=lambda x: x["score"],
         reverse=True,
     )[:limit]
+
+
+class RevenueService:
+
+    @staticmethod
+    def get_summary():
+        summary, created = RevenueSummary.objects.get_or_create(pk=1)
+        return summary
+    
+    @staticmethod
+    def add_paid_order(order):
+
+        summary = RevenueService.get_summary()
+
+        summary.total_revenue += order.total_price
+        summary.total_orders += 1
+
+        if summary.total_orders > 0:
+            summary.average_order_value = (
+                summary.total_revenue /
+                summary.total_orders
+            )
+
+        if order.payment_method == "ESEWA":
+            summary.esewa_revenue += order.total_price
+
+        elif order.payment_method == "COD":
+            summary.cod_revenue += order.total_price
+
+        summary.save()
+    
+    @staticmethod
+    def remove_paid_order(order):
+
+        summary = RevenueService.get_summary()
+
+        summary.total_revenue -= order.total_price
+        summary.total_orders -= 1
+
+        if summary.total_orders > 0:
+            summary.average_order_value = (
+                summary.total_revenue /
+                summary.total_orders
+            )
+        else:
+            summary.average_order_value = Decimal("0.00")
+
+        if order.payment_method == "ESEWA":
+            summary.esewa_revenue -= order.total_price
+
+        elif order.payment_method == "COD":
+            summary.cod_revenue -= order.total_price
+
+        summary.save()
+    @staticmethod
+    def refund_order(order):
+
+        summary = RevenueService.get_summary()
+
+        summary.total_revenue -= order.total_price
+
+        if order.payment_method == "ESEWA":
+            summary.esewa_revenue -= order.total_price
+
+        elif order.payment_method == "COD":
+            summary.cod_revenue -= order.total_price
+
+        if summary.total_orders > 0:
+            summary.average_order_value = (
+                summary.total_revenue /
+                summary.total_orders
+            )
+
+        summary.save()
+            
+    def calculate(self):
+
+        today = timezone.localdate()
+
+        paid_orders = Order.objects.filter(
+            payment_status="PAID"
+        )
+
+        total_orders = paid_orders.count()
+
+        total_revenue = (
+            paid_orders.aggregate(
+                total=Sum("total_price")
+            )["total"] or 0
+        )
+
+        average_order = (
+            paid_orders.aggregate(
+                avg=Avg("total_price")
+            )["avg"] or 0
+        )
+
+        esewa = (
+            paid_orders.filter(
+                payment_method="ESEWA"
+            ).aggregate(
+                total=Sum("total_price")
+            )["total"] or 0
+        )
+
+        cod = (
+            paid_orders.filter(
+                payment_method="COD"
+            ).aggregate(
+                total=Sum("total_price")
+            )["total"] or 0
+        )
+
+        RevenueSnapshot.objects.update_or_create(
+
+            date=today,
+
+            defaults={
+                "total_revenue": total_revenue,
+                "total_orders": total_orders,
+                "average_order_value": average_order,
+                "esewa_revenue": esewa,
+                "cod_revenue": cod,
+            }
+        )
+
+        print("Revenue Analytics Updated")
