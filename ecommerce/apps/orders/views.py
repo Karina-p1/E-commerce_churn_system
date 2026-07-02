@@ -42,18 +42,18 @@ def _get_session_coupon(request, order_amount):
         return None, Decimal('0')
 
     try:
-        coupon = Coupon.objects.get(code__iexact=code)
+        coupon = Coupon.objects.get(code__iexact=code) # 1. does it exist?
     except Coupon.DoesNotExist:
         request.session.pop(SESSION_COUPON_KEY, None)
         return None, Decimal('0')
 
-    is_valid, _ = coupon.is_valid(order_amount=order_amount)
+    is_valid, _ = coupon.is_valid(order_amount=order_amount) # 2. active? not expired? under usage limit? above min order?
 
     if not is_valid:
-        request.session.pop(SESSION_COUPON_KEY, None)
+        request.session.pop(SESSION_COUPON_KEY, None) # 4. store it in session
         return None, Decimal('0')
 
-    discount_amount = coupon.calculate_discount(order_amount)
+    discount_amount = coupon.calculate_discount(order_amount) # 3. how much is the discount?
     return coupon, discount_amount
 
 
