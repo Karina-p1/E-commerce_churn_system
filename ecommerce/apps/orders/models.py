@@ -318,6 +318,21 @@ class Order(models.Model):
             "processing",
         ]
     
+    @property
+    def order_number(self):
+        return f"ORD-{self.id:06d}"
+
+
+    @property
+    def preview_items(self):
+        return self.items.all()[:2]
+
+
+    @property
+    def remaining_items(self):
+        count = self.items.count()
+        return max(0, count - 2)
+    
     def set_status(self, new_status, note=None, changed_by=None):
         self.status = new_status
         update_fields = ['status', 'updated_at']

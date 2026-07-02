@@ -5,35 +5,118 @@
 <h3 class="fw-bold mb-4">My Orders</h3>
 
 {% for order in orders %}
-<div class="card border-0 shadow-sm mb-3">
-    <div class="card-body p-4">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-            <h6 class="fw-bold mb-0">Order #{{ order.id }}</h6>
-            <span class="badge
-                {% if order.status == 'delivered' %}bg-success
-                {% elif order.status == 'cancelled' %}bg-danger
-                {% elif order.status == 'shipped' %}bg-info
-                {% else %}bg-warning text-dark{% endif %}">
-                {{ order.get_status_display }}
-            </span>
+    {% with first_item=order.items.first %}
+        <div class="card border-0 shadow-sm rounded-4 mb-4">
+            <div class="card-body p-4">
+                <div class="row align-items-center">
+                    <!-- Product Image -->
+                    <div class="col-md-2 text-center">
+                        {% if first_item.product.image %}
+                            <img
+                                src="{{ first_item.product.image.url }}"
+                                class="img-fluid rounded-3"
+                                style="height:90px;width:90px;object-fit:cover;"
+                            >
+                        {% else %}
+                            <div class="bg-light rounded-3 d-flex align-items-center justify-content-center"
+                                style="height:90px;width:90px;">
+                                <i class="fas fa-image text-muted fa-2x"></i>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Order Information -->
+                    <div class="col-md-7">
+                        <h4 class="fw-bold mb-2">
+                            {{ first_item.product_name }}
+
+                            {% if order.items.count > 1 %}
+                                <span class="fw-normal text-muted">
+                                    + {{ order.items.count|add:"-1" }} more
+                                </span>
+                            {% endif %}
+                        </h4>
+
+                        <div class="text-muted mb-2">
+                            Order
+                            <strong>
+                                ORD-{{ order.id|stringformat:"06d" }}
+                            </strong>
+                        </div>
+
+                        <div class="small text-muted mb-2">
+                            {{ order.items.count }} Item{{ order.items.count|pluralize }}
+                            •
+                            {{ order.created_at|date:"F d, Y • h:i A" }}
+                        </div>
+
+                        <div>
+                            <strong>Payment:</strong>
+                            {{ order.payment_method }}
+                            {% if order.payment_status == "PAID" %}
+                                <span class="badge bg-success ms-2">
+                                    Paid
+                                </span>
+                            {% elif order.payment_status == "UNPAID" %}
+                                <span class="badge bg-warning text-dark ms-2">
+                                    Unpaid
+                                </span>
+                            {% elif order.payment_status == "FAILED" %}
+                                <span class="badge bg-danger ms-2">
+                                    Failed
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary ms-2">
+                                    {{ order.get_payment_status_display }}
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Right Side -->
+
+                    <div class="col-md-3 text-end">
+                        <h2 class="fw-bold text-primary mb-3">
+                            Rs. {{ order.total_price }}
+                        </h2>
+                        <span class="badge px-3 py-2
+                            {% if order.status == 'delivered' %}
+                                bg-success
+                            {% elif order.status == 'cancelled' %}
+                                bg-danger
+                            {% elif order.status == 'shipped' %}
+                                bg-info
+                            {% else %}
+                                bg-warning text-dark
+                            {% endif %}">
+                            {{ order.get_status_display }}
+                        </span>
+
+                        <div class="mt-3">
+                            <a href="{% url 'order_detail' order.id %}"
+                            class="btn btn-outline-dark rounded">
+                                View Details
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        <p class="text-muted small mb-1">
-            {{ order.created_at|date:"F j, Y" }}
-        </p>
-        <p class="fw-bold text-primary mb-3">Rs. {{ order.total_price }}</p>
-        <a href="{% url 'order_detail' order.id %}"
-           class="btn btn-outline-dark btn-sm">
-            View Details
-        </a>
-    </div>
-</div>
+    {% endwith %}
 {% empty %}
+
 <div class="text-center py-5">
-    <h5 class="text-muted">No orders yet</h5>
-    <a href="{% url 'products:view_products' %}" class="btn btn-dark mt-3">
-        Start Shopping
+    <i class="fas fa-box-open fa-4x text-muted mb-3"></i>
+    <h4>No Orders Yet</h4>
+    <p class="text-muted">
+        Looks like you haven't placed any orders yet.
+    </p>
+    <a href="{% url 'products:view_products' %}"
+       class="btn btn-dark rounded-pill px-4">
+        Start Shopping Now
     </a>
 </div>
+
 {% endfor %}
 
 {% endblock %}
