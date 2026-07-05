@@ -8,10 +8,9 @@ from django.db.models import Q, ProtectedError
 from django.db.models import Count
 from django.urls import reverse
 from django.utils import timezone
-from flask import Response
 from django.core.paginator import Paginator
 from apps.accounts.models import User
-from django.http import JsonResponse                          # ← replaces flask import
+from django.http import JsonResponse
 
 from apps.products.models import Category, Brand, Product, Review, Wishlist
 from apps.analytics.services import get_top_products
@@ -21,7 +20,9 @@ from apps.activity.models import UserEvent
 def view_products(request):
     categories = Category.objects.all()
     top_products = get_top_products(limit=10)
-    brands = Brand.objects.all().order_by('name')
+
+    # Brand strip — ordered by admin-set priority number, then alphabetically as tiebreaker
+    brands = Brand.objects.all().order_by('order', 'name')
 
     products = Product.objects.filter(
         is_active=True
@@ -267,7 +268,7 @@ def top_products(request):
         for p in top
     ]
 
-    return Response(data)
+    return JsonResponse(data, safe=False)
 
 
 # ---------------------------------------------------------------------------
@@ -300,15 +301,15 @@ def category_edit(request, pk):
     category = get_object_or_404(Category, pk=pk)
 
     if request.method == 'POST':
-        name = request.POST.get('name', '').strip()
+        name        = request.POST.get('name', '').strip()
         description = request.POST.get('description', '').strip()
-        image = request.FILES.get('image')
+        image       = request.FILES.get('image')
 
         if not name:
             messages.error(request, 'Category name is required.')
             return redirect('products:category_edit', pk=pk)
 
-        category.name = name
+        category.name        = name
         category.description = description
         if image:
             category.image = image
@@ -317,15 +318,13 @@ def category_edit(request, pk):
         messages.success(request, f"'{category.name}' updated.")
         return redirect('products:category_list')
 
-    return render(request, 'products/category_edit.html', {
-        'category': category,
-    })
+    return render(request, 'products/category_edit.html', {'category': category})
 
 
 @login_required
 @staff_member_required
 def category_delete_confirm(request, pk):
-    category = get_object_or_404(Category, pk=pk)
+    category      = get_object_or_404(Category, pk=pk)
     product_count = category.products.count()
 
     if request.method == 'POST':
@@ -340,9 +339,9 @@ def category_delete_confirm(request, pk):
         return redirect('products:category_list')
 
     return render(request, 'products/confirm_delete.html', {
-        'object': category,
+        'object':       category,
         'object_label': category.name,
-        'object_type': 'category',
+        'object_type':  'category',
         'warning': (
             f"This category has {product_count} product(s) attached. "
             f"Deleting it will cascade-delete those products."
@@ -358,20 +357,21 @@ def category_delete_confirm(request, pk):
 @login_required
 @staff_member_required
 def brand_list(request):
+    # Admin list — ordered by priority number so admin sees the same order as the strip
     brands = Brand.objects.annotate(
         product_count=Count('products')
-    ).order_by('name')
+    ).order_by('order', 'name')
 
     q = request.GET.get('q', '').strip()
     if q:
         brands = brands.filter(name__icontains=q)
 
     paginator = Paginator(brands, 20)
-    page_obj = paginator.get_page(request.GET.get('page'))
+    page_obj  = paginator.get_page(request.GET.get('page'))
 
     return render(request, 'products/brand_list.html', {
         'page_obj': page_obj,
-        'query': q,
+        'query':    q,
     })
 
 
@@ -381,16 +381,18 @@ def brand_edit(request, pk):
     brand = get_object_or_404(Brand, pk=pk)
 
     if request.method == 'POST':
-        name = request.POST.get('name', '').strip()
+        name        = request.POST.get('name', '').strip()
         description = request.POST.get('description', '').strip()
-        logo = request.FILES.get('logo')
+        logo        = request.FILES.get('logo')
+        order       = request.POST.get('order', '0').strip()
 
         if not name:
             messages.error(request, 'Brand name is required.')
             return redirect('products:brand_edit', pk=pk)
 
-        brand.name = name
+        brand.name        = name
         brand.description = description
+        brand.order       = int(order) if order.isdigit() else 0
         if logo:
             brand.logo = logo
         brand.save()
@@ -398,28 +400,24 @@ def brand_edit(request, pk):
         messages.success(request, f"'{brand.name}' updated.")
         return redirect('products:brand_list')
 
-    return render(request, 'products/brand_edit.html', {
-        'brand': brand,
-    })
+    return render(request, 'products/brand_edit.html', {'brand': brand})
 
 
 @login_required
 @staff_member_required
 def brand_delete_confirm(request, pk):
-    brand = get_object_or_404(Brand, pk=pk)
+    brand         = get_object_or_404(Brand, pk=pk)
     product_count = brand.products.count()
 
     if request.method == 'POST':
-        # Product.brand uses on_delete=SET_NULL, so this won't cascade —
-        # affected products just lose their brand reference.
         brand.delete()
         messages.success(request, f"'{brand.name}' deleted.")
         return redirect('products:brand_list')
 
     return render(request, 'products/confirm_delete.html', {
-        'object': brand,
+        'object':       brand,
         'object_label': brand.name,
-        'object_type': 'brand',
+        'object_type':  'brand',
         'warning': (
             f"{product_count} product(s) use this brand. They will be "
             f"kept, but their brand will be cleared."
@@ -452,32 +450,32 @@ def product_list(request):
         products = products.filter(stock=0)
 
     paginator = Paginator(products, 20)
-    page_obj = paginator.get_page(request.GET.get('page'))
+    page_obj  = paginator.get_page(request.GET.get('page'))
 
     return render(request, 'products/product_list.html', {
         'page_obj': page_obj,
-        'query': q,
-        'status': status or 'all',
+        'query':    q,
+        'status':   status or 'all',
     })
 
 
 @login_required
 @staff_member_required
 def product_edit(request, pk):
-    product = get_object_or_404(Product, pk=pk)
+    product    = get_object_or_404(Product, pk=pk)
     categories = Category.objects.order_by('name')
-    brands = Brand.objects.order_by('name')
+    brands     = Brand.objects.order_by('order', 'name')
 
     if request.method == 'POST':
-        name = request.POST.get('name', '').strip()
-        description = request.POST.get('description', '').strip()
-        price = request.POST.get('price', '').strip()
+        name           = request.POST.get('name', '').strip()
+        description    = request.POST.get('description', '').strip()
+        price          = request.POST.get('price', '').strip()
         discount_price = request.POST.get('discount_price', '').strip()
-        stock = request.POST.get('stock', '').strip()
-        category_id = request.POST.get('category')
-        brand_id = request.POST.get('brand')
-        is_active = request.POST.get('is_active') == 'on'
-        image = request.FILES.get('image')
+        stock          = request.POST.get('stock', '').strip()
+        category_id    = request.POST.get('category')
+        brand_id       = request.POST.get('brand')
+        is_active      = request.POST.get('is_active') == 'on'
+        image          = request.FILES.get('image')
 
         errors = []
         if not name:
@@ -511,14 +509,14 @@ def product_edit(request, pk):
                 messages.error(request, e)
             return redirect('products:product_edit', pk=pk)
 
-        product.name = name
-        product.description = description
-        product.price = price
+        product.name           = name
+        product.description    = description
+        product.price          = price
         product.discount_price = discount_price
-        product.stock = stock
-        product.category_id = category_id
-        product.brand_id = brand_id or None
-        product.is_active = is_active
+        product.stock          = stock
+        product.category_id    = category_id
+        product.brand_id       = brand_id or None
+        product.is_active      = is_active
         if image:
             product.image = image
         product.save()
@@ -527,9 +525,9 @@ def product_edit(request, pk):
         return redirect('products:product_list')
 
     return render(request, 'products/product_edit.html', {
-        'product': product,
+        'product':    product,
         'categories': categories,
-        'brands': brands,
+        'brands':     brands,
     })
 
 
@@ -544,18 +542,16 @@ def product_delete_confirm(request, pk):
         return redirect('products:product_list')
 
     return render(request, 'products/confirm_delete.html', {
-        'object': product,
+        'object':       product,
         'object_label': product.name,
-        'object_type': 'product',
-        'warning': None,
-        'cancel_link': reverse('products:product_list'),
+        'object_type':  'product',
+        'warning':      None,
+        'cancel_link':  reverse('products:product_list'),
     })
 
 
 # ---------------------------------------------------------------------------
-# USERS  (list + activate/deactivate + delete only — no field editing,
-# since changing username/email/staff-status on auth.User directly carries
-# more risk; ask if you want full edit added too)
+# USERS
 # ---------------------------------------------------------------------------
 
 @login_required
@@ -574,12 +570,12 @@ def user_list(request):
         users = users.filter(is_active=False)
 
     paginator = Paginator(users, 20)
-    page_obj = paginator.get_page(request.GET.get('page'))
+    page_obj  = paginator.get_page(request.GET.get('page'))
 
     return render(request, 'products/user_list.html', {
         'page_obj': page_obj,
-        'query': q,
-        'status': status or 'all',
+        'query':    q,
+        'status':   status or 'all',
     })
 
 
@@ -616,9 +612,9 @@ def user_delete_confirm(request, pk):
         return redirect('products:user_list')
 
     return render(request, 'products/confirm_delete.html', {
-        'object': user,
+        'object':       user,
         'object_label': user.username,
-        'object_type': 'user',
+        'object_type':  'user',
         'warning': (
             "This permanently deletes the account and anonymizes/cascades "
             "related orders and reviews depending on your model's on_delete "
@@ -626,6 +622,7 @@ def user_delete_confirm(request, pk):
         ),
         'cancel_link': reverse('products:user_list'),
     })
+
 
 # ---------------------------------------------------------------------------
 # ADD (CREATE) VIEWS
@@ -635,9 +632,9 @@ def user_delete_confirm(request, pk):
 @staff_member_required
 def category_add(request):
     if request.method == 'POST':
-        name = request.POST.get('name', '').strip()
+        name        = request.POST.get('name', '').strip()
         description = request.POST.get('description', '').strip()
-        image = request.FILES.get('image')
+        image       = request.FILES.get('image')
 
         if not name:
             messages.error(request, 'Category name is required.')
@@ -647,10 +644,7 @@ def category_add(request):
             messages.error(request, f"A category named '{name}' already exists.")
             return redirect('products:category_add')
 
-        category = Category.objects.create(
-            name=name,
-            description=description,
-        )
+        category = Category.objects.create(name=name, description=description)
         if image:
             category.image = image
             category.save()
@@ -665,9 +659,10 @@ def category_add(request):
 @staff_member_required
 def brand_add(request):
     if request.method == 'POST':
-        name = request.POST.get('name', '').strip()
+        name        = request.POST.get('name', '').strip()
         description = request.POST.get('description', '').strip()
-        logo = request.FILES.get('logo')
+        logo        = request.FILES.get('logo')
+        order       = request.POST.get('order', '0').strip()
 
         if not name:
             messages.error(request, 'Brand name is required.')
@@ -680,6 +675,7 @@ def brand_add(request):
         brand = Brand.objects.create(
             name=name,
             description=description,
+            order=int(order) if order.isdigit() else 0,
         )
         if logo:
             brand.logo = logo
@@ -695,18 +691,18 @@ def brand_add(request):
 @staff_member_required
 def product_add(request):
     categories = Category.objects.order_by('name')
-    brands = Brand.objects.order_by('name')
+    brands     = Brand.objects.order_by('order', 'name')
 
     if request.method == 'POST':
-        name = request.POST.get('name', '').strip()
-        description = request.POST.get('description', '').strip()
-        price = request.POST.get('price', '').strip()
+        name           = request.POST.get('name', '').strip()
+        description    = request.POST.get('description', '').strip()
+        price          = request.POST.get('price', '').strip()
         discount_price = request.POST.get('discount_price', '').strip()
-        stock = request.POST.get('stock', '').strip()
-        category_id = request.POST.get('category')
-        brand_id = request.POST.get('brand')
-        is_active = request.POST.get('is_active') == 'on'
-        image = request.FILES.get('image')
+        stock          = request.POST.get('stock', '').strip()
+        category_id    = request.POST.get('category')
+        brand_id       = request.POST.get('brand')
+        is_active      = request.POST.get('is_active') == 'on'
+        image          = request.FILES.get('image')
 
         errors = []
         if not name:
@@ -735,15 +731,13 @@ def product_add(request):
             errors.append('Stock must be a whole number.')
             stock = None
 
-        # Re-render the form with entered values preserved on error,
-        # instead of redirecting (which would lose everything typed so far).
         if errors:
             for e in errors:
                 messages.error(request, e)
             return render(request, 'products/product_add.html', {
                 'categories': categories,
-                'brands': brands,
-                'form_data': request.POST,
+                'brands':     brands,
+                'form_data':  request.POST,
             })
 
         product = Product.objects.create(
@@ -765,14 +759,15 @@ def product_add(request):
 
     return render(request, 'products/product_add.html', {
         'categories': categories,
-        'brands': brands,
-        'form_data': {},
+        'brands':     brands,
+        'form_data':  {},
     })
 
-    return JsonResponse({'results': data})              # ← was Flask Response, now fixed too
 
+# ---------------------------------------------------------------------------
+# SEARCH AUTOCOMPLETE
+# ---------------------------------------------------------------------------
 
-# ─── NEW: Search Autocomplete ──────────────────────────────────────────────────
 def search_autocomplete(request):
     q = request.GET.get('q', '').strip()
     if len(q) < 1:
@@ -784,4 +779,3 @@ def search_autocomplete(request):
     ).values('name', 'slug')[:8]
 
     return JsonResponse({'results': list(products)})
-
