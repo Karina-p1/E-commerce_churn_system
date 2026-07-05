@@ -103,16 +103,6 @@
       </p>
     {% endif %}
 
-    {% if order.cancel_note %}
-      <p class="mb-2">
-        <strong>Note:</strong> {{ order.cancel_note }}
-      </p>
-    {% else %}
-      <p class="mb-2">
-        <strong>Note:</strong> Cancelled by admin
-      </p>
-    {% endif %}
-
     {% if order.cancelled_at %}
       <small>Cancelled on {{ order.cancelled_at|date:"F d, Y h:i A" }}</small>
     {% endif %}
@@ -265,11 +255,30 @@
   </div>
   {% endif %}
 
-  <div class="d-flex gap-2 mt-3">
-    <a href="{% url 'order_list' %}" class="btn btn-outline-dark">Back to Orders</a>
-    {% if order.can_cancel %}
-    <a href="{% url 'cancel_order' order.id %}" class="btn btn-danger">Cancel Order</a>
-    {% endif %}
+  <div class="d-flex gap-2 mt-4">
+      {% if order.payment_status == "REFUND_PENDING" %}
+          <button class="btn btn-warning" disabled>
+              <i class="fas fa-clock me-2"></i>
+              Refund Pending
+          </button>
+      {% elif order.payment_status == "REFUNDED" %}
+          <button class="btn btn-success" disabled>
+              <i class="fas fa-check-circle me-2"></i>
+              Refunded
+          </button>
+      {% elif order.payment_status == "PAID" %}
+          <a href="{% url 'request_refund' order.id %}"
+            class="btn btn-warning">
+              <i class="fas fa-undo-alt me-2"></i>
+              Request Refund
+          </a>
+      {% elif order.status != "cancelled" %}
+          <a href="{% url 'cancel_order' order.id %}"
+            class="btn btn-danger">
+              <i class="me-2"></i>
+              Cancel Order
+          </a>
+      {% endif %}
   </div>
 </div>
 

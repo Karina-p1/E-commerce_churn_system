@@ -18,6 +18,7 @@ from django.contrib import messages
 from apps.products.models import Product
 from apps.activity.models import UserEvent
 from apps.addresses.models import Address
+from .forms import RefundRequestForm
 
 from .models import Cart, CartItem, Order, OrderItem, Coupon
 from django.core.paginator import Paginator
@@ -797,6 +798,57 @@ def cancel_order(request, order_id):
         {
             "order": order
         }
+    )
+
+@login_required
+def request_refund(request, order_id):
+    order = get_object_or_404(
+        Order,
+        id=order_id,
+        user=request.user
+    )
+
+    # Only paid orders
+    if order.payment_status != "PAID":
+        messages.error(request, "Only paid orders can be refunded.")
+        return redirect("order_detail", order.id)
+
+    # Already requested
+    if hasattr(order, "refund_request"):
+        messages.warning(request, "Refund has already been requested.")
+        return redirect("order_detail", order.id)
+
+    if request.method == "POST":
+        form = RefundRequestForm(request.POST)
+
+        if form.is_valid():
+
+            refund = form.save(commit=False)
+            refund.order = order
+            refund.save()
+
+            order.status = "cancelled"
+            order.refund_status = "PENDING"
+            order.payment_status = "REFUND_PENDING"
+            order.save()
+
+            messages.success(
+                request,
+                "Your refund request has been submitted."
+            )
+
+            return redirect("order_detail", order.id)
+
+    else:
+        form = RefundRequestForm()
+
+    return render(
+        request,
+        "orders/request_refund.html",
+        {
+            "order": order,
+            "form": form,
+        },
     )
 
 @staff_member_required
