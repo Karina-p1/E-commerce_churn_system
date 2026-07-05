@@ -5,11 +5,15 @@ from django.conf import settings
 
 
 class Brand(models.Model):
-    name = models.CharField(max_length=100)
-    slug = models.SlugField(unique=True, blank=True)
-    logo = models.ImageField(upload_to='brands/', blank=True, null=True)
+    name        = models.CharField(max_length=100)
+    slug        = models.SlugField(unique=True, blank=True)
+    logo        = models.ImageField(upload_to='brands/', blank=True, null=True)
     description = models.TextField(blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    order       = models.PositiveIntegerField(
+        default=0,
+        help_text="Lower number appears first in the brand strip. Set by admin."
+    )
+    created_at  = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
         if not self.slug:
@@ -21,11 +25,11 @@ class Brand(models.Model):
 
 
 class Category(models.Model):
-    name = models.CharField(max_length=100)
-    slug = models.SlugField(unique=True, blank=True)
+    name        = models.CharField(max_length=100)
+    slug        = models.SlugField(unique=True, blank=True)
     description = models.TextField(blank=True)
-    image = models.ImageField(upload_to='categories/', blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    image       = models.ImageField(upload_to='categories/', blank=True, null=True)
+    created_at  = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
         if not self.slug:
@@ -40,22 +44,20 @@ class Category(models.Model):
 
 
 class Product(models.Model):
-    category = models.ForeignKey(
+    category       = models.ForeignKey(
         Category, on_delete=models.CASCADE, related_name='products')
-    brand = models.ForeignKey(
+    brand          = models.ForeignKey(
         Brand, on_delete=models.SET_NULL, null=True, blank=True, related_name='products')
-    name = models.CharField(max_length=255)
-    slug = models.SlugField(unique=True, blank=True)
-    description = models.TextField()
-    price = models.DecimalField(max_digits=10, decimal_places=2)
-    discount_price = models.DecimalField(
-        max_digits=10, decimal_places=2, null=True, blank=True)
-    stock = models.IntegerField(default=0)
-    image = models.ImageField(
-        upload_to='products/main/', blank=True, null=True)
-    is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    name           = models.CharField(max_length=255)
+    slug           = models.SlugField(unique=True, blank=True)
+    description    = models.TextField()
+    price          = models.DecimalField(max_digits=10, decimal_places=2)
+    discount_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    stock          = models.IntegerField(default=0)
+    image          = models.ImageField(upload_to='products/main/', blank=True, null=True)
+    is_active      = models.BooleanField(default=True)
+    created_at     = models.DateTimeField(auto_now_add=True)
+    updated_at     = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):
         if not self.slug:
@@ -88,10 +90,8 @@ class Product(models.Model):
 
 
 class ProductImage(models.Model):
-    product = models.ForeignKey(
-        Product, on_delete=models.CASCADE, related_name='images')
-    image = models.ImageField(
-        upload_to='products/gallery/', blank=True, null=True)
+    product    = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='images')
+    image      = models.ImageField(upload_to='products/gallery/', blank=True, null=True)
     is_primary = models.BooleanField(default=False)
 
     def __str__(self):
@@ -99,29 +99,24 @@ class ProductImage(models.Model):
 
 
 class Review(models.Model):
-    product = models.ForeignKey(
-        Product, on_delete=models.CASCADE, related_name='reviews')
-    customer = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    rating = models.IntegerField()
-    comment = models.TextField()
+    product    = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='reviews')
+    customer   = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    rating     = models.IntegerField()
+    comment    = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
 
 
 class Wishlist(models.Model):
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
-        related_name="wishlist"
+    user    = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="wishlist"
     )
     product = models.ForeignKey(
-        Product,
-        on_delete=models.CASCADE,
-        related_name="wishlisted_by"
+        Product, on_delete=models.CASCADE, related_name="wishlisted_by"
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ('user', 'product')  # prevents duplicates
+        unique_together = ('user', 'product')
 
     def __str__(self):
         return f"{self.user.username} - {self.product.name}"
