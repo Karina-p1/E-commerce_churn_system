@@ -441,3 +441,81 @@ class OrderStatusHistory(models.Model):
 
     def __str__(self):
         return f"Order #{self.order_id} -> {self.status} at {self.created_at:%Y-%m-%d %H:%M}"
+    
+class RefundRequest(models.Model):
+
+    STATUS_CHOICES = [
+        ("PENDING", "Pending"),
+        ("APPROVED", "Approved"),
+        ("REJECTED", "Rejected"),
+        ("COMPLETED", "Completed"),
+    ]
+
+    REASON_CHOICES = [
+        ("DAMAGED", "Damaged product"),
+        ("WRONG_ITEM", "Wrong item received"),
+        ("ORDERED_BY_MISTAKE", "Ordered by mistake"),
+        ("BETTER_PRICE", "Found a better price"),
+        ("DELAYED", "Delivery taking too long"),
+        ("CHANGED_MIND", "Changed my mind"),
+        ("OTHER", "Other"),
+    ]
+
+    order = models.OneToOneField(
+        Order,
+        on_delete=models.CASCADE,
+        related_name="refund_request"
+    )
+
+    reason = models.CharField(
+        max_length=30,
+        choices=REASON_CHOICES
+    )
+
+    other_reason = models.TextField(
+        blank=True
+    )
+
+    bank_name = models.CharField(
+        max_length=120
+    )
+
+    account_holder = models.CharField(
+        max_length=120
+    )
+
+    account_number = models.CharField(
+        max_length=50
+    )
+
+    branch = models.CharField(
+        max_length=120,
+        blank=True
+    )
+
+    phone = models.CharField(
+        max_length=20,
+        blank=True
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="PENDING"
+    )
+
+    admin_note = models.TextField(
+        blank=True
+    )
+
+    requested_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    processed_at = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+
+    def __str__(self):
+        return f"Refund - Order #{self.order.id}"

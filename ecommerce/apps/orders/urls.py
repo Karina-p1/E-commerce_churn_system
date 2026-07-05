@@ -22,4 +22,6 @@ urlpatterns = [
     path('order_list/<int:pk>/', views.order_detail_admin, name='order_detail_admin'),
     path('order_list/<int:pk>/update-status/', views.order_update_status, name='order_update_status'),
     path('order_list/<int:pk>/cancel/', views.order_cancel, name='order_cancel'),
+    
+    path("orders/<int:order_id>/refund/", views.request_refund, name="request_refund"),
 ]
