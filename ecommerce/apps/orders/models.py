@@ -11,7 +11,21 @@ class Coupon(models.Model):
         ('FLAT', 'Flat Amount'),
     ]
 
+    # ── New: what kind of eligibility rule this coupon uses ──────────
+    COUPON_TYPE_CHOICES = [
+        ('STANDARD', 'Standard'),               # existing behavior — no extra condition
+        ('FIRST_ORDER', 'First Order Only'),     # only valid on the user's very first order
+        ('MIN_QUANTITY', 'Minimum Quantity'),    # only valid if cart has >= min_quantity items
+        ('BUY_X_GET_Y', 'Buy X Get Y'),          # buy_quantity items -> get_quantity items discounted
+    ]
+
     code = models.CharField(max_length=50, unique=True)
+
+    coupon_type = models.CharField(
+        max_length=20,
+        choices=COUPON_TYPE_CHOICES,
+        default='STANDARD'
+    )
 
     discount_type = models.CharField(
         max_length=20,
@@ -21,13 +35,37 @@ class Coupon(models.Model):
 
     discount_value = models.DecimalField(
         max_digits=10,
-        decimal_places=2
+        decimal_places=2,
+        help_text="Percentage or flat amount. Ignored for BUY_X_GET_Y (use get_discount_percent instead)."
     )
 
     min_order_amount = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         default=0
+    )
+
+    # ── MIN_QUANTITY fields ───────────────────────────────────────────
+    min_quantity = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="MIN_QUANTITY type only: minimum total cart items required."
+    )
+
+    # ── BUY_X_GET_Y fields ─────────────────────────────────────────────
+    buy_quantity = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="BUY_X_GET_Y type only: number of items the customer must buy."
+    )
+    get_quantity = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="BUY_X_GET_Y type only: number of additional items that get discounted."
+    )
+    get_discount_percent = models.PositiveIntegerField(
+        default=100,
+        help_text="BUY_X_GET_Y type only: discount % applied to the 'get' items. 100 = free."
     )
 
     max_uses = models.PositiveIntegerField(
@@ -41,16 +79,28 @@ class Coupon(models.Model):
     is_active = models.BooleanField(default=True)
 
     valid_from = models.DateTimeField(null=True, blank=True)
-    valid_until = models.DateTimeField(null=True, blank=True)
+    valid_until = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Setting this also marks the coupon as a limited-time offer for notification purposes."
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.code
 
-    def is_valid(self, order_amount=None):
+    @property
+    def is_limited_time_offer(self):
+        return bool(self.valid_until)
+
+    def is_valid(self, order_amount=None, user=None, cart_quantity=None):
         """
-        Returns (is_valid: bool, error_message: str)
+        Returns (is_valid: bool, error_message: str).
+
+        order_amount   — cart subtotal, used for min_order_amount + percentage/flat calc
+        user           — required to check FIRST_ORDER eligibility
+        cart_quantity  — total item count in cart, required for MIN_QUANTITY / BUY_X_GET_Y
         """
         now = timezone.now()
 
@@ -69,10 +119,40 @@ class Coupon(models.Model):
         if order_amount is not None and Decimal(order_amount) < self.min_order_amount:
             return False, f"Minimum order amount for this coupon is Rs.{self.min_order_amount}."
 
+        if self.coupon_type == 'FIRST_ORDER':
+            if user is None or not user.is_authenticated:
+                return False, "This coupon requires an account."
+            has_prior_order = Order.objects.filter(user=user).exclude(status='cancelled').exists()
+            if has_prior_order:
+                return False, "This coupon is valid only on your first order."
+
+        if self.coupon_type == 'MIN_QUANTITY':
+            required = self.min_quantity or 0
+            if cart_quantity is None or cart_quantity < required:
+                return False, f"This coupon requires at least {required} item(s) in your cart."
+
+        if self.coupon_type == 'BUY_X_GET_Y':
+            required = (self.buy_quantity or 0) + (self.get_quantity or 0)
+            if cart_quantity is None or cart_quantity < required:
+                return False, (
+                    f"This coupon requires at least {required} item(s) in your cart "
+                    f"(buy {self.buy_quantity}, get {self.get_quantity})."
+                )
+
         return True, ""
 
-    def calculate_discount(self, amount):
+    def calculate_discount(self, amount, cart_items=None):
+        """
+        amount     — cart subtotal (Decimal-able)
+        cart_items — list of {'price': Decimal, 'quantity': int}, required for BUY_X_GET_Y
+                     to determine which units receive the discount.
+        """
         amount = Decimal(amount)
+
+        if self.coupon_type == 'BUY_X_GET_Y':
+            if not cart_items:
+                return Decimal('0.00')
+            return self._calculate_buy_x_get_y_discount(cart_items)
 
         if self.discount_type == 'PERCENTAGE':
             discount = (amount * self.discount_value) / Decimal('100')
@@ -83,6 +163,41 @@ class Coupon(models.Model):
             discount = amount
 
         return discount.quantize(Decimal('0.01'))
+
+    def _calculate_buy_x_get_y_discount(self, cart_items):
+        """
+        Flattens cart_items into individual unit prices, sorts cheapest-first,
+        and discounts get_quantity cheapest units per complete
+        (buy_quantity + get_quantity) group present in the cart.
+
+        This is a simplified, transparent rule: the discount always applies to
+        the cheapest eligible units, once per complete group — e.g. buy 2 get 1
+        with 6 items in cart = 2 complete groups = 2 discounted units (the two
+        cheapest of the six).
+        """
+        units = []
+        for item in cart_items:
+            units.extend([Decimal(item['price'])] * item['quantity'])
+
+        if not units:
+            return Decimal('0.00')
+
+        units.sort()
+
+        group_size = (self.buy_quantity or 0) + (self.get_quantity or 0)
+        if group_size <= 0:
+            return Decimal('0.00')
+
+        eligible_groups = len(units) // group_size
+        discount_units_count = eligible_groups * (self.get_quantity or 0)
+
+        if discount_units_count <= 0:
+            return Decimal('0.00')
+
+        discount_total = sum(units[:discount_units_count]) * (
+            Decimal(self.get_discount_percent) / Decimal('100')
+        )
+        return discount_total.quantize(Decimal('0.01'))
 
 
 class Cart(models.Model):
@@ -145,18 +260,6 @@ class Order(models.Model):
         ("REFUND_PENDING", "Refund Pending"),
         ("REFUNDED", "Refunded"),
     ]
-    
-    REFUND_STATUS_CHOICES = [
-        ("NONE", "Not Required"),
-        ("PENDING", "Pending"),
-        ("REFUNDED", "Refunded"),
-    ]
-
-    refund_status = models.CharField(
-        max_length=20,
-        choices=REFUND_STATUS_CHOICES,
-        default="NONE",
-    )
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -169,7 +272,18 @@ class Order(models.Model):
         choices=STATUS_CHOICES,
         default='pending'
     )
-    
+    REFUND_STATUS_CHOICES = [
+    ('NONE', 'No Refund'),
+    ('PENDING', 'Refund Pending'),
+    ('COMPLETED', 'Refund Completed'),
+    ('REJECTED', 'Refund Rejected'),
+]
+
+    refund_status = models.CharField(
+    max_length=20,
+    choices=REFUND_STATUS_CHOICES,
+    default='NONE',
+)
     CANCEL_REASON_CHOICES = (
         ("mistake", "Ordered by mistake"),
         ("cheaper", "Found cheaper elsewhere"),
@@ -229,10 +343,6 @@ class Order(models.Model):
         max_digits=10,
         decimal_places=2
     )
-
-    # ==========================
-    # Coupon / Discount
-    # ==========================
 
     coupon = models.ForeignKey(
         Coupon,
@@ -316,13 +426,7 @@ class Order(models.Model):
 
     class Meta:
         ordering = ['-created_at']
-    
-    @property
-    def final_price(self):
-        """Amount the customer actually pays — total_price minus coupon discount."""
-        discount = self.discount_amount or Decimal('0')
-        return self.total_price - discount
-    
+        
     @property
     def can_cancel(self):
         return self.status in [
@@ -330,44 +434,12 @@ class Order(models.Model):
             "processing",
         ]
     
-    @property
-    def order_number(self):
-        return f"ORD-{self.id:06d}"
-
-
-    @property
-    def preview_items(self):
-        return self.items.all()[:2]
-
-
-    @property
-    def remaining_items(self):
-        count = self.items.count()
-        return max(0, count - 2)
-    
     def set_status(self, new_status, note=None, changed_by=None):
         self.status = new_status
-
-        update_fields = ["status", "updated_at"]
-
-        revenue_needs_update = False
-
-        if new_status == "delivered":
-            if (
-                self.payment_method == "COD"
-                and self.payment_status == "UNPAID"
-            ):
-                self.payment_status = "PAID"
-                self.paid_at = timezone.now()
-
-                update_fields.extend(["payment_status", "paid_at"])
-
-                revenue_needs_update = True
-
-        if new_status == "cancelled":
+        update_fields = ['status', 'updated_at']
+        if new_status == 'cancelled':
             self.cancelled_at = timezone.now()
-            update_fields.append("cancelled_at")
-
+            update_fields.append('cancelled_at')
         self.save(update_fields=update_fields)
 
         self.status_history.create(
@@ -376,13 +448,6 @@ class Order(models.Model):
             changed_by=changed_by,
         )
 
-        if revenue_needs_update:
-            from django.db import transaction
-            from apps.analytics.tasks import paid_order_created
-
-            transaction.on_commit(
-                lambda: paid_order_created.delay(self.id)
-            )
     def __str__(self):
         return f"Order #{self.id} by {self.user.username}"
 
@@ -411,7 +476,6 @@ class OrderItem(models.Model):
     def subtotal(self):
         return self.price * self.quantity
     
-
 class OrderStatusHistory(models.Model):
     order = models.ForeignKey(
         Order,

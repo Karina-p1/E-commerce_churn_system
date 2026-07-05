@@ -180,7 +180,11 @@
       .icon-btn.active-link svg {
         stroke: #0ea5e9;
       }
-      .cart-badge {
+      .icon-btn.dropdown-toggle::after {
+        display: none;
+      }
+      .cart-badge,
+      .notif-badge {
         position: absolute;
         top: 4px;
         right: 6px;
@@ -193,6 +197,39 @@
         min-width: 16px;
         text-align: center;
         border: 1.5px solid #fff;
+      }
+      .notif-dropdown-menu {
+        min-width: 320px;
+        max-width: 360px;
+        padding: 6px;
+      }
+      .notif-item {
+        display: block;
+        padding: 10px 12px;
+        border-radius: 8px;
+        text-decoration: none;
+      }
+      .notif-item:hover {
+        background: #f0f9ff;
+      }
+      .notif-item-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: #1f2937;
+      }
+      .notif-item-message {
+        font-size: 12px;
+        color: #6b7280;
+        margin-top: 2px;
+        white-space: normal;
+      }
+      .notif-unread-dot {
+        display: inline-block;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #0ea5e9;
+        margin-right: 6px;
       }
 
       /* BRAND STRIP */
@@ -810,6 +847,54 @@
           
           {% endwith %}
         </a>
+
+        <div class="nav-item dropdown">
+          <a
+            href="#"
+            class="icon-btn dropdown-toggle"
+            id="notifBell"
+            role="button"
+            data-bs-toggle="dropdown"
+            aria-expanded="false"
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke-width="2"
+            >
+              <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+              <path d="M13.73 21a2 2 0 01-3.46 0" />
+            </svg>
+            <span>Alerts</span>
+            {% if unread_notification_count %}
+            <span class="notif-badge">{{ unread_notification_count }}</span>
+            {% endif %}
+          </a>
+          <ul class="dropdown-menu dropdown-menu-end notif-dropdown-menu" aria-labelledby="notifBell">
+            {% if recent_notifications %}
+              {% for n in recent_notifications %}
+              <li>
+                <a class="notif-item" href="{% url 'notifications:mark_read' n.id %}">
+                  <div class="notif-item-title">
+                    {% if not n.is_read %}<span class="notif-unread-dot"></span>{% endif %}{{ n.title }}
+                  </div>
+                  <div class="notif-item-message">{{ n.message|truncatechars:70 }}</div>
+                </a>
+              </li>
+              {% endfor %}
+              <li><hr class="dropdown-divider my-1"></li>
+              <li>
+                <a class="dropdown-item text-center small text-primary" href="{% url 'notifications:list' %}">
+                  View all notifications
+                </a>
+              </li>
+            {% else %}
+              <li><span class="dropdown-item text-muted small">No notifications yet</span></li>
+            {% endif %}
+          </ul>
+        </div>
 
         <a href="{% url 'order_list' %}" class="icon-btn">
           <svg

@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block title %}Notifications{% endblock %}
+
+{% block start %}
+<div class="container py-5">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="fw-bold mb-0">Notifications</h3>
+    {% if notifications %}
+    <a href="{% url 'notifications:mark_all_read' %}" class="btn btn-sm btn-outline-dark">
+      Mark all as read
+    </a>
+    {% endif %}
+  </div>
+
+  {% if notifications %}
+  <div class="list-group">
+    {% for n in notifications %}
+    <div class="list-group-item {% if not n.is_read %}bg-light{% endif %}">
+      <div class="d-flex justify-content-between">
+        <div>
+          <div class="fw-semibold">
+            {{ n.title }}
+            {% if not n.is_read %}<span class="badge bg-primary ms-2">New</span>{% endif %}
+          </div>
+          <div class="text-muted small">{{ n.message }}</div>
+        </div>
+        <div class="text-end">
+          <div class="text-muted small">{{ n.created_at|date:"M d, Y" }}</div>
+          {% if not n.is_read %}
+          <a href="{% url 'notifications:mark_read' n.id %}" class="small">Mark read</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="text-muted">No notifications yet.</p>
+  {% endif %}
+</div>
+{% endblock %}
