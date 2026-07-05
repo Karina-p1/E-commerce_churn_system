@@ -190,7 +190,7 @@
             <div class="user-email">{{ order.user.email }}</div>
           </div>
         </div>
-        <a href="{% url 'products:user_list' %}?q={{ order.user.username }}" style="font-size:11.5px;color:#2931a3;text-decoration:none;">View all orders from this customer &rarr;</a>
+        <a href="{% url 'order_list_admin' %}?user={{ order.user.pk }}" style="font-size:11.5px;color:#2931a3;text-decoration:none;">View all orders from this customer &rarr;</a>
       </div>
 
       <div class="card">
