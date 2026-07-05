@@ -1,0 +1,94 @@
+{% extends "base.html" %} 
+
+{% block title %}Request Refund{% endblock %}
+
+{% block start %}
+
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-7">
+      <div class="card shadow-sm border-0">
+        <div class="card-body p-5">
+          <h3 class="fw-bold mb-2">Refund Request</h3>
+
+          <p class="text-muted mb-4">
+            Please provide your bank details so we can process your refund after
+            approval.
+          </p>
+
+          <form method="POST">
+            {% csrf_token %}
+
+            <div class="mb-3">
+              <label class="form-label">Reason</label>
+              {{ form.reason }}
+            </div>
+
+            <div class="mb-3" id="otherReason">
+              <label class="form-label">Other Reason</label>
+              {{ form.other_reason }}
+            </div>
+
+            <hr class="my-4" />
+
+            <h5 class="fw-bold mb-3">Bank Details</h5>
+
+            <div class="mb-3">
+              <label class="form-label">Bank Name</label>
+              {{ form.bank_name }}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Account Holder</label>
+              {{ form.account_holder }}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Account Number</label>
+              {{ form.account_number }}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Branch</label>
+              {{ form.branch }}
+            </div>
+
+            <div class="mb-4">
+              <label class="form-label">Phone Number</label>
+              {{ form.phone }}
+            </div>
+
+            <button class="btn btn-danger px-4">Submit Refund Request</button>
+
+            <a
+              href="{% url 'order_detail' order.id %}"
+              class="btn btn-outline-secondary"
+            >
+              Cancel
+            </a>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const reason = document.getElementById("id_reason");
+  const other = document.getElementById("otherReason");
+
+  function toggleOther() {
+    if (reason.value === "OTHER") {
+      other.style.display = "block";
+    } else {
+      other.style.display = "none";
+      document.getElementById("id_other_reason").value = "";
+    }
+  }
+
+  toggleOther();
+
+  reason.addEventListener("change", toggleOther);
+</script>
+
+{% endblock %}
