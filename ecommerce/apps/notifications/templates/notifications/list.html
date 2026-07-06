@@ -1,41 +1,75 @@
 {% extends 'base.html' %}
+{% load notification_extras %}
 {% block title %}Notifications{% endblock %}
 
 {% block start %}
-<div class="container py-5">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h3 class="fw-bold mb-0">Notifications</h3>
-    {% if notifications %}
-    <a href="{% url 'notifications:mark_all_read' %}" class="btn btn-sm btn-outline-dark">
+<div style="max-width: 680px; margin: 0 auto;">
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="fw-bold mb-0" style="color:#0e3a5c;">Notifications</h3>
+    {% if unread_notification_count %}
+    <a href="{% url 'notifications:mark_all_read' %}"
+       class="btn btn-sm"
+       style="background:#0e3a5c; color:#fff; border-radius:8px; font-weight:600; font-size:12.5px; padding:7px 14px;">
       Mark all as read
     </a>
     {% endif %}
   </div>
 
+  <div class="d-flex gap-2 mb-3">
+    <a href="{% url 'notifications:list' %}"
+       class="btn btn-sm"
+       style="border-radius:20px; font-size:12.5px; font-weight:600; padding:6px 16px;
+              background:{% if filter_type != 'unread' %}#0e3a5c{% else %}#f3f4f6{% endif %};
+              color:{% if filter_type != 'unread' %}#fff{% else %}#374151{% endif %};">
+      All
+    </a>
+    <a href="?filter=unread"
+       class="btn btn-sm"
+       style="border-radius:20px; font-size:12.5px; font-weight:600; padding:6px 16px;
+              background:{% if filter_type == 'unread' %}#0e3a5c{% else %}#f3f4f6{% endif %};
+              color:{% if filter_type == 'unread' %}#fff{% else %}#374151{% endif %};">
+      Unread {% if unread_notification_count %}({{ unread_notification_count }}){% endif %}
+    </a>
+  </div>
+
   {% if notifications %}
-  <div class="list-group">
+  <div style="display:flex; flex-direction:column; gap:8px;">
     {% for n in notifications %}
-    <div class="list-group-item {% if not n.is_read %}bg-light{% endif %}">
-      <div class="d-flex justify-content-between">
-        <div>
-          <div class="fw-semibold">
-            {{ n.title }}
-            {% if not n.is_read %}<span class="badge bg-primary ms-2">New</span>{% endif %}
-          </div>
-          <div class="text-muted small">{{ n.message }}</div>
+    <div style="display:flex; gap:12px; padding:14px 16px; border-radius:12px;
+                background:{% if not n.is_read %}#f0f9ff{% else %}#fff{% endif %};
+                border:1px solid #e8eaed; box-shadow:0 1px 4px rgba(0,0,0,0.03);">
+      <div style="flex-shrink:0; width:38px; height:38px; border-radius:10px;
+                  background:#f0f9ff; display:flex; align-items:center; justify-content:center; color:#0ea5e9;">
+        {% if n.notif_type == 'COUPON' %}
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41L11 3.83V3H4v7h.83l9.58 9.58a2 2 0 002.83 0l3.35-3.35a2 2 0 000-2.82z"/><circle cx="7.5" cy="7.5" r="1.5" fill="currentColor"/></svg>
+        {% else %}
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+        {% endif %}
+      </div>
+      <div style="flex:1; min-width:0;">
+        <div class="d-flex justify-content-between">
+          <span style="font-weight:{% if not n.is_read %}700{% else %}600{% endif %}; font-size:14px; color:#1f2937;">
+            {% if not n.is_read %}<span class="notif-unread-dot"></span>{% endif %}{{ n.title }}
+          </span>
+          <span style="font-size:11.5px; color:#9ca3af; white-space:nowrap; margin-left:10px;">{{ n.created_at|time_ago }}</span>
         </div>
-        <div class="text-end">
-          <div class="text-muted small">{{ n.created_at|date:"M d, Y" }}</div>
-          {% if not n.is_read %}
-          <a href="{% url 'notifications:mark_read' n.id %}" class="small">Mark read</a>
-          {% endif %}
-        </div>
+        <div style="font-size:13px; color:#6b7280; margin-top:2px;">{{ n.message }}</div>
+        {% if not n.is_read %}
+        <a href="{% url 'notifications:mark_read' n.id %}"
+           style="font-size:12px; font-weight:600; color:#0ea5e9; text-decoration:none;">Mark as read</a>
+        {% endif %}
       </div>
     </div>
     {% endfor %}
   </div>
   {% else %}
-  <p class="text-muted">No notifications yet.</p>
+  <div class="text-center" style="padding:60px 0; color:#9ca3af;">
+    <div style="font-size:2.2rem;">🔕</div>
+    <p class="mt-2 mb-0" style="font-size:14px;">
+      {% if filter_type == 'unread' %}You're all caught up.{% else %}No notifications yet.{% endif %}
+    </p>
+  </div>
   {% endif %}
 </div>
 {% endblock %}

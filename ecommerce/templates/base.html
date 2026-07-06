@@ -231,6 +231,11 @@
         background: #0ea5e9;
         margin-right: 6px;
       }
+      .dropdown-item:active,
+      .dropdown-item:focus {
+        background-color: #f0f9ff;
+        color: #0ea5e9;
+      }
 
       /* BRAND STRIP */
       .brand-strip-wrapper {
@@ -886,7 +891,7 @@
               {% endfor %}
               <li><hr class="dropdown-divider my-1"></li>
               <li>
-                <a class="dropdown-item text-center small text-primary" href="{% url 'notifications:list' %}">
+                <a class="dropdown-item text-center small" href="{% url 'notifications:list' %}">
                   View all notifications
                 </a>
               </li>

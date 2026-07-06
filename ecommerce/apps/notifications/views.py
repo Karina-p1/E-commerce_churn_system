@@ -6,9 +6,17 @@ from .models import Notification
 
 @login_required
 def notification_list(request):
-    notifications = Notification.objects.filter(recipient=request.user)
+    notifications = Notification.objects.filter(
+        recipient=request.user
+    ).order_by('-created_at')
+
+    filter_type = request.GET.get('filter')
+    if filter_type == 'unread':
+        notifications = notifications.filter(is_read=False)
+
     return render(request, 'notifications/list.html', {
         'notifications': notifications,
+        'filter_type': filter_type,
     })
 
 
