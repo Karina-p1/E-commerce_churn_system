@@ -27,15 +27,23 @@ from django.db.models import Q
 SESSION_COUPON_KEY = 'applied_coupon_code'
 
 
-def _get_session_coupon(request, order_amount):
+def _get_cart_items_payload(cart):
+    """Flattened {'price', 'quantity'} list used for BUY_X_GET_Y calculations."""
+    return [
+        {'price': item.product.effective_price, 'quantity': item.quantity}
+        for item in cart.items.select_related('product')
+    ]
+
+
+def _get_session_coupon(request, cart):
     """
     Looks up the coupon code (if any) stored in session, re-validates it
-    against the current order_amount, and returns a tuple:
+    against the current cart (amount, quantity, and the requesting user for
+    FIRST_ORDER-type coupons), and returns a tuple:
         (coupon_or_None, discount_amount)
 
-    If the stored coupon is no longer valid (expired, cart total dropped
-    below min_order_amount, etc.), it is silently cleared from the session
-    and (None, Decimal('0')) is returned.
+    If the stored coupon is no longer valid, it is silently cleared from the
+    session and (None, Decimal('0')) is returned.
     """
     code = request.session.get(SESSION_COUPON_KEY)
 
@@ -43,18 +51,28 @@ def _get_session_coupon(request, order_amount):
         return None, Decimal('0')
 
     try:
-        coupon = Coupon.objects.get(code__iexact=code) # 1. does it exist?
+        coupon = Coupon.objects.get(code__iexact=code)
     except Coupon.DoesNotExist:
         request.session.pop(SESSION_COUPON_KEY, None)
         return None, Decimal('0')
 
-    is_valid, _ = coupon.is_valid(order_amount=order_amount) # 2. active? not expired? under usage limit? above min order?
+    order_amount = cart.total_price
+    cart_quantity = cart.total_items
+
+    is_valid, _ = coupon.is_valid(
+        order_amount=order_amount,
+        user=request.user,
+        cart_quantity=cart_quantity,
+    )
 
     if not is_valid:
-        request.session.pop(SESSION_COUPON_KEY, None) # 4. store it in session
+        request.session.pop(SESSION_COUPON_KEY, None)
         return None, Decimal('0')
 
-    discount_amount = coupon.calculate_discount(order_amount) # 3. how much is the discount?
+    discount_amount = coupon.calculate_discount(
+        order_amount,
+        cart_items=_get_cart_items_payload(cart),
+    )
     return coupon, discount_amount
 
 
@@ -259,13 +277,21 @@ def apply_coupon(request):
         return JsonResponse({'success': False, 'error': 'Invalid coupon code.'})
 
     cart_total = cart.total_price
+    cart_quantity = cart.total_items
 
-    is_valid, error_message = coupon.is_valid(order_amount=cart_total)
+    is_valid, error_message = coupon.is_valid(
+        order_amount=cart_total,
+        user=request.user,
+        cart_quantity=cart_quantity,
+    )
 
     if not is_valid:
         return JsonResponse({'success': False, 'error': error_message})
 
-    discount_amount = coupon.calculate_discount(cart_total)
+    discount_amount = coupon.calculate_discount(
+        cart_total,
+        cart_items=_get_cart_items_payload(cart),
+    )
     final_total = cart_total - discount_amount
 
     request.session[SESSION_COUPON_KEY] = coupon.code
@@ -367,14 +393,13 @@ def checkout_view(request):
                 )
 
                 # Coupon (if a valid one is stored in session for this cart)
-                cart_total = cart.total_price
-                coupon_obj, discount_amount = _get_session_coupon(request, cart_total)
-                final_total = cart_total - discount_amount
+                coupon_obj, discount_amount = _get_session_coupon(request, cart)
+                final_total = cart.total_price - discount_amount
 
                 # Create unpaid order only. Do NOT reduce stock yet.
                 order = Order.objects.create(
                     user=request.user,
-                    total_price=cart_total,
+                    total_price=final_total,
                     coupon=coupon_obj,
                     discount_amount=discount_amount,
                     payment_status='INITIATED',
@@ -497,8 +522,8 @@ def checkout_view(request):
             return redirect('checkout')
 
     # GET: show current coupon state (if any) alongside cart/addresses
+    applied_coupon, discount_amount = _get_session_coupon(request, cart)
     cart_total = cart.total_price
-    applied_coupon, discount_amount = _get_session_coupon(request, cart_total)
     final_total = cart_total - discount_amount
 
     return render(
@@ -696,12 +721,7 @@ def payment_failed(request):
 def order_list(request):
     orders = Order.objects.filter(
         user=request.user,
-        # payment_status__in=[
-        #     "PAID",
-        #     "REFUND_PENDING",
-        #     "REFUNDED",
-        # ]
-    ).prefetch_related("items").order_by("-created_at")
+    ).order_by("-created_at")
 
     return render(request, 'orders/order_list.html', {
         'orders': orders
@@ -714,46 +734,12 @@ def order_detail(request, order_id):
         Order,
         id=order_id,
         user=request.user,
-        # payment_status='PAID'
     )
 
     return render(request, 'orders/order_detail.html', {
         'order': order
     })
 
-
-# @login_required
-# def cancel_order(request, order_id):
-#     order = get_object_or_404(
-#         Order,
-#         id=order_id,
-#         user=request.user,
-#         payment_status='PAID'
-#     )
-
-#     if order.status in ['pending', 'processing']:
-#         order.status = 'cancelled'
-#         order.save()
-
-#         UserEvent.objects.create(
-#             user=request.user,
-#             event_type='ORDER_CANCELLED'
-#         )
-
-#         messages.success(
-#             request,
-#             f"Order #{order.id} cancelled successfully."
-#         )
-#     else:
-#         messages.warning(
-#             request,
-#             "This order cannot be cancelled."
-#         )
-
-#     return redirect(
-#         'order_detail',
-#         order_id=order.id
-#     )
 
 @login_required
 def cancel_order(request, order_id):
@@ -773,15 +759,6 @@ def cancel_order(request, order_id):
             "order_detail",
             order_id=order.id
         )
-        
-    if order.payment_method == "COD":
-        order.payment_status = "UNPAID"
-        
-    if (
-        order.payment_method == "ESEWA"
-        and order.payment_status == "PAID"
-    ):
-        order.payment_status = "REFUND_PENDING"
 
     if request.method == "POST":
 

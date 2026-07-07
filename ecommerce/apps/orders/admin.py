@@ -28,12 +28,37 @@ admin.site.register(OrderStatusHistory)
 class CouponAdmin(admin.ModelAdmin):
     list_display = [
         'code',
+        'coupon_type',
         'discount_type',
         'discount_value',
         'min_order_amount',
         'max_uses',
         'used_count',
         'is_active',
+        'is_limited_time_offer',
     ]
-    list_filter = ['discount_type', 'is_active']
+    list_filter = ['coupon_type', 'discount_type', 'is_active']
     search_fields = ['code']
+    fieldsets = (
+        ('Basic', {
+            'fields': ('code', 'coupon_type', 'is_active')
+        }),
+        ('Standard discount', {
+            'fields': ('discount_type', 'discount_value', 'min_order_amount'),
+            'description': 'Used by STANDARD and FIRST_ORDER types.',
+        }),
+        ('Minimum quantity rule', {
+            'fields': ('min_quantity',),
+            'description': 'Used only by the MIN_QUANTITY type.',
+        }),
+        ('Buy X get Y rule', {
+            'fields': ('buy_quantity', 'get_quantity', 'get_discount_percent'),
+            'description': 'Used only by the BUY_X_GET_Y type.',
+        }),
+        ('Usage limits & validity', {
+            'fields': ('max_uses', 'used_count', 'valid_from', 'valid_until'),
+            'description': 'Setting "valid until" marks this as a limited-time offer '
+                            'and triggers the expiring-offer notification job.',
+        }),
+    )
+    readonly_fields = ['used_count']
