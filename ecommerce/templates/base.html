@@ -11,8 +11,8 @@
     />
 
     <link
-        rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
     />
 
     <link
@@ -39,11 +39,12 @@
         background: #fff;
         border-bottom: 1px solid #e8eaed;
         box-shadow: 0 2px 12px rgba(0, 0, 0, 0.07);
-        padding: 0 24px;
         display: flex;
         align-items: center;
-        gap: 14px;
-        height: 60px;
+        padding: 14px 36px;
+        gap: 16px;
+        min-height: 60px; /* instead of height:60px */
+        box-sizing: border-box;
       }
       .nav-logo {
         font-size: 22px;
@@ -53,6 +54,7 @@
         white-space: nowrap;
         letter-spacing: -0.5px;
         flex-shrink: 0;
+        margin-right: 16px;
       }
       .nav-logo span {
         color: #0ea5e9;
@@ -79,20 +81,27 @@
       }
       .search-wrap {
         flex: 1;
-        min-width: 0;
+        width: 100%;
+        max-width: 800px;
+        min-width: 320px;
+        margin: 0 auto;
         display: flex;
         align-items: center;
+        height: 45px;
         border: 1.5px solid #d1d5db;
         border-radius: 10px;
-        overflow: visible;
         background: #f9fafb;
-        transition:
-          border-color 0.2s,
-          box-shadow 0.2s;
+        overflow: visible;
         position: relative;
+      }
+      .search-container {
+        flex: 1;
+        display: flex;
+        justify-content: center;
       }
       .search-wrap input {
         flex: 1;
+        height: 45px;
         min-width: 0;
         border: none;
         background: transparent;
@@ -109,7 +118,8 @@
       .btn-search {
         background: #0ea5e9;
         border: none;
-        padding: 9px 18px;
+        height: 45px;
+        padding: 0 28px;
         cursor: pointer;
         display: flex;
         align-items: center;
@@ -126,7 +136,19 @@
         box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.12);
         background: #fff;
       }
-
+      .search-category select {
+        border: none;
+        background: transparent;
+        padding: 0 18px;
+        height: 45px;
+        font-size: 14px;
+        font-family: "DM Sans", sans-serif;
+        outline: none;
+        cursor: pointer;
+        border-right: 1px solid #e5e7eb;
+        appearance: none;
+        min-width: 170px;
+      }
       .nav-divider {
         width: 1px;
         height: 32px;
@@ -137,7 +159,7 @@
       .nav-right {
         display: flex;
         align-items: center;
-        gap: 4px;
+        gap: 18px;
         margin-left: auto;
         flex-shrink: 0;
       }
@@ -240,7 +262,7 @@
       /* BRAND STRIP */
       .brand-strip-wrapper {
         position: fixed;
-        top: 60px;
+        top: 75px;
         left: 0;
         width: 100%;
         z-index: 999;
@@ -249,20 +271,14 @@
       .cat-bar {
         background: #fff;
         border-bottom: 1px solid #e8eaed;
-
         display: flex;
         align-items: center;
-
         overflow-x: auto;
         overflow-y: hidden;
-
         white-space: nowrap;
         scroll-behavior: smooth;
-
         padding: 0 42px;
-
-        height: 42px;
-
+        height: 50px;
         scrollbar-width: thin;
         scrollbar-color: #0ea5e9 transparent;
       }
@@ -462,243 +478,330 @@
         Modern Toast
       ========================== */
 
-      #toast-container{
-          position:fixed;
-          top:25px;
-          left:50%;
-          transform:translateX(-50%);
-          z-index:9999;
-          width:420px;
-          max-width:92%;
+      #toast-container {
+        position: fixed;
+        top: 25px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 9999;
+        width: 420px;
+        max-width: 92%;
       }
 
-      .custom-toast{
-          position:relative;
-          overflow:hidden;
-          display:flex;
-          align-items:center;
-          gap:14px;
-          padding:16px 18px;
-          margin-bottom:14px;
-          border-radius:14px;
+      .custom-toast {
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 16px 18px;
+        margin-bottom: 14px;
+        border-radius: 14px;
 
-          background:#fff;
-          color:#1f2937;
+        background: #fff;
+        color: #1f2937;
 
-          border:1px solid rgba(0,0,0,.08);
+        border: 1px solid rgba(0, 0, 0, 0.08);
 
-          box-shadow:
-              0 12px 30px rgba(0,0,0,.10),
-              0 2px 8px rgba(0,0,0,.05);
+        box-shadow:
+          0 12px 30px rgba(0, 0, 0, 0.1),
+          0 2px 8px rgba(0, 0, 0, 0.05);
 
-          backdrop-filter:blur(12px);
+        backdrop-filter: blur(12px);
 
-          animation:toastIn .35s ease;
+        animation: toastIn 0.35s ease;
       }
 
-      .toast-icon{
-          width:42px;
-          height:42px;
-          border-radius:50%;
+      .toast-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
 
-          display:flex;
-          align-items:center;
-          justify-content:center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
 
-          font-size:18px;
-          flex-shrink:0;
+        font-size: 18px;
+        flex-shrink: 0;
       }
 
-      .toast-body{
-          flex:1;
+      .toast-body {
+        flex: 1;
       }
 
-      .toast-title{
-          font-weight:600;
-          font-size:15px;
-          margin-bottom:2px;
+      .toast-title {
+        font-weight: 600;
+        font-size: 15px;
+        margin-bottom: 2px;
       }
 
-      .toast-message{
-          font-size:14px;
-          color:#6b7280;
+      .toast-message {
+        font-size: 14px;
+        color: #6b7280;
       }
 
-      .custom-toast.success .toast-icon{
-          background:#e8f7ee;
-          color:#16a34a;
+      .custom-toast.success .toast-icon {
+        background: #e8f7ee;
+        color: #16a34a;
       }
 
-      .custom-toast.error .toast-icon{
-          background:#fdecec;
-          color:#dc2626;
+      .custom-toast.error .toast-icon {
+        background: #fdecec;
+        color: #dc2626;
       }
 
-      .custom-toast.warning .toast-icon{
-          background:#fff7e6;
-          color:#d97706;
+      .custom-toast.warning .toast-icon {
+        background: #fff7e6;
+        color: #d97706;
       }
 
-      .custom-toast.info .toast-icon{
-          background:#e9f4ff;
-          color:#2563eb;
+      .custom-toast.info .toast-icon {
+        background: #e9f4ff;
+        color: #2563eb;
       }
 
       /* Progress */
 
-      .toast-progress{
-          position:absolute;
-          left:0;
-          bottom:0;
+      .toast-progress {
+        position: absolute;
+        left: 0;
+        bottom: 0;
 
-          width:100%;
-          height:3px;
+        width: 100%;
+        height: 3px;
 
-          background:#0d6efd;
+        background: #0d6efd;
 
-          transform:scaleX(0);
-          transform-origin:left;
+        transform: scaleX(0);
+        transform-origin: left;
 
-          animation:progress 4s linear forwards;
+        animation: progress 4s linear forwards;
       }
 
-      .custom-toast.success .toast-progress{
-          background:#22c55e;
+      .custom-toast.success .toast-progress {
+        background: #22c55e;
       }
 
-      .custom-toast.error .toast-progress{
-          background:#ef4444;
+      .custom-toast.error .toast-progress {
+        background: #ef4444;
       }
 
-      .custom-toast.warning .toast-progress{
-          background:#f59e0b;
+      .custom-toast.warning .toast-progress {
+        background: #f59e0b;
       }
 
-      .custom-toast.info .toast-progress{
-          background:#3b82f6;
+      .custom-toast.info .toast-progress {
+        background: #3b82f6;
       }
 
-      @keyframes progress{
+      @keyframes progress {
+        from {
+          transform: scaleX(0);
+        }
 
-      from{
-      transform:scaleX(0);
+        to {
+          transform: scaleX(1);
+        }
       }
 
-      to{
-      transform:scaleX(1);
+      .fade-out {
+        animation: toastOut 0.3s forwards;
       }
 
+      @keyframes toastIn {
+        from {
+          opacity: 0;
+          transform: translateY(-18px);
+        }
+
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
       }
 
-      .fade-out{
-      animation:toastOut .3s forwards;
+      @keyframes toastOut {
+        to {
+          opacity: 0;
+          transform: translateY(-18px);
+        }
       }
 
-      @keyframes toastIn{
+      @media (max-width: 850px) {
 
-      from{
-      opacity:0;
-      transform:translateY(-18px);
-      }
-
-      to{
-      opacity:1;
-      transform:translateY(0);
-      }
-
-      }
-
-      @keyframes toastOut{
-
-      to{
-      opacity:0;
-      transform:translateY(-18px);
-      }
-
-      }
-
-      @media (max-width: 768px) {
         body {
-          padding-top: 108px;
+            padding-top: 110px;
         }
+
         .main-nav {
-          padding: 0 12px;
-          gap: 8px;
-          height: 56px;
+            padding: 12px 16px;
+            gap: 12px;
+            min-height: 70px;
+            flex-wrap: wrap;
         }
+
         .nav-logo {
-          font-size: 18px;
+            font-size: 20px;
+            margin-right: 0;
         }
-        .btn-categories span {
-          display: none;
+
+        .search-container {
+            order: 3;
+            width: 100%;
+            flex: 0 0 100%;
         }
-        .btn-categories {
-          padding: 8px 10px;
+
+        .search-wrap {
+            max-width: 100%;
+            width: 100%;
+            min-width: 0;
+            height: 44px;
         }
-        .nav-divider {
-          display: none;
-        }
+
         .search-wrap input {
-          padding: 8px 10px;
-          font-size: 13px;
+            font-size: 13px;
+            padding: 0 12px;
+            height: 44px;
         }
+
+        .search-category select {
+            min-width: 120px;
+            padding: 0 12px;
+            height: 44px;
+            font-size: 13px;
+        }
+
         .btn-search {
-          padding: 8px 12px;
+            height: 44px;
+            padding: 0 18px;
+            font-size: 13px;
         }
-        .icon-btn span {
-          display: none;
+
+        .nav-divider {
+            display: none;
         }
+
+        .nav-right {
+            margin-left: auto;
+            gap: 10px;
+        }
+
         .icon-btn {
-          padding: 6px 7px;
+            padding: 6px;
         }
+
+        .icon-btn span {
+            display: none;
+        }
+
+        .icon-btn svg {
+            width: 22px;
+            height: 22px;
+        }
+
+        .brand-strip-wrapper {
+            top: 115px;
+        }
+
         .cat-bar {
-          top: 88px;
-          padding: 0 12px;
-          height: 32px;
-        }
-        .cat-link {
-          font-size: 12px;
-          padding: 0 10px;
-        }
-        .page-container {
-          padding: 16px 12px;
-        }
-        .brand-popup {
-          width: 220px;
-        }
-        .cat-bar {
-          top: 88px;
-          height: 40px;
-          padding: 0 36px;
+            top: 96px;
+            height: 40px;
+            padding: 0 20px;
         }
 
         .cat-link {
-          font-size: 12px;
-          padding: 0 12px;
+            font-size: 12px;
+            padding: 0 10px;
+        }
+
+        .brand-popup {
+            width: 220px;
         }
 
         .brand-item img {
-          width: 20px;
-          height: 20px;
+            width: 20px;
+            height: 20px;
         }
 
         .brand-scroll-btn {
-          width: 26px;
-          height: 26px;
-          font-size: 12px;
+            width: 26px;
+            height: 26px;
+            font-size: 12px;
         }
       }
       @media (max-width: 480px) {
+
+        body {
+            padding-top: 130px;
+        }
+
         .top-bar {
-          font-size: 10px;
-          gap: 4px;
-          padding: 6px 10px;
+            font-size: 10px;
+            padding: 6px 10px;
+            gap: 4px;
         }
+
+        .main-nav {
+            padding: 10px 12px;
+            gap: 10px;
+        }
+
         .nav-logo {
-          font-size: 16px;
+            font-size: 18px;
         }
+
+        .search-wrap {
+            height: 42px;
+        }
+
+        .search-wrap input {
+            height: 42px;
+            font-size: 12px;
+            padding: 0 10px;
+        }
+
+        .search-category select {
+            min-width: 95px;
+            padding: 0 8px;
+            font-size: 12px;
+            height: 42px;
+        }
+
+        .btn-search {
+            height: 42px;
+            padding: 0 14px;
+            font-size: 12px;
+        }
+
+        .nav-right {
+            gap: 6px;
+        }
+
         .icon-btn {
-          padding: 6px 5px;
+            padding: 4px;
+        }
+
+        .icon-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .brand-strip-wrapper {
+            top: 100px;
+        }
+
+        .cat-bar {
+            top: 102px;
+        }
+
+        .btn-search {
+            width: 44px;
+            padding: 0;
+            justify-content: center;
+        }
+
+        .btn-search span {
+            display: none;
         }
       }
     </style>
@@ -707,151 +810,87 @@
   </head>
 
   <body>
-    <!-- MAIN NAVBAR -->
+    <!-- =========================
+            MAIN NAVBAR
+    ========================== -->
     <nav class="main-nav">
+      <!-- Logo -->
       <a href="{% url 'products:view_products' %}" class="nav-logo">
         Shop<span>Mart</span>
       </a>
 
-      <div class="nav-item dropdown" style="list-style: none">
-        <button
-          class="btn-categories dropdown-toggle"
-          type="button"
-          data-bs-toggle="dropdown"
-          aria-expanded="false"
+      <div class="search-container">
+        <form
+          class="search-wrap"
+          method="GET"
+          action="{% url 'products:view_products' %}"
+          autocomplete="off"
+          style="position: relative"
         >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.5"
-          >
-            <line x1="3" y1="6" x2="21" y2="6" />
-            <line x1="3" y1="12" x2="21" y2="12" />
-            <line x1="3" y1="18" x2="21" y2="18" />
-          </svg>
-          <span>Categories</span>
-        </button>
-        <ul class="dropdown-menu">
-          {% for cat in all_categories %}
-          <li>
-            <a
-              class="dropdown-item"
-              href="{% url 'products:view_products' %}?category={{ cat.slug }}"
-            >
-              {{ cat.name }}
-            </a>
-          </li>
-          {% empty %}
-          <li>
-            <a class="dropdown-item disabled" href="#">No categories found</a>
-          </li>
-          {% endfor %}
-        </ul>
-      </div>
+          <div class="search-category">
+            <select name="category">
+              <option value="">All Categories</option>
 
-      <form
-        class="search-wrap"
-        method="GET"
-        action="{% url 'products:view_products' %}"
-        style="position: relative"
-        autocomplete="off"
-      >
-        <input
-          type="search"
-          id="search-input"
-          name="q"
-          placeholder="Search for products, brands..."
-          value="{{ request.GET.q }}"
-        />
-        <button class="btn-search" type="submit">
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.5"
-          >
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-        </button>
-        <div
-          id="search-dropdown"
-          style="
-            display: none;
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: #fff;
-            border: 1.5px solid #e5e7eb;
-            border-top: none;
-            border-radius: 0 0 10px 10px;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-            z-index: 2000;
-            overflow: hidden;
-          "
-        ></div>
-      </form>
+              {% for cat in all_categories %}
+
+              <option value="{{ cat.slug }}"{% if request.GET.category == cat.slug %} selected{% endif %}>
+                {{ cat.name }}
+              </option>
+
+              {% endfor %}
+            </select>
+          </div>
+
+          <input
+            type="search"
+            id="search-input"
+            name="q"
+            placeholder="Search for products, brands..."
+            value="{{ request.GET.q }}"
+          />
+
+          <button type="submit" class="btn-search">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <span>Search</span>
+          </button>
+
+          <div
+            id="search-dropdown"
+            style="
+              display: none;
+              position: absolute;
+              top: 100%;
+              left: 0;
+              right: 0;
+              background: #fff;
+              border: 1.5px solid #e5e7eb;
+              border-top: none;
+              border-radius: 0 0 10px 10px;
+              box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+              z-index: 2000;
+              overflow: hidden;
+            "
+          ></div>
+        </form>
+      </div>
 
       <div class="nav-divider"></div>
 
       <div class="nav-right">
         {% if request.user.is_authenticated %}
-        <a href="{% url 'profile' %}" class="icon-btn">
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke-width="2"
-          >
-            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
-            <circle cx="12" cy="7" r="4" />
-          </svg>
-          <span>{{ request.user.username }}</span>
-        </a>
-
-        <a href="{% url 'products:wishlist' %}" class="icon-btn">
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke-width="2"
-          >
-            <path
-              d="M20.8 4.6c-1.5-1.4-4-1.4-5.5 0L12 7.9 8.7 4.6c-1.5-1.4-4-1.4-5.5 0-1.5 1.5-1.5 4 0 5.5L12 20l8.8-9.9c1.5-1.5 1.5-4 0-5.5z"
-            />
-          </svg>
-          <span>Wishlist</span>
-        </a>
-
-        <a href="{% url 'cart' %}" class="icon-btn">
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke-width="2"
-          >
-            <circle cx="9" cy="21" r="1" />
-            <circle cx="20" cy="21" r="1" />
-            <path
-              d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"
-            />
-          </svg>
-          <span>Cart</span>
-          {% with cart_count=request.user.cart.total_items %} {% if cart_count %}
-          <span class="cart-badge">{{ cart_count }}</span>
-          {% endif %} 
-          
-          {% endwith %}
-        </a>
+        <!-- =========================
+                ALERTS
+        ========================== -->
 
         <div class="nav-item dropdown">
           <a
@@ -872,188 +911,68 @@
               <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
               <path d="M13.73 21a2 2 0 01-3.46 0" />
             </svg>
+
             <span>Alerts</span>
+
             {% if unread_notification_count %}
-            <span class="notif-badge">{{ unread_notification_count }}</span>
+            <span class="notif-badge"> {{ unread_notification_count }} </span>
             {% endif %}
           </a>
-          <ul class="dropdown-menu dropdown-menu-end notif-dropdown-menu" aria-labelledby="notifBell">
-            {% if recent_notifications %}
-              {% for n in recent_notifications %}
-              <li>
-                <a class="notif-item" href="{% url 'notifications:mark_read' n.id %}">
-                  <div class="notif-item-title">
-                    {% if not n.is_read %}<span class="notif-unread-dot"></span>{% endif %}{{ n.title }}
-                  </div>
-                  <div class="notif-item-message">{{ n.message|truncatechars:70 }}</div>
-                </a>
-              </li>
-              {% endfor %}
-              <li><hr class="dropdown-divider my-1"></li>
-              <li>
-                <a class="dropdown-item text-center small" href="{% url 'notifications:list' %}">
-                  View all notifications
-                </a>
-              </li>
+
+          <ul
+            class="dropdown-menu dropdown-menu-end notif-dropdown-menu"
+            aria-labelledby="notifBell"
+          >
+            {% if recent_notifications %} {% for n in recent_notifications %}
+
+            <li>
+              <a
+                class="notif-item"
+                href="{% url 'notifications:mark_read' n.id %}"
+              >
+                <div class="notif-item-title">
+                  {% if not n.is_read %}
+                  <span class="notif-unread-dot"></span>
+                  {% endif %} {{ n.title }}
+                </div>
+
+                <div class="notif-item-message">
+                  {{ n.message|truncatechars:70 }}
+                </div>
+              </a>
+            </li>
+
+            {% endfor %}
+
+            <li>
+              <hr class="dropdown-divider my-1" />
+            </li>
+
+            <li>
+              <a
+                class="dropdown-item text-center small"
+                href="{% url 'notifications:list' %}"
+              >
+                View all notifications
+              </a>
+            </li>
+
             {% else %}
-              <li><span class="dropdown-item text-muted small">No notifications yet</span></li>
+
+            <li>
+              <span class="dropdown-item text-muted small">
+                No notifications yet
+              </span>
+            </li>
+
             {% endif %}
           </ul>
         </div>
 
-        <a href="{% url 'order_list' %}" class="icon-btn">
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke-width="2"
-          >
-            <path
-              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"
-            />
-            <rect x="9" y="3" width="6" height="4" rx="2" />
-            <line x1="9" y1="12" x2="15" y2="12" />
-            <line x1="9" y1="16" x2="13" y2="16" />
-          </svg>
-          <span>Orders</span>
-        </a>
+        <!-- =========================
+                    CART
+        ========================== -->
 
-        <div class="nav-divider"></div>
-
-        {% if request.user.is_staff %}
-        <div style="position: relative" id="admin-dropdown-wrap">
-          <button
-            onclick="toggleAdminMenu()"
-            class="icon-btn"
-            style="
-              color: #f59e0b;
-              border: none;
-              cursor: pointer;
-              background: transparent;
-            "
-          >
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#f59e0b"
-              stroke-width="2"
-            >
-              <circle cx="12" cy="12" r="3" />
-              <path
-                d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"
-              />
-            </svg>
-            <span>Admin ▾</span>
-          </button>
-
-          <div
-            id="admin-menu"
-            style="
-              display: none;
-              position: absolute;
-              right: 0;
-              top: 52px;
-              background: #fff;
-              border: 1px solid #e5e7eb;
-              border-radius: 10px;
-              box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-              min-width: 185px;
-              z-index: 9999;
-              overflow: hidden;
-            "
-          >
-            <!-- Django Admin -->
-            <a
-              href="/admin/"
-              style="
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                padding: 11px 16px;
-                font-size: 13px;
-                font-weight: 500;
-                color: #374151;
-                text-decoration: none;
-                border-bottom: 1px solid #f3f4f6;
-                font-family: &quot;DM Sans&quot;, sans-serif;
-              "
-              onmouseenter="this.style.background = '#f9fafb'"
-              onmouseleave="this.style.background = ''"
-            >
-              <svg
-                width="15"
-                height="15"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#6b7280"
-                stroke-width="2"
-              >
-                <rect x="3" y="3" width="7" height="7" />
-                <rect x="14" y="3" width="7" height="7" />
-                <rect x="14" y="14" width="7" height="7" />
-                <rect x="3" y="14" width="7" height="7" />
-              </svg>
-              Django Admin
-            </a>
-
-            <!-- Churn Dashboard -->
-            <a
-              href="{% url 'churn:dashboard' %}"
-              style="
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                padding: 11px 16px;
-                font-size: 13px;
-                font-weight: 500;
-                color: #374151;
-                text-decoration: none;
-                font-family: &quot;DM Sans&quot;, sans-serif;
-              "
-              onmouseenter="this.style.background = '#f9fafb'"
-              onmouseleave="this.style.background = ''"
-            >
-              <svg
-                width="15"
-                height="15"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#6b7280"
-                stroke-width="2"
-              >
-                <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
-                <circle cx="9" cy="7" r="4" />
-                <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
-              </svg>
-              Churn Dashboard
-            </a>
-          </div>
-        </div>
-        <div class="nav-divider"></div>
-        {% endif %}
-
-        <form action="{% url 'logout' %}" method="post" style="display: inline">
-          {% csrf_token %}
-          <button type="submit" class="icon-btn active-link">
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke-width="2"
-            >
-              <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
-              <polyline points="16 17 21 12 16 7" />
-              <line x1="21" y1="12" x2="9" y2="12" />
-            </svg>
-            <span>Logout</span>
-          </button>
-        </form>
-
-        {% else %}
         <a href="{% url 'cart' %}" class="icon-btn">
           <svg
             width="20"
@@ -1064,14 +983,189 @@
           >
             <circle cx="9" cy="21" r="1" />
             <circle cx="20" cy="21" r="1" />
+
             <path
               d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"
             />
           </svg>
+
           <span>Cart</span>
+
+          {% with cart_count=request.user.cart.total_items %} {% if cart_count %}
+          <span class="cart-badge"> {{ cart_count }} </span>
+          {% endif %} {% endwith %}
         </a>
 
-        <div class="nav-divider"></div>
+        <!-- =========================
+                ACCOUNT MENU
+        ========================== -->
+
+        <div class="nav-item dropdown">
+          <a
+            href="#"
+            class="icon-btn dropdown-toggle"
+            id="accountDropdown"
+            role="button"
+            data-bs-toggle="dropdown"
+            aria-expanded="false"
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke-width="2"
+            >
+              <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
+
+            <span>{{ request.user.username }}</span>
+          </a>
+
+          <ul
+            class="dropdown-menu dropdown-menu-end"
+            aria-labelledby="accountDropdown"
+          >
+            <li>
+              <a class="dropdown-item" href="{% url 'profile' %}">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  style="margin-right: 10px"
+                >
+                  <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+
+                My Profile
+              </a>
+            </li>
+
+            <li>
+              <a class="dropdown-item" href="{% url 'order_list' %}">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  style="margin-right: 10px"
+                >
+                  <path
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"
+                  />
+                  <rect x="9" y="3" width="6" height="4" rx="2" />
+                  <line x1="9" y1="12" x2="15" y2="12" />
+                  <line x1="9" y1="16" x2="13" y2="16" />
+                </svg>
+
+                My Orders
+              </a>
+            </li>
+
+            <li>
+              <a class="dropdown-item" href="{% url 'products:wishlist' %}">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  style="margin-right: 10px"
+                >
+                  <path
+                    d="M20.8 4.6c-1.5-1.4-4-1.4-5.5 0L12 7.9 8.7 4.6c-1.5-1.4-4-1.4-5.5 0-1.5 1.5-1.5 4 0 5.5L12 20l8.8-9.9c1.5-1.5 1.5-4 0-5.5z"
+                  />
+                </svg>
+
+                Wishlist
+              </a>
+            </li>
+            {% if request.user.is_staff %}
+            <li><hr class="dropdown-divider" /></li>
+
+            <li>
+              <a class="dropdown-item" href="{% url 'churn:dashboard' %}">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  style="margin-right: 10px"
+                >
+                  <path d="M3 3v18h18" />
+                  <polyline points="7 14 11 10 14 13 20 7" />
+                </svg>
+
+                Churn Dashboard
+              </a>
+            </li>
+
+            <li>
+              <a class="dropdown-item" href="/admin/">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  style="margin-right: 10px"
+                >
+                  <rect x="3" y="3" width="7" height="7" />
+                  <rect x="14" y="3" width="7" height="7" />
+                  <rect x="3" y="14" width="7" height="7" />
+                  <rect x="14" y="14" width="7" height="7" />
+                </svg>
+
+                Django Admin
+              </a>
+            </li>
+            {% endif %}
+
+            <li><hr class="dropdown-divider" /></li>
+
+            <li>
+              <form action="{% url 'logout' %}" method="post">
+                {% csrf_token %}
+
+                <button
+                  type="submit"
+                  class="dropdown-item text-danger d-flex align-items-center"
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    style="margin-right: 10px"
+                  >
+                    <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+                    <polyline points="16 17 21 12 16 7" />
+                    <line x1="21" y1="12" x2="9" y2="12" />
+                  </svg>
+
+                  Logout
+                </button>
+              </form>
+            </li>
+          </ul>
+        </div>
+
+        {% else %}
+
+        <!-- <div class="nav-divider"></div> -->
 
         <a href="{% url 'login' %}" class="icon-btn active-link">
           <svg
@@ -1108,7 +1202,6 @@
       </div>
     </nav>
 
-    <!-- BRAND STRIP -->
     <!-- BRAND STRIP -->
     <div class="brand-strip-wrapper">
       <button
@@ -1174,38 +1267,28 @@
 
     {% if messages %}
     <div id="toast-container">
-    {% for message in messages %}
-    <div class="custom-toast {{ message.tags }}">
+      {% for message in messages %}
+      <div class="custom-toast {{ message.tags }}">
         <div class="toast-icon">
-            {% if message.tags == "success" %}
-                <i class="fas fa-check"></i>
-            {% elif message.tags == "error" %}
-                <i class="fas fa-times"></i>
-            {% elif message.tags == "warning" %}
-                <i class="fas fa-exclamation"></i>
-            {% else %}
-                <i class="fas fa-info"></i>
-            {% endif %}
+          {% if message.tags == "success" %}
+          <i class="fas fa-check"></i>
+          {% elif message.tags == "error" %}
+          <i class="fas fa-times"></i>
+          {% elif message.tags == "warning" %}
+          <i class="fas fa-exclamation"></i>
+          {% else %}
+          <i class="fas fa-info"></i>
+          {% endif %}
         </div>
         <div class="toast-body">
-            <div class="toast-title">
-                {% if message.tags == "success" %}
-                    Success
-                {% elif message.tags == "error" %}
-                    Error
-                {% elif message.tags == "warning" %}
-                    Warning
-                {% else %}
-                    Information
-                {% endif %}
-            </div>
-            <div class="toast-message">
-                {{ message }}
-            </div>
+          <div class="toast-title">
+            {% if message.tags == "success" %} Success {% elif message.tags == "error" %} Error {% elif message.tags == "warning" %} Warning {% else %} Information {% endif %}
+          </div>
+          <div class="toast-message">{{ message }}</div>
         </div>
         <div class="toast-progress"></div>
-    </div>
-    {% endfor %}
+      </div>
+      {% endfor %}
     </div>
     {% endif %}
 
