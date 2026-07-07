@@ -143,7 +143,7 @@
           <!-- Subtotal row -->
           <tr class="text-muted">
             <td colspan="3" class="text-end">Subtotal</td>
-            <td class="text-end">Rs. {{ order.total_price }}</td>
+            <td class="text-end">Rs. {{ order.total_price|add:order.discount_amount }}</td>
           </tr>
 
           <!-- Coupon discount row — only shown if a coupon was applied -->
@@ -161,11 +161,7 @@
           <tr>
             <td colspan="3" class="text-end fw-bold">Grand Total</td>
             <td class="text-end fw-bold text-primary fs-5">
-              {% if order.coupon and order.discount_amount %}
-                Rs. {{ order.final_price }}
-              {% else %}
-                Rs. {{ order.total_price }}
-              {% endif %}
+              Rs. {{ order.total_price }}
             </td>
           </tr>
         </tfoot>
