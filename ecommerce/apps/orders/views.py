@@ -15,6 +15,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 
+from apps.analytics.tasks import paid_order_created
 from apps.products.models import Product
 from apps.activity.models import UserEvent
 from apps.addresses.models import Address
@@ -23,7 +24,6 @@ from .forms import RefundRequestForm
 from .models import Cart, CartItem, Order, OrderItem, Coupon
 from django.core.paginator import Paginator
 from django.db.models import Q
-
 SESSION_COUPON_KEY = 'applied_coupon_code'
 
 
@@ -542,21 +542,21 @@ def checkout_view(request):
 
 @login_required
 def esewa_success(request):
-    encoded_data = request.GET.get('data')
+    encoded_data = request.GET.get("data")
 
     if not encoded_data:
         messages.error(
             request,
             "Invalid eSewa response."
         )
-        return redirect('cart')
+        return redirect("cart")
 
     try:
         response_data = decode_esewa_response(encoded_data)
 
-        transaction_uuid = response_data.get('transaction_uuid')
-        status = response_data.get('status')
-        received_signature = response_data.get('signature')
+        transaction_uuid = response_data.get("transaction_uuid")
+        status = response_data.get("status")
+        received_signature = response_data.get("signature")
 
         order = get_object_or_404(
             Order,
@@ -564,73 +564,88 @@ def esewa_success(request):
             user=request.user
         )
 
-        if order.payment_status == 'PAID':
+        # Already paid
+        if order.payment_status == "PAID":
             messages.info(
                 request,
                 "Payment already verified."
             )
-            return redirect('order_detail', order_id=order.id)
+            return redirect(
+                "order_detail",
+                order_id=order.id
+            )
 
+        # Verify signature
         response_message = build_esewa_response_message(response_data)
         expected_signature = generate_esewa_signature(response_message)
 
         if received_signature != expected_signature:
-            order.payment_status = 'FAILED'
-            order.save()
+
+            order.payment_status = "FAILED"
+            order.save(update_fields=["payment_status"])
 
             UserEvent.objects.create(
                 user=request.user,
-                event_type='PAYMENT_FAILED'
+                event_type="PAYMENT_FAILED"
             )
 
             messages.error(
                 request,
                 "Payment verification failed. Invalid signature."
             )
-            return redirect('cart')
 
-        if status != 'COMPLETE':
-            order.payment_status = 'FAILED'
-            order.save()
+            return redirect("cart")
+
+        # Verify payment status
+        if status != "COMPLETE":
+
+            order.payment_status = "FAILED"
+            order.save(update_fields=["payment_status"])
 
             UserEvent.objects.create(
                 user=request.user,
-                event_type='PAYMENT_FAILED'
+                event_type="PAYMENT_FAILED"
             )
 
             messages.error(
                 request,
                 "Payment was not completed."
             )
-            return redirect('cart')
+
+            return redirect("cart")
 
         with transaction.atomic():
-            order_items = order.items.select_related('product')
 
-            # Re-check stock only after payment success
+            order_items = order.items.select_related("product")
+
+            # Check stock again
             for item in order_items:
+
                 product = item.product
 
                 if product is None:
                     continue
 
                 if item.quantity > product.stock:
-                    order.payment_status = 'FAILED'
-                    order.save()
+
+                    order.payment_status = "FAILED"
+                    order.save(update_fields=["payment_status"])
 
                     UserEvent.objects.create(
                         user=request.user,
-                        event_type='PAYMENT_FAILED'
+                        event_type="PAYMENT_FAILED"
                     )
 
                     messages.error(
                         request,
                         f"Payment received, but stock is not enough for '{item.product_name}'. Please contact support."
                     )
-                    return redirect('cart')
 
-            # Payment verified. Now reduce stock.
+                    return redirect("cart")
+
+            # Reduce stock
             for item in order_items:
+
                 product = item.product
 
                 if product is None:
@@ -641,35 +656,52 @@ def esewa_success(request):
                 if product.stock < 0:
                     product.stock = 0
 
-                product.save()
+                product.save(update_fields=["stock"])
 
-            order.payment_status = 'PAID'
-            order.esewa_ref_id = response_data.get('transaction_code')
+            # Mark order as paid
+            order.payment_status = "PAID"
+            order.esewa_ref_id = response_data.get("transaction_code")
             order.paid_at = timezone.now()
-            order.save()
 
-            # Coupon usage is only counted once payment is confirmed,
-            # so failed/abandoned checkouts never consume a redemption.
+            order.save(
+                update_fields=[
+                    "payment_status",
+                    "esewa_ref_id",
+                    "paid_at",
+                ]
+            )
+
+            # ✅ IMPORTANT
+            # Queue analytics update AFTER database commit
+            transaction.on_commit(
+                lambda: paid_order_created.delay(order.id)
+            )
+
+            # Update coupon usage
             if order.coupon:
-                Coupon.objects.filter(pk=order.coupon_id).update(
-                    used_count=F('used_count') + 1
+                Coupon.objects.filter(
+                    pk=order.coupon_id
+                ).update(
+                    used_count=F("used_count") + 1
                 )
 
+            # Empty cart
             cart = Cart.objects.filter(
                 user=request.user
             ).first()
 
             if cart:
                 cart.items.all().delete()
-            
+
+            # Activity logs
             UserEvent.objects.create(
                 user=request.user,
-                event_type='PAYMENT_SUCCESS'
+                event_type="PAYMENT_SUCCESS"
             )
 
             UserEvent.objects.create(
                 user=request.user,
-                event_type='ORDER'
+                event_type="ORDER"
             )
 
         messages.success(
@@ -677,15 +709,19 @@ def esewa_success(request):
             f"Payment successful. Order #{order.id} placed successfully!"
         )
 
-        return redirect('order_detail', order_id=order.id)
+        return redirect(
+            "order_detail",
+            order_id=order.id
+        )
 
     except Exception as e:
+
         messages.error(
             request,
             f"Could not verify eSewa payment: {e}"
         )
-        return redirect('cart')
 
+        return redirect("cart")
 
 @login_required
 def esewa_failure(request):
@@ -890,17 +926,50 @@ def order_detail_admin(request, pk):
 @staff_member_required
 def order_update_status(request, pk):
     order = get_object_or_404(Order, pk=pk)
-    if request.method == 'POST':
-        new_status = request.POST.get('status')
-        note = request.POST.get('note', '').strip() or None
-        valid_statuses = [choice[0] for choice in Order.STATUS_CHOICES if choice[0] != 'cancelled']
+
+    if request.method == "POST":
+
+        new_status = request.POST.get("status")
+        note = request.POST.get("note", "").strip() or None
+
+        valid_statuses = [
+            choice[0]
+            for choice in Order.STATUS_CHOICES
+            if choice[0] != "cancelled"
+        ]
+
         if new_status in valid_statuses:
-            order.set_status(new_status, note=note, changed_by=request.user)
-            messages.success(request, f"Order #{order.id} marked as {order.get_status_display()}.")
+
+            order.set_status(
+                new_status,
+                note=note,
+                changed_by=request.user
+            )
+
+            # Automatically mark COD orders as paid when delivered
+            if (
+                new_status == "delivered"
+                and order.payment_method == "COD"
+                and order.payment_status != "PAID"
+            ):
+                order.payment_status = "PAID"
+                order.save(update_fields=["payment_status"])
+
+                transaction.on_commit(
+                    lambda: paid_order_created.delay(order.id)
+                )
+
+            messages.success(
+                request,
+                f"Order #{order.id} marked as {order.get_status_display()}."
+            )
+
         else:
             messages.error(request, "Invalid status.")
-    return redirect(request.META.get('HTTP_REFERER', 'order_list_admin'))
- 
+
+    return redirect(
+        request.META.get("HTTP_REFERER", "order_list_admin")
+    )
  
 @staff_member_required
 def order_cancel(request, pk):
