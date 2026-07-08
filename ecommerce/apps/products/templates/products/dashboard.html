@@ -128,6 +128,42 @@
     font-weight: 500;
   }
 
+  /* ── OFFER COUNTDOWN ─────────────────────────────── */
+
+  .offer-countdown{
+    margin-top:12px;
+    display:inline-block;
+    background:#fff3cd;
+    color:#856404;
+    padding:6px 14px;
+    border-radius:999px;
+    font-weight:600;
+    font-size:.9rem;
+  }
+
+  .offer-countdown .countdown{
+    color:#dc3545;
+    font-weight:700;
+  }
+
+  .offer-kicker{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+
+    background:rgba(255,255,255,.18);
+    color:#fff;
+
+    padding:8px 16px;
+    border-radius:999px;
+
+    font-size:.9rem;
+    font-weight:700;
+    letter-spacing:.3px;
+
+    backdrop-filter:blur(10px);
+  }
+
   /* ── POPULAR PRODUCTS ─────────────────────────────── */
   .popular-section { margin-bottom: 36px; }
   .popular-carousel { position: relative; padding: 0 44px; }
@@ -338,7 +374,10 @@
     <div class="carousel-item {% if forloop.first %}active{% endif %}">
       <div class="offer-slide">
         <div>
-          <span class="offer-kicker">⚡ Limited Time Offer</span>
+          <span class="offer-kicker"
+                data-end="{{ p.offer_end|date:'c' }}">
+              ⚡ Flash Sale
+          </span>
           <h2 class="offer-title">{{ p.discount_percent }}% OFF on {{ p.name }}</h2>
           <p class="offer-text">Special deal alert! Hurry up and grab it soon before stock runs out.</p>
           <div class="offer-price">
@@ -531,5 +570,36 @@
   </div>
   {% endfor %}
 </div>
+
+<script>
+  document.querySelectorAll(".offer-kicker").forEach(function(badge){
+      if(!badge.dataset.end) return;
+      const end = new Date(badge.dataset.end);
+      function update(){
+          const now = new Date();
+          const diff = end - now;
+          if(diff <= 0){
+              badge.innerHTML = "❌ Offer Expired";
+              return;
+          }
+          const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+          const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+          const mins = Math.floor((diff / (1000 * 60)) % 60);
+          const secs = Math.floor((diff / 1000) % 60);
+          if(days > 0){
+              badge.innerHTML =
+                  `⚡ Flash Sale • Ends in ${days}d ${hours}h`;
+          }else if(hours > 0){
+              badge.innerHTML =
+                  `🔥 Ends Today • ${hours}h ${mins}m`;
+          }else{
+              badge.innerHTML =
+                  `🚨 Final Hours • ${mins}m ${secs}s`;
+          }
+      }
+      update();
+      setInterval(update,1000);
+  });
+</script>
 
 {% endblock %}
