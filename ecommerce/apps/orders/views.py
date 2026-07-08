@@ -15,10 +15,11 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 
-from apps.analytics.tasks import paid_order_created
+from apps.analytics.tasks import order_refunded, paid_order_created
 from apps.products.models import Product
 from apps.activity.models import UserEvent
 from apps.addresses.models import Address
+from apps.notifications.models import Notification
 from .forms import RefundRequestForm
 
 from .models import Cart, CartItem, Order, OrderItem, Coupon
@@ -978,3 +979,44 @@ def order_cancel(request, pk):
         order.set_status('cancelled', note='Cancelled by admin', changed_by=request.user)
         messages.success(request, f"Order #{order.id} has been cancelled.")
     return redirect(request.META.get('HTTP_REFERER', 'order_list_admin'))
+
+@staff_member_required
+def process_refund(request, pk):
+    order = get_object_or_404(Order, pk=pk)
+
+    if request.method != "POST":
+        return redirect('order_list_admin')
+
+    reference = request.POST.get("reference_id")
+    notes = request.POST.get("notes")
+
+    if not reference:
+        return redirect('order_list_admin')
+
+    # Guard against double-processing a refund (double-click, retry, etc.)
+    # — refund_order() subtracts revenue every time it's called, so this
+    # must run exactly once per order.
+    if order.payment_status == "REFUNDED":
+        return redirect('order_list_admin')
+
+    order.refund_reference = reference
+    order.refund_notes = notes
+    order.payment_status = "REFUNDED"
+    order.refunded_at = timezone.now()
+    order.save()
+
+    # Only pull the order out of the revenue numbers if it had actually
+    # been counted as paid revenue in the first place.
+    transaction.on_commit(lambda: order_refunded.delay(order.id))
+
+    Notification.objects.create(
+        recipient=order.user,
+        notif_type='REFUND',
+        title='Refund processed',
+        message=(
+            f"Your refund of Rs. {order.total_price} for order #{order.id} "
+            f"has been processed. Reference ID: {reference}."
+        ),
+    )
+
+    return redirect('order_list_admin')

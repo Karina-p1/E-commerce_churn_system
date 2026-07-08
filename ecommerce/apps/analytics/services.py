@@ -164,45 +164,113 @@ class RevenueService:
     
     @staticmethod
     def remove_paid_order(order):
+        """Order cancelled before payment was ever counted as final revenue."""
+        with transaction.atomic():
+            summary = RevenueSummary.objects.select_for_update().get(pk=1)
 
-        summary = RevenueService.get_summary()
-
-        summary.total_revenue -= order.total_price
-        summary.total_orders -= 1
-
-        if summary.total_orders > 0:
-            summary.average_order_value = (
-                summary.total_revenue /
-                summary.total_orders
+            RevenueSummary.objects.filter(pk=summary.pk).update(
+                total_revenue=F("total_revenue") - order.total_price,
+                total_orders=F("total_orders") - 1,
+                esewa_revenue=(
+                    F("esewa_revenue") - order.total_price
+                    if order.payment_method == "ESEWA"
+                    else F("esewa_revenue")
+                ),
+                cod_revenue=(
+                    F("cod_revenue") - order.total_price
+                    if order.payment_method == "COD"
+                    else F("cod_revenue")
+                ),
             )
-        else:
-            summary.average_order_value = Decimal("0.00")
 
-        if order.payment_method == "ESEWA":
-            summary.esewa_revenue -= order.total_price
+            summary.refresh_from_db()
 
-        elif order.payment_method == "COD":
-            summary.cod_revenue -= order.total_price
-
-        summary.save()
+            summary.average_order_value = (
+                summary.total_revenue / summary.total_orders
+                if summary.total_orders > 0
+                else Decimal("0.00")
+            )
+            summary.save(update_fields=["average_order_value"])
 
     @staticmethod
     def refund_order(order):
+        """
+        Reverses a PAID order out of both the lifetime summary and the
+        daily snapshot for the day the order was originally placed.
+        Call this once per order — calling it twice will double-subtract.
+        """
+        with transaction.atomic():
+            # -------------------------------
+            # Lifetime Revenue Summary
+            # -------------------------------
+            summary = RevenueSummary.objects.select_for_update().get(pk=1)
 
-        summary = RevenueService.get_summary()
-
-        summary.total_revenue -= order.total_price
-
-        if order.payment_method == "ESEWA":
-            summary.esewa_revenue -= order.total_price
-
-        elif order.payment_method == "COD":
-            summary.cod_revenue -= order.total_price
-
-        if summary.total_orders > 0:
-            summary.average_order_value = (
-                summary.total_revenue /
-                summary.total_orders
+            RevenueSummary.objects.filter(pk=summary.pk).update(
+                total_revenue=F("total_revenue") - order.total_price,
+                total_orders=F("total_orders") - 1,
+                esewa_revenue=(
+                    F("esewa_revenue") - order.total_price
+                    if order.payment_method == "ESEWA"
+                    else F("esewa_revenue")
+                ),
+                cod_revenue=(
+                    F("cod_revenue") - order.total_price
+                    if order.payment_method == "COD"
+                    else F("cod_revenue")
+                ),
             )
 
-        summary.save()
+            summary.refresh_from_db()
+
+            summary.average_order_value = (
+                summary.total_revenue / summary.total_orders
+                if summary.total_orders > 0
+                else Decimal("0.00")
+            )
+            summary.save(update_fields=["average_order_value"])
+
+            # -------------------------------
+            # Daily Revenue Snapshot
+            # -------------------------------
+            # Adjust the snapshot for the day the order was originally
+            # placed (that's the day its revenue was booked into).
+            snapshot_date = order.created_at.date()
+
+            snapshot = (
+                RevenueSnapshot.objects
+                .select_for_update()
+                .filter(date=snapshot_date)
+                .first()
+            )
+
+            if snapshot is None:
+                # No snapshot for that day (e.g. it predates snapshot
+                # tracking) — nothing to reverse, skip safely.
+                print(f"⚠️ No snapshot found for {snapshot_date}, skipping snapshot reversal")
+                return
+
+            RevenueSnapshot.objects.filter(pk=snapshot.pk).update(
+                total_revenue=F("total_revenue") - order.total_price,
+                total_orders=F("total_orders") - 1,
+                esewa_revenue=(
+                    F("esewa_revenue") - order.total_price
+                    if order.payment_method == "ESEWA"
+                    else F("esewa_revenue")
+                ),
+                cod_revenue=(
+                    F("cod_revenue") - order.total_price
+                    if order.payment_method == "COD"
+                    else F("cod_revenue")
+                ),
+            )
+
+            snapshot.refresh_from_db()
+
+            snapshot.average_order_value = (
+                snapshot.total_revenue / snapshot.total_orders
+                if snapshot.total_orders > 0
+                else Decimal("0.00")
+            )
+            snapshot.save(update_fields=["average_order_value"])
+
+            print(f"↩️ Refund reversed for {snapshot_date}: -{order.total_price}")
