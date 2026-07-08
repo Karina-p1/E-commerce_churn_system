@@ -8,6 +8,10 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
+# Timezone settings
+TIME_ZONE = 'Asia/Kathmandu'
+USE_TZ = True
+
 # Build paths
 BASE_DIR = Path(__file__).resolve().parent.parent
 
