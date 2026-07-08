@@ -41,8 +41,9 @@ def view_products(request):
     )
 
     special_offers = [
-        product for product in all_active_products
-        if product.discount_percent and product.discount_percent >= 30
+        product
+        for product in all_active_products
+        if product.is_offer_active
     ]
 
     # Filter by brand
