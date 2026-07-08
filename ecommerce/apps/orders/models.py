@@ -257,7 +257,7 @@ class Order(models.Model):
         ('INITIATED', 'Payment Initiated'),
         ('PAID', 'Paid'),
         ('FAILED', 'Failed'),
-        ("REFUND_PENDING", "Refund Pending"),
+        ("REFUND_PENDING", "Refund Requested"),
         ("REFUNDED", "Refunded"),
     ]
 
