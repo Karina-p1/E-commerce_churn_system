@@ -10,8 +10,6 @@ def paid_order_created(order_id):
 
     RevenueService.add_paid_order(order)
 
-    # Temporary: keep daily snapshot updated
-    RevenueService().calculate()
 
     print(f"Revenue updated for paid Order #{order.id}")
 

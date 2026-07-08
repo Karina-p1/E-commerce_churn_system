@@ -2,9 +2,9 @@ from collections import defaultdict
 from decimal import Decimal
 
 from cloudinary.utils import cloudinary_url
-
+from django.db import transaction
 from apps.activity.models import UserEvent
-from django.db.models import Avg, Sum
+from django.db.models import F, Avg, Sum
 from django.utils import timezone
 
 from apps.orders.models import Order
@@ -77,24 +77,90 @@ class RevenueService:
     @staticmethod
     def add_paid_order(order):
 
-        summary = RevenueService.get_summary()
+        today = timezone.localdate()
 
-        summary.total_revenue += order.total_price
-        summary.total_orders += 1
+        with transaction.atomic():
 
-        if summary.total_orders > 0:
+            # -------------------------------
+            # Lifetime Revenue Summary
+            # -------------------------------
+
+            summary = RevenueService.get_summary()
+
+            RevenueSummary.objects.filter(pk=summary.pk).update(
+                total_revenue=F("total_revenue") + order.total_price,
+                total_orders=F("total_orders") + 1,
+                esewa_revenue=(
+                    F("esewa_revenue") + order.total_price
+                    if order.payment_method == "ESEWA"
+                    else F("esewa_revenue")
+                ),
+                cod_revenue=(
+                    F("cod_revenue") + order.total_price
+                    if order.payment_method == "COD"
+                    else F("cod_revenue")
+                ),
+            )
+
+            summary.refresh_from_db()
+
             summary.average_order_value = (
                 summary.total_revenue /
                 summary.total_orders
             )
 
-        if order.payment_method == "ESEWA":
-            summary.esewa_revenue += order.total_price
+            summary.save(update_fields=["average_order_value"])
 
-        elif order.payment_method == "COD":
-            summary.cod_revenue += order.total_price
+            print("✅ RevenueSummary Updated")
+            print(f"Revenue : {summary.total_revenue}")
+            print(f"Orders  : {summary.total_orders}")
 
-        summary.save()
+            # -------------------------------
+            # Daily Revenue Snapshot
+            # -------------------------------
+
+            snapshot, created = RevenueSnapshot.objects.get_or_create(
+                date=today,
+                defaults={
+                    "total_revenue": Decimal("0.00"),
+                    "total_orders": 0,
+                    "average_order_value": Decimal("0.00"),
+                    "esewa_revenue": Decimal("0.00"),
+                    "cod_revenue": Decimal("0.00"),
+                }
+            )
+
+            RevenueSnapshot.objects.filter(pk=snapshot.pk).update(
+                total_revenue=F("total_revenue") + order.total_price,
+                total_orders=F("total_orders") + 1,
+                esewa_revenue=(
+                    F("esewa_revenue") + order.total_price
+                    if order.payment_method == "ESEWA"
+                    else F("esewa_revenue")
+                ),
+                cod_revenue=(
+                    F("cod_revenue") + order.total_price
+                    if order.payment_method == "COD"
+                    else F("cod_revenue")
+                ),
+            )
+
+            snapshot.refresh_from_db()
+
+            snapshot.average_order_value = (
+                snapshot.total_revenue /
+                snapshot.total_orders
+            )
+
+            snapshot.save(update_fields=["average_order_value"])
+
+            if created:
+                print(f"📅 Created snapshot for {today}")
+            else:
+                print(f"📅 Updated snapshot for {today}")
+
+            print(f"Today's Revenue : {snapshot.total_revenue}")
+            print(f"Today's Orders  : {snapshot.total_orders}")
     
     @staticmethod
     def remove_paid_order(order):
@@ -119,6 +185,7 @@ class RevenueService:
             summary.cod_revenue -= order.total_price
 
         summary.save()
+
     @staticmethod
     def refund_order(order):
 
@@ -139,56 +206,3 @@ class RevenueService:
             )
 
         summary.save()
-            
-    def calculate(self):
-
-        today = timezone.localdate()
-
-        paid_orders = Order.objects.filter(
-            payment_status="PAID"
-        )
-
-        total_orders = paid_orders.count()
-
-        total_revenue = (
-            paid_orders.aggregate(
-                total=Sum("total_price")
-            )["total"] or 0
-        )
-
-        average_order = (
-            paid_orders.aggregate(
-                avg=Avg("total_price")
-            )["avg"] or 0
-        )
-
-        esewa = (
-            paid_orders.filter(
-                payment_method="ESEWA"
-            ).aggregate(
-                total=Sum("total_price")
-            )["total"] or 0
-        )
-
-        cod = (
-            paid_orders.filter(
-                payment_method="COD"
-            ).aggregate(
-                total=Sum("total_price")
-            )["total"] or 0
-        )
-
-        RevenueSnapshot.objects.update_or_create(
-
-            date=today,
-
-            defaults={
-                "total_revenue": total_revenue,
-                "total_orders": total_orders,
-                "average_order_value": average_order,
-                "esewa_revenue": esewa,
-                "cod_revenue": cod,
-            }
-        )
-
-        print("Revenue Analytics Updated")

@@ -37,7 +37,7 @@ def register_view(request):
 def login_view(request):
     if request.user.is_authenticated:
         if request.user.is_staff:
-            return redirect('admin_dashboard')
+            return redirect('analytics_dashboard')
         return redirect('products:view_products')
 
     if request.method == 'POST':
@@ -48,7 +48,7 @@ def login_view(request):
 
             # Staff → admin dashboard, regular users → home
             if user.is_staff:
-                return redirect('admin_dashboard')
+                return redirect('analytics_dashboard')
             
             next_url = request.POST.get('next') or request.GET.get('next') or 'products:view_products'
             return redirect(next_url)
