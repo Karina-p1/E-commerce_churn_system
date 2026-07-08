@@ -146,8 +146,50 @@
         outline: none;
         cursor: pointer;
         border-right: 1px solid #e5e7eb;
-        appearance: none;
         min-width: 170px;
+      }
+      .search-category{
+          position: relative;
+          display: flex;
+          align-items: center;
+      }
+
+      .search-category select{
+          appearance: none;
+          -webkit-appearance: none;
+          -moz-appearance: none;
+      }
+
+      .category-arrow{
+          position: absolute;
+          right: 12px;
+          pointer-events: none;
+          color: #6b7280;
+          transform-origin: center;
+          transition: transform .25s cubic-bezier(.4,0,.2,1);
+      }
+      .search-category:focus-within .category-arrow{
+          transform: rotate(180deg);
+      }
+      .account-label{
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          gap:4px;
+          transition: transform .25s cubic-bezier(.4,0,.2,1);
+      }
+      .account-arrow{
+          width:11px;
+          height:11px;
+          stroke:#6b7280;
+          transition: transform .25s cubic-bezier(.4,0,.2,1);
+      }
+      #accountDropdown .account-arrow{
+          transition: transform .25s ease;
+      }
+
+      #accountDropdown[aria-expanded="true"] .account-arrow{
+          transform: rotate(180deg);
       }
       .nav-divider {
         width: 1px;
@@ -839,6 +881,14 @@
 
               {% endfor %}
             </select>
+            <svg class="category-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <polyline
+                    points="6 9 12 15 18 9"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"/>
+            </svg>
           </div>
 
           <input
@@ -899,7 +949,7 @@
             id="notifBell"
             role="button"
             data-bs-toggle="dropdown"
-            aria-expanded="false"
+            aria-expanded="true"
           >
             <svg
               width="20"
@@ -1020,7 +1070,24 @@
               <circle cx="12" cy="7" r="4" />
             </svg>
 
-            <span>{{ request.user.username }}</span>
+            <span class="account-label">{{ request.user.username }}
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                class="account-arrow"
+                style="margin-left:4px;">
+
+                <polyline
+                    points="6 9 12 15 18 9"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"/>
+
+              </svg>
+            </span>
           </a>
 
           <ul
