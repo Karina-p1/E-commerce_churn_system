@@ -316,6 +316,11 @@
       <i class="ti ti-shopping-bag"></i>
       Manage Orders
     </a>
+    <a href="{% url 'coupon_list' %}"
+      class="nav-item {% if request.resolver_match.url_name in "coupon_list,coupon_add,coupon_edit" %}active{% endif %}">
+      <i class="ti ti-ticket"></i>
+      Manage Coupons
+    </a>
 
     <div class="nav-dropdown">
       <div class="nav-item nav-dropdown-toggle

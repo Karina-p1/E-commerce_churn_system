@@ -1,7 +1,7 @@
 from time import timezone
 from django.contrib.admin.views.decorators import staff_member_required
 from django.shortcuts import render
-from django.db.models import Sum, Avg
+from django.db.models import Q, Sum, Avg
 from .models import  RevenueSnapshot
 from apps.products.models import Product, Category, Brand, Wishlist
 from django.apps import apps
@@ -101,14 +101,31 @@ def analytics_dashboard(request):
         or get_model_or_none("churn", "Prediction")
     )
 
-    total_orders = Order.objects.count() if Order else 0
+    total_orders = Order.objects.filter(
+        Q(payment_method__iexact='cod') | Q(payment_method__iexact='esewa')
+    ).exclude(
+        payment_status='INITIATED'
+    ).count()
     total_customers = User.objects.filter(is_staff=False).count()
 
     product_views = 0
     cart_activity = 0
     wishlist_activity_events = 0
     order_activity = 0
+    category_analysis = (
+        Category.objects
+        .annotate(product_count=Count("products"))
+        .order_by("-product_count")[:6]
+    )
 
+    brand_analysis = (
+        Brand.objects
+        .annotate(product_count=Count("products"))
+        .order_by("-product_count")[:6]
+    )
+
+    total_categories = Category.objects.count()
+    total_brands = Brand.objects.count()
     if UserEvent:
         product_views = UserEvent.objects.filter(event_type="VIEW").count()
 
@@ -138,7 +155,6 @@ def analytics_dashboard(request):
     inactive_products = Product.objects.filter(is_active=False).count()
     out_of_stock_products = Product.objects.filter(stock=0).count()
     low_stock_products = Product.objects.filter(stock__gt=0, stock__lte=5).count()
-    discounted_products = Product.objects.filter(discount_price__isnull=False).count()
 
     total_wishlist_items = Wishlist.objects.count()
 
@@ -184,11 +200,12 @@ def analytics_dashboard(request):
         "total_orders": total_orders,
         "total_customers": total_customers,
         "total_products": total_products,
+        "total_brands": total_brands,
+        "total_categories": total_categories,
         "active_products": active_products,
         "inactive_products": inactive_products,
         "out_of_stock_products": out_of_stock_products,
         "low_stock_products": low_stock_products,
-        "discounted_products": discounted_products,
         "total_wishlist_items": total_wishlist_items,
         "product_views": product_views,
         "cart_activity": cart_activity,
@@ -203,4 +220,3 @@ def analytics_dashboard(request):
     }
 
     return render(request, "analytics/dashboard.html", context)
-

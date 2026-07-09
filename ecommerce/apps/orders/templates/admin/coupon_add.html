@@ -1,0 +1,259 @@
+{% extends 'admin_base.html' %}
+{% block title %}Add Coupon - ShopMart Admin{% endblock %}
+
+{% block start %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+
+<style>
+  .edit-page {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #f5f5f4; padding: 40px 20px; border-radius: 12px; color: #1a1a1a;
+    min-height: 80vh; display: flex; flex-direction: column; align-items: center;
+  }
+  .edit-header { display: flex; align-items: center; gap: 10px; margin-bottom: 22px; width: 100%; max-width: 640px; }
+  .back-link {
+    width: 34px; height: 34px; border-radius: 8px; background: #fff;
+    border: 0.5px solid #e5e5e5; display: flex; align-items: center; justify-content: center;
+    color: #888; text-decoration: none; transition: all 0.15s ease;
+  }
+  .back-link:hover { background: #2931a3; color: #fff; border-color: #2931a3; transform: translateX(-2px); }
+  .edit-header h1 { font-size: 19px; font-weight: 600; margin: 0; }
+  .edit-header .subtitle { font-size: 12px; color: #888; margin: 2px 0 0; }
+
+  .edit-card {
+    background: #fff; border: 0.5px solid #e5e5e5; border-radius: 14px; padding: 28px;
+    width: 100%; max-width: 640px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03), 0 8px 24px rgba(0,0,0,0.04);
+    animation: cardIn 0.35s ease;
+  }
+  @keyframes cardIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  .form-row { margin-bottom: 18px; }
+  .form-row label {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-size: 12px; font-weight: 600; color: #666; margin-bottom: 6px;
+    text-transform: uppercase; letter-spacing: 0.03em;
+  }
+  .form-row .hint { font-size: 11px; font-weight: 400; color: #aaa; text-transform: none; letter-spacing: 0; }
+
+  .form-row input[type="text"],
+  .form-row input[type="number"],
+  .form-row input[type="datetime-local"],
+  .form-row select,
+  .form-row textarea {
+    width: 100%; padding: 10px 12px; border: 1px solid #d4d4d4; border-radius: 8px;
+    font-size: 13.5px; font-family: inherit; color: #1a1a1a; box-sizing: border-box; background: #fff;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .form-row input:hover, .form-row select:hover { border-color: #b8b8b8; }
+  .form-row input:focus, .form-row select:focus {
+    outline: none; border-color: #2931a3; box-shadow: 0 0 0 3px rgba(41, 49, 163, 0.12);
+  }
+
+  .form-row input#code { text-transform: uppercase; font-family: 'Courier New', monospace; font-weight: 700; letter-spacing: 0.03em; }
+
+  .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+  .type-fields {
+    background: #f9fafb; border: 1px solid #eee; border-radius: 10px; padding: 16px; margin-bottom: 18px; display: none;
+  }
+  .type-fields.show { display: block; }
+  .type-fields .type-fields-label { font-size: 11.5px; font-weight: 700; color: #2931a3; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.03em; }
+
+  .checkbox-row {
+    display: flex; align-items: center; gap: 10px; padding: 12px 14px;
+    background: #f9fafb; border-radius: 8px; border: 1px solid #eee;
+  }
+  .checkbox-row input { width: 16px; height: 16px; accent-color: #2931a3; cursor: pointer; }
+  .checkbox-row label { margin: 0; font-size: 13px; font-weight: 500; color: #1a1a1a; cursor: pointer; }
+  .checkbox-row .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #ccc; margin-left: auto; transition: background 0.15s ease; }
+  .checkbox-row.active .status-dot { background: #22c55e; }
+
+  .form-actions { display: flex; gap: 10px; margin-top: 26px; align-items: center; }
+  .btn {
+    padding: 11px 20px; border-radius: 8px; font-size: 13px; font-weight: 600;
+    text-decoration: none; text-align: center; cursor: pointer; border: none; transition: all 0.15s ease;
+  }
+  .btn-primary { background: #2931a3; color: #fff; }
+  .btn-primary:hover { background: #232a8a; transform: translateY(-1px); box-shadow: 0 4px 10px rgba(41,49,163,0.25); }
+  .btn-secondary { background: #f5f5f4; border: 1px solid #d4d4d4; color: #1a1a1a; }
+  .btn-secondary:hover { background: #ececeb; }
+
+  .unsaved-pill {
+    margin-left: auto; font-size: 11.5px; color: #b45309; background: #fef3c7;
+    padding: 5px 10px; border-radius: 999px; display: none; align-items: center; gap: 5px;
+  }
+  .unsaved-pill.show { display: flex; }
+  .unsaved-pill .dot { width: 6px; height: 6px; border-radius: 50%; background: #f59e0b; }
+
+  @media (max-width: 560px) { .form-grid-2, .form-grid-3 { grid-template-columns: 1fr; } }
+</style>
+
+<div class="edit-page">
+
+  <div class="edit-header">
+    <a href="{% url 'coupon_list' %}" class="back-link"><i class="ti ti-arrow-left"></i></a>
+    <div>
+      <h1>Add Coupon</h1>
+      <p class="subtitle">Create a new discount coupon</p>
+    </div>
+  </div>
+
+  <div class="edit-card">
+    <form method="post" id="couponForm">
+      {% csrf_token %}
+
+      <div class="form-row">
+        <label for="code">Coupon code</label>
+        <input type="text" id="code" name="code" value="{{ form_data.code|default:'' }}" placeholder="e.g. WELCOME20" required>
+      </div>
+
+      <div class="form-row">
+        <label for="coupon_type">Coupon type <span class="hint">Determines eligibility rule</span></label>
+        <select id="coupon_type" name="coupon_type">
+          <option value="STANDARD" {% if form_data.coupon_type == 'STANDARD' or not form_data %}selected{% endif %}>Standard</option>
+          <option value="FIRST_ORDER" {% if form_data.coupon_type == 'FIRST_ORDER' %}selected{% endif %}>First Order Only</option>
+          <option value="MIN_QUANTITY" {% if form_data.coupon_type == 'MIN_QUANTITY' %}selected{% endif %}>Minimum Quantity</option>
+          <option value="BUY_X_GET_Y" {% if form_data.coupon_type == 'BUY_X_GET_Y' %}selected{% endif %}>Buy X Get Y</option>
+        </select>
+      </div>
+
+      <div class="form-grid-2" id="discountFields">
+        <div class="form-row">
+          <label for="discount_type">Discount type</label>
+          <select id="discount_type" name="discount_type">
+            <option value="PERCENTAGE" {% if form_data.discount_type == 'PERCENTAGE' or not form_data %}selected{% endif %}>Percentage</option>
+            <option value="FLAT" {% if form_data.discount_type == 'FLAT' %}selected{% endif %}>Flat amount</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label for="discount_value">Discount value</label>
+          <input type="number" step="0.01" id="discount_value" name="discount_value" value="{{ form_data.discount_value|default:'' }}">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label for="min_order_amount">Minimum order amount <span class="hint">Rs. 0 = no minimum</span></label>
+        <input type="number" step="0.01" id="min_order_amount" name="min_order_amount" value="{{ form_data.min_order_amount|default:'0' }}">
+      </div>
+
+      <!-- MIN_QUANTITY fields -->
+      <div class="type-fields" id="minQuantityFields">
+        <div class="type-fields-label">Minimum quantity settings</div>
+        <div class="form-row" style="margin-bottom:0;">
+          <label for="min_quantity">Minimum items in cart</label>
+          <input type="number" id="min_quantity" name="min_quantity" value="{{ form_data.min_quantity|default:'' }}">
+        </div>
+      </div>
+
+      <!-- BUY_X_GET_Y fields -->
+      <div class="type-fields" id="buyXGetYFields">
+        <div class="type-fields-label">Buy X Get Y settings</div>
+        <div class="form-grid-3">
+          <div class="form-row" style="margin-bottom:0;">
+            <label for="buy_quantity">Buy quantity</label>
+            <input type="number" id="buy_quantity" name="buy_quantity" value="{{ form_data.buy_quantity|default:'' }}">
+          </div>
+          <div class="form-row" style="margin-bottom:0;">
+            <label for="get_quantity">Get quantity</label>
+            <input type="number" id="get_quantity" name="get_quantity" value="{{ form_data.get_quantity|default:'' }}">
+          </div>
+          <div class="form-row" style="margin-bottom:0;">
+            <label for="get_discount_percent">Discount on "get" items %</label>
+            <input type="number" id="get_discount_percent" name="get_discount_percent" value="{{ form_data.get_discount_percent|default:'100' }}">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label for="max_uses">Max uses <span class="hint">Leave blank for unlimited</span></label>
+        <input type="number" id="max_uses" name="max_uses" value="{{ form_data.max_uses|default:'' }}">
+      </div>
+
+      <div class="form-grid-2">
+        <div class="form-row">
+          <label for="valid_from">Valid from <span class="hint">Optional</span></label>
+          <input type="datetime-local" id="valid_from" name="valid_from" value="{{ form_data.valid_from|default:'' }}">
+        </div>
+        <div class="form-row">
+          <label for="valid_until">Valid until <span class="hint">Optional — marks as limited-time</span></label>
+          <input type="datetime-local" id="valid_until" name="valid_until" value="{{ form_data.valid_until|default:'' }}">
+        </div>
+      </div>
+
+      <div class="form-row checkbox-row" id="activeRow">
+        <input type="checkbox" id="is_active" name="is_active" {% if form_data.is_active == 'on' or not form_data %}checked{% endif %}>
+        <label for="is_active">Active (available for use)</label>
+        <span class="status-dot"></span>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Create coupon</button>
+        <a href="{% url 'coupon_list' %}" class="btn btn-secondary" id="cancelLink">Cancel</a>
+        <span class="unsaved-pill" id="unsavedPill"><span class="dot"></span>Unsaved changes</span>
+      </div>
+    </form>
+  </div>
+
+</div>
+
+<script>
+(function() {
+  const form = document.getElementById('couponForm');
+  const couponType = document.getElementById('coupon_type');
+  const discountFields = document.getElementById('discountFields');
+  const minQuantityFields = document.getElementById('minQuantityFields');
+  const buyXGetYFields = document.getElementById('buyXGetYFields');
+  const activeCheckbox = document.getElementById('is_active');
+  const activeRow = document.getElementById('activeRow');
+  const unsavedPill = document.getElementById('unsavedPill');
+  const cancelLink = document.getElementById('cancelLink');
+
+  let dirty = false;
+  const markDirty = () => { dirty = true; unsavedPill.classList.add('show'); };
+
+  function syncTypeFields() {
+    const type = couponType.value;
+    minQuantityFields.classList.toggle('show', type === 'MIN_QUANTITY');
+    buyXGetYFields.classList.toggle('show', type === 'BUY_X_GET_Y');
+    // Discount value/type is meaningless for BUY_X_GET_Y (uses get_discount_percent instead)
+    discountFields.style.display = (type === 'BUY_X_GET_Y') ? 'none' : 'grid';
+  }
+  syncTypeFields();
+  couponType.addEventListener('change', () => { syncTypeFields(); markDirty(); });
+
+  function syncActiveState() { activeRow.classList.toggle('active', activeCheckbox.checked); }
+  syncActiveState();
+  activeCheckbox.addEventListener('change', () => { syncActiveState(); markDirty(); });
+
+  form.querySelectorAll('input, select').forEach(el => {
+    el.addEventListener('input', markDirty);
+    el.addEventListener('change', markDirty);
+  });
+
+  cancelLink.addEventListener('click', e => {
+    if (dirty && !confirm('You have unsaved changes. Discard them and leave?')) { e.preventDefault(); }
+  });
+
+  form.addEventListener('submit', (e) => {
+    const type = couponType.value;
+    if (type === 'MIN_QUANTITY' && !document.getElementById('min_quantity').value) {
+      e.preventDefault();
+      alert('Please enter a minimum quantity.');
+      return;
+    }
+    if (type === 'BUY_X_GET_Y') {
+      const buyQ = document.getElementById('buy_quantity').value;
+      const getQ = document.getElementById('get_quantity').value;
+      if (!buyQ || !getQ) {
+        e.preventDefault();
+        alert('Please enter both buy quantity and get quantity.');
+        return;
+      }
+    }
+    dirty = false;
+  });
+})();
+</script>
+{% endblock %}

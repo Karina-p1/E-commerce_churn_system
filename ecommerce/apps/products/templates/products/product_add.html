@@ -41,10 +41,12 @@
     font-size: 12px; font-weight: 600; color: #666; margin-bottom: 6px;
     text-transform: uppercase; letter-spacing: 0.03em;
   }
-  .form-row label .char-count { font-size: 11px; font-weight: 400; color: #aaa; text-transform: none; letter-spacing: 0; }
+  .form-row label .char-count,
+  .form-row label .hint { font-size: 11px; font-weight: 400; color: #aaa; text-transform: none; letter-spacing: 0; }
 
   .form-row input[type="text"],
   .form-row input[type="number"],
+  .form-row input[type="datetime-local"],
   .form-row textarea {
     width: 100%; padding: 10px 12px; border: 1px solid #d4d4d4; border-radius: 8px;
     font-size: 13.5px; font-family: inherit; color: #1a1a1a; box-sizing: border-box;
@@ -59,6 +61,10 @@
   .price-input { position: relative; }
   .price-input span { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 13px; color: #999; pointer-events: none; }
   .price-input input { padding-left: 38px !important; }
+
+  .percent-input { position: relative; }
+  .percent-input span { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 13px; color: #999; pointer-events: none; }
+  .percent-input input { padding-right: 32px !important; }
 
   .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 
@@ -121,6 +127,17 @@
   .dropzone .dz-text strong { color: #2931a3; }
   .dropzone .dz-filename { font-size: 12px; color: #2931a3; font-weight: 600; margin-top: 2px; }
   .dropzone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+
+  .offer-fields {
+    background: #f9fafb; border: 1px solid #eee; border-radius: 10px; padding: 16px; margin-bottom: 18px;
+    display: none;
+  }
+  .offer-fields.show { display: block; }
+  .offer-fields .offer-fields-label {
+    font-size: 11.5px; font-weight: 700; color: #2931a3; margin-bottom: 12px;
+    text-transform: uppercase; letter-spacing: 0.03em; display: flex; align-items: center; gap: 6px;
+  }
+  .offer-fields .offer-fields-label i { font-size: 14px; }
 
   .checkbox-row {
     display: flex; align-items: center; gap: 10px; padding: 12px 14px;
@@ -248,19 +265,32 @@
         </div>
       </div>
 
-      <div class="form-grid-2">
-        <div class="form-row">
-          <label for="price">Price</label>
-          <div class="price-input">
-            <span>Rs.</span>
-            <input type="number" step="0.01" id="price" name="price" value="{{ form_data.price|default:'' }}" required>
-          </div>
+      <div class="form-row">
+        <label for="price">Price</label>
+        <div class="price-input">
+          <span>Rs.</span>
+          <input type="number" step="0.01" id="price" name="price" value="{{ form_data.price|default:'' }}" required>
         </div>
-        <div class="form-row">
-          <label for="discount_price">Discount price</label>
-          <div class="price-input">
-            <span>Rs.</span>
-            <input type="number" step="0.01" id="discount_price" name="discount_price" value="{{ form_data.discount_price|default:'' }}">
+      </div>
+
+      <div class="form-row">
+        <label for="discount_percentage">Discount percentage <span class="hint">0 = no discount</span></label>
+        <div class="percent-input">
+          <input type="number" min="0" max="100" id="discount_percentage" name="discount_percentage" value="{{ form_data.discount_percentage|default:'0' }}">
+          <span>%</span>
+        </div>
+      </div>
+
+      <div class="offer-fields" id="offerFields">
+        <div class="offer-fields-label"><i class="ti ti-clock"></i> Offer window <span class="hint">Optional — leave blank for an always-on discount</span></div>
+        <div class="form-grid-2">
+          <div class="form-row" style="margin-bottom:0;">
+            <label for="offer_start">Offer starts</label>
+            <input type="datetime-local" id="offer_start" name="offer_start" value="{{ form_data.offer_start|default:'' }}">
+          </div>
+          <div class="form-row" style="margin-bottom:0;">
+            <label for="offer_end">Offer ends</label>
+            <input type="datetime-local" id="offer_end" name="offer_end" value="{{ form_data.offer_end|default:'' }}">
           </div>
         </div>
       </div>
@@ -295,6 +325,8 @@
   const dzFilename = document.getElementById('dzFilename');
   const descTextarea = document.getElementById('description');
   const descCount = document.getElementById('descCount');
+  const discountInput = document.getElementById('discount_percentage');
+  const offerFields = document.getElementById('offerFields');
   const activeCheckbox = document.getElementById('is_active');
   const activeRow = document.getElementById('activeRow');
   const unsavedPill = document.getElementById('unsavedPill');
@@ -306,6 +338,14 @@
   function updateCount() { descCount.textContent = descTextarea.value.length + ' characters'; }
   updateCount();
   descTextarea.addEventListener('input', () => { updateCount(); markDirty(); });
+
+  // Offer start/end only matter once a discount is set
+  function syncOfferFields() {
+    const hasDiscount = parseFloat(discountInput.value) > 0;
+    offerFields.classList.toggle('show', hasDiscount);
+  }
+  syncOfferFields();
+  discountInput.addEventListener('input', () => { syncOfferFields(); markDirty(); });
 
   function syncActiveState() { activeRow.classList.toggle('active', activeCheckbox.checked); }
   syncActiveState();
@@ -349,6 +389,12 @@
       e.preventDefault();
       document.getElementById('categoryPicSelect').querySelector('.pic-select-trigger').style.borderColor = '#dc2626';
       alert('Please select a category.');
+      return;
+    }
+    const discount = parseFloat(discountInput.value);
+    if (discount < 0 || discount > 100) {
+      e.preventDefault();
+      alert('Discount percentage must be between 0 and 100.');
       return;
     }
     dirty = false;
@@ -399,7 +445,6 @@
       if (!root.contains(e.target)) root.classList.remove('open');
     });
 
-    // Pre-select if a value already exists (e.g. validation re-render)
     const existing = hiddenInput.value;
     if (existing) {
       const match = options.find(o => o.dataset.value === existing);

@@ -25,6 +25,8 @@
   .mgmt-title h1 { font-size: 18px; font-weight: 500; margin: 0 0 2px; }
   .mgmt-title p { color: #888; font-size: 12px; margin: 0; }
 
+  .header-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+
   .mgmt-toolbar {
     display: flex;
     align-items: center;
@@ -117,6 +119,43 @@
   .product-name { font-size: 12.5px; font-weight: 500; color: #1a1a1a; }
   .product-meta { font-size: 10.5px; color: #888; margin-top: 1px; }
 
+  .brand-pill {
+    display: inline-block;
+    font-size: 11px;
+    color: #555;
+  }
+  .brand-pill.none { color: #ccc; font-style: italic; }
+
+  .price-cell .original-price {
+    display: block;
+    font-size: 11px;
+    color: #aaa;
+    text-decoration: line-through;
+  }
+  .price-cell .discounted-price {
+    display: block;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #1a1a1a;
+  }
+  .price-cell .plain-price {
+    font-size: 12.5px;
+    color: #1a1a1a;
+  }
+
+  .discount-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 7px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 700;
+    background: #fef2f2;
+    color: #dc2626;
+    margin-top: 2px;
+  }
+
   .status-pill {
     display: inline-flex;
     align-items: center;
@@ -185,8 +224,29 @@
   }
   .add-btn:hover { opacity: 0.9; }
 
+  .discount-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #fff;
+    color: #dc2626;
+    border: 1px solid #f3c6c6;
+    padding: 9px 15px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    flex-shrink: 0;
+    transition: 0.15s ease;
+  }
+  .discount-btn:hover { background: #fef2f2; }
+  .discount-btn.active { background: #dc2626; color: #fff; border-color: #dc2626; }
+
   @media (max-width: 640px) {
     .mgmt-header { flex-direction: column; align-items: flex-start; }
+    .header-actions { width: 100%; }
+    .header-actions .discount-btn,
+    .header-actions .add-btn { flex: 1; justify-content: center; }
   }
 </style>
 
@@ -197,7 +257,13 @@
       <h1>Manage Products</h1>
       <p>{{ page_obj.paginator.count }} product{{ page_obj.paginator.count|pluralize }} total</p>
     </div>
-    <a href="{% url 'products:product_add' %}" class="add-btn"><i class="ti ti-plus"></i> Add product</a>
+    <div class="header-actions">
+      <a href="?status={% if status == 'on_discount' %}all{% else %}on_discount{% endif %}{% if query %}&q={{ query }}{% endif %}"
+         class="discount-btn {% if status == 'on_discount' %}active{% endif %}">
+        <i class="ti ti-discount-2"></i> On discount
+      </a>
+      <a href="{% url 'products:product_add' %}" class="add-btn"><i class="ti ti-plus"></i> Add product</a>
+    </div>
   </div>
 
   <form method="get" class="mgmt-toolbar">
@@ -216,6 +282,7 @@
       <thead>
         <tr>
           <th>Product</th>
+          <th>Brand</th>
           <th>Category</th>
           <th>Price</th>
           <th>Stock</th>
@@ -237,12 +304,26 @@
               </div>
               <div>
                 <div class="product-name">{{ product.name }}</div>
-                <div class="product-meta">{{ product.brand.name|default:"No brand" }}</div>
               </div>
             </div>
           </td>
+          <td>
+            {% if product.brand %}
+              <span class="brand-pill">{{ product.brand.name }}</span>
+            {% else %}
+              <span class="brand-pill none">No brand</span>
+            {% endif %}
+          </td>
           <td>{{ product.category.name }}</td>
-          <td>Rs. {{ product.effective_price|floatformat:0 }}</td>
+          <td class="price-cell">
+            {% if product.is_offer_active %}
+              <span class="original-price">Rs. {{ product.price|floatformat:0 }}</span>
+              <span class="discounted-price">Rs. {{ product.effective_price|floatformat:0 }}</span>
+              <span class="discount-badge"><i class="ti ti-discount-2"></i> {{ product.discount_percent }}% off</span>
+            {% else %}
+              <span class="plain-price">Rs. {{ product.effective_price|floatformat:0 }}</span>
+            {% endif %}
+          </td>
           <td>{{ product.stock }}</td>
           <td>
             {% if product.stock == 0 %}
@@ -262,7 +343,13 @@
         </tr>
         {% empty %}
         <tr>
-          <td colspan="6" class="empty-state">No products found{% if query %} for "{{ query }}"{% endif %}.</td>
+          <td colspan="7" class="empty-state">
+            {% if status == 'on_discount' %}
+              No products currently on discount{% if query %} matching "{{ query }}"{% endif %}.
+            {% else %}
+              No products found{% if query %} for "{{ query }}"{% endif %}.
+            {% endif %}
+          </td>
         </tr>
         {% endfor %}
       </tbody>

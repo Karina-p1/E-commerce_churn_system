@@ -25,4 +25,9 @@ urlpatterns = [
     
     path("orders/<int:order_id>/refund/", views.request_refund, name="request_refund"),
     path("orders_list/<int:pk>/refund/",views.process_refund,name='process_refund'),
+    
+    path('coupons/', views.coupon_list, name='coupon_list'),
+    path('coupons/add/', views.coupon_add, name='coupon_add'),
+    path('coupons/<int:pk>/edit/', views.coupon_edit, name='coupon_edit'),
+    path('coupons/<int:pk>/delete/', views.coupon_delete_confirm, name='coupon_delete_confirm'),
 ]
