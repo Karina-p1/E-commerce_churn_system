@@ -17,6 +17,3 @@ def analytics_dashboard(request):
             "summary": summary
         }
     )
-
-
-
