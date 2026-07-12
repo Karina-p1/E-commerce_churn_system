@@ -1,10 +1,10 @@
 from django.db import models as django_models
 from django.utils import timezone
-from apps.activity.models import UserEvent
+from apps.activity.models import UserEvent, UserSession
 from apps.orders.models import Order
 from apps.products.models import Review
 from apps.addresses.models import Address
-
+from django.db.models import Sum
 
 def extract_features(user) -> dict:
     """
@@ -26,26 +26,17 @@ def extract_features(user) -> dict:
     # ── Tenure ────────────────────────────────────────
     tenure_months = max(1, (timezone.now() - user.date_joined).days // 30)
 
-    # ── Activity ──────────────────────────────────────
-    # NOTE: training data's HourSpendOnApp was a self-reported daily
-    # average bounded 0-5. We don't track real session duration yet,
-    # so this is a synthetic proxy based on DISTINCT ACTIVE DAYS in the
-    # last 30 (or since account creation, if younger than 30 days) —
-    # this avoids unfairly penalizing brand-new accounts that simply
-    # haven't existed long enough to rack up 30 days of activity.
-    account_age_days = max((timezone.now() - user.date_joined).days, 1)
-    lookback_days = min(account_age_days, 30)
-    lookback_start = timezone.now() - timezone.timedelta(days=lookback_days)
+   # ── Activity (Real usage time) ─────────────────────────
 
-    active_days = (
-        UserEvent.objects
-        .filter(user=user, event_type='LOGIN', created_at__gte=lookback_start)
-        .annotate(day=django_models.functions.TruncDate('created_at'))
-        .values('day')
-        .distinct()
-        .count()
+    # last_30_days = timezone.now() - timezone.timedelta(days=30)
+
+    total_active_seconds = (
+        UserSession.objects.filter(user=user)
+        .aggregate(total=Sum("active_seconds"))["total"]
+        or 0
     )
-    hours_on_app = round(min(active_days / lookback_days * 5, 5.0), 1)
+
+    hours_on_app = round(total_active_seconds / 3600, 2)
 
     # Real coupon usage: count of this user's non-cancelled orders that
     # had a coupon attached at checkout.

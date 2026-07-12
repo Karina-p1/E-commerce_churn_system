@@ -4,7 +4,10 @@ from django.views.decorators.http import require_GET
 
 from .models import UserEvent
 from apps.products.models import Product
+from django.contrib.auth.decorators import login_required
+from django.utils import timezone
 
+from .models import UserSession
 
 @require_GET
 def log_click(request, product_id):
@@ -30,3 +33,41 @@ def log_click(request, product_id):
         "success": True,
         "message": "Click logged successfully"
     })
+    
+@login_required
+def activity_ping(request):
+
+    if request.method != "POST":
+        return JsonResponse({"success": False})
+
+    session = (
+        UserSession.objects
+        .filter(
+            user=request.user,
+            ended_at__isnull=True
+        )
+        .order_by("-started_at")
+        .first()
+    )
+
+    if session:
+        elapsed = (
+            timezone.now() -
+            session.last_activity
+        ).total_seconds()
+
+        session.active_seconds += min(
+            int(elapsed),
+            60
+        )
+
+        session.last_activity = timezone.now()
+
+        session.save(
+            update_fields=[
+                "active_seconds",
+                "last_activity",
+            ]
+        )
+
+    return JsonResponse({"success": True})

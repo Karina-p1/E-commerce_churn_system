@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
 from apps.products.models import Product
+from django.utils import timezone
 
 
 class UserEvent(models.Model):
@@ -66,3 +67,26 @@ class UserEvent(models.Model):
 
     def __str__(self):
         return f"{self.user} - {self.event_type}"
+    
+class UserSession(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="sessions"
+    )
+
+    started_at = models.DateTimeField(auto_now_add=True)
+
+    last_activity = models.DateTimeField(
+        default=timezone.now
+    )
+
+    active_seconds = models.PositiveIntegerField(default=0)
+
+    ended_at = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+
+    def __str__(self):
+        return f"{self.user.username} - {self.started_at}"
