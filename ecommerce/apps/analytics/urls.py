@@ -4,6 +4,11 @@ from . import api
 
 urlpatterns = [
     path(
+        "finance/",
+        views.analytics_finance,
+        name="analytics_finance",
+    ),
+    path(
         "dashboard/",
         views.analytics_dashboard,
         name="analytics_dashboard",

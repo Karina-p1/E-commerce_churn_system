@@ -15,10 +15,11 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 
-from apps.analytics.tasks import paid_order_created
+from apps.analytics.tasks import order_refunded, paid_order_created
 from apps.products.models import Product
 from apps.activity.models import UserEvent
 from apps.addresses.models import Address
+from apps.notifications.models import Notification
 from .forms import RefundRequestForm
 
 from .models import Cart, CartItem, Order, OrderItem, Coupon
@@ -978,3 +979,227 @@ def order_cancel(request, pk):
         order.set_status('cancelled', note='Cancelled by admin', changed_by=request.user)
         messages.success(request, f"Order #{order.id} has been cancelled.")
     return redirect(request.META.get('HTTP_REFERER', 'order_list_admin'))
+
+@staff_member_required
+def process_refund(request, pk):
+    order = get_object_or_404(Order, pk=pk)
+
+    if request.method != "POST":
+        return redirect('order_list_admin')
+
+    reference = request.POST.get("reference_id")
+    notes = request.POST.get("notes")
+
+    if not reference:
+        return redirect('order_list_admin')
+
+    # Guard against double-processing a refund (double-click, retry, etc.)
+    # — refund_order() subtracts revenue every time it's called, so this
+    # must run exactly once per order.
+    if order.payment_status == "REFUNDED":
+        return redirect('order_list_admin')
+
+    order.refund_reference = reference
+    order.refund_notes = notes
+    order.payment_status = "REFUNDED"
+    order.refunded_at = timezone.now()
+    order.save()
+
+    # Only pull the order out of the revenue numbers if it had actually
+    # been counted as paid revenue in the first place.
+    transaction.on_commit(lambda: order_refunded.delay(order.id))
+
+    Notification.objects.create(
+        recipient=order.user,
+        notif_type='REFUND',
+        title='Refund processed',
+        message=(
+            f"Your refund of Rs. {order.total_price} for order #{order.id} "
+            f"has been processed. Reference ID: {reference}."
+        ),
+    )
+
+    return redirect('order_list_admin')
+
+# ---------------------------------------------------------------------------
+# COUPON
+# ---------------------------------------------------------------------------
+
+@login_required
+@staff_member_required
+def coupon_list(request):
+    coupons = Coupon.objects.all().order_by('-created_at')
+
+    q = request.GET.get('q', '').strip()
+    if q:
+        coupons = coupons.filter(code__icontains=q)
+
+    status = request.GET.get('status')
+    now = timezone.now()
+    if status == 'active':
+        coupons = coupons.filter(is_active=True)
+    elif status == 'inactive':
+        coupons = coupons.filter(is_active=False)
+    elif status == 'expired':
+        coupons = coupons.filter(valid_until__lt=now)
+
+    paginator = Paginator(coupons, 20)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    return render(request, 'admin/coupon_list.html', {
+        'page_obj': page_obj,
+        'query': q,
+        'status': status or 'all',
+        'now': now,
+    })
+
+
+@login_required
+@staff_member_required
+def coupon_add(request):
+    if request.method == 'POST':
+        code = request.POST.get('code', '').strip().upper()
+        coupon_type = request.POST.get('coupon_type', 'STANDARD')
+        discount_type = request.POST.get('discount_type', 'PERCENTAGE')
+        discount_value = request.POST.get('discount_value', '').strip()
+        min_order_amount = request.POST.get('min_order_amount', '0').strip()
+        min_quantity = request.POST.get('min_quantity', '').strip()
+        buy_quantity = request.POST.get('buy_quantity', '').strip()
+        get_quantity = request.POST.get('get_quantity', '').strip()
+        get_discount_percent = request.POST.get('get_discount_percent', '100').strip()
+        max_uses = request.POST.get('max_uses', '').strip()
+        is_active = request.POST.get('is_active') == 'on'
+        valid_from = request.POST.get('valid_from', '').strip()
+        valid_until = request.POST.get('valid_until', '').strip()
+
+        errors = []
+        if not code:
+            errors.append('Coupon code is required.')
+        elif Coupon.objects.filter(code__iexact=code).exists():
+            errors.append(f"A coupon with code '{code}' already exists.")
+
+        try:
+            discount_value = float(discount_value) if discount_value else 0
+        except ValueError:
+            errors.append('Discount value must be a valid number.')
+            discount_value = 0
+
+        if coupon_type == 'MIN_QUANTITY' and not min_quantity:
+            errors.append('Minimum quantity is required for this coupon type.')
+
+        if coupon_type == 'BUY_X_GET_Y' and (not buy_quantity or not get_quantity):
+            errors.append('Buy quantity and get quantity are required for this coupon type.')
+
+        if errors:
+            for e in errors:
+                messages.error(request, e)
+            return render(request, 'admin/coupon_add.html', {
+                'form_data': request.POST,
+            })
+
+        Coupon.objects.create(
+            code=code,
+            coupon_type=coupon_type,
+            discount_type=discount_type,
+            discount_value=discount_value,
+            min_order_amount=min_order_amount or 0,
+            min_quantity=min_quantity or None,
+            buy_quantity=buy_quantity or None,
+            get_quantity=get_quantity or None,
+            get_discount_percent=get_discount_percent or 100,
+            max_uses=max_uses or None,
+            is_active=is_active,
+            valid_from=valid_from or None,
+            valid_until=valid_until or None,
+        )
+
+        messages.success(request, f"Coupon '{code}' created.")
+        return redirect('coupon_list')
+
+    return render(request, 'admin/coupon_add.html', {'form_data': {}})
+
+
+@login_required
+@staff_member_required
+def coupon_edit(request, pk):
+    coupon = get_object_or_404(Coupon, pk=pk)
+
+    if request.method == 'POST':
+        code = request.POST.get('code', '').strip().upper()
+        coupon_type = request.POST.get('coupon_type', 'STANDARD')
+        discount_type = request.POST.get('discount_type', 'PERCENTAGE')
+        discount_value = request.POST.get('discount_value', '').strip()
+        min_order_amount = request.POST.get('min_order_amount', '0').strip()
+        min_quantity = request.POST.get('min_quantity', '').strip()
+        buy_quantity = request.POST.get('buy_quantity', '').strip()
+        get_quantity = request.POST.get('get_quantity', '').strip()
+        get_discount_percent = request.POST.get('get_discount_percent', '100').strip()
+        max_uses = request.POST.get('max_uses', '').strip()
+        is_active = request.POST.get('is_active') == 'on'
+        valid_from = request.POST.get('valid_from', '').strip()
+        valid_until = request.POST.get('valid_until', '').strip()
+
+        errors = []
+        if not code:
+            errors.append('Coupon code is required.')
+        elif Coupon.objects.filter(code__iexact=code).exclude(pk=pk).exists():
+            errors.append(f"A coupon with code '{code}' already exists.")
+
+        try:
+            discount_value = float(discount_value) if discount_value else 0
+        except ValueError:
+            errors.append('Discount value must be a valid number.')
+            discount_value = 0
+
+        if coupon_type == 'MIN_QUANTITY' and not min_quantity:
+            errors.append('Minimum quantity is required for this coupon type.')
+
+        if coupon_type == 'BUY_X_GET_Y' and (not buy_quantity or not get_quantity):
+            errors.append('Buy quantity and get quantity are required for this coupon type.')
+
+        if errors:
+            for e in errors:
+                messages.error(request, e)
+            return redirect('coupon_edit', pk=pk)
+
+        coupon.code = code
+        coupon.coupon_type = coupon_type
+        coupon.discount_type = discount_type
+        coupon.discount_value = discount_value
+        coupon.min_order_amount = min_order_amount or 0
+        coupon.min_quantity = min_quantity or None
+        coupon.buy_quantity = buy_quantity or None
+        coupon.get_quantity = get_quantity or None
+        coupon.get_discount_percent = get_discount_percent or 100
+        coupon.max_uses = max_uses or None
+        coupon.is_active = is_active
+        coupon.valid_from = valid_from or None
+        coupon.valid_until = valid_until or None
+        coupon.save()
+
+        messages.success(request, f"Coupon '{coupon.code}' updated.")
+        return redirect('coupon_list')
+
+    return render(request, 'admin/coupon_edit.html', {'coupon': coupon})
+
+
+@login_required
+@staff_member_required
+def coupon_delete_confirm(request, pk):
+    coupon = get_object_or_404(Coupon, pk=pk)
+
+    if request.method == 'POST':
+        coupon.delete()
+        messages.success(request, f"Coupon '{coupon.code}' deleted.")
+        return redirect('coupon_list')
+
+    return render(request, 'admin/confirm_delete.html', {
+        'object': coupon,
+        'object_label': coupon.code,
+        'object_type': 'coupon',
+        'warning': (
+            f"This coupon has been used {coupon.used_count} time(s). "
+            f"Deleting it won't affect past orders, but it can no longer be applied."
+        ) if coupon.used_count else None,
+        'cancel_link': reverse('coupon_list'),
+    })

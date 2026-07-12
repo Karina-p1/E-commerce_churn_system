@@ -1,3 +1,4 @@
+# notifications/models.py
 from django.db import models
 from django.conf import settings
 
@@ -6,6 +7,7 @@ class Notification(models.Model):
     NOTIF_TYPE_CHOICES = [
         ('COUPON', 'New Coupon'),
         ('OFFER_EXPIRING', 'Offer Expiring Soon'),
+        ('REFUND', 'Refund Processed'),
         ('GENERAL', 'General'),
     ]
 

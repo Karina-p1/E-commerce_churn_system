@@ -1,6 +1,6 @@
 from datetime import timedelta
 from django.contrib.admin.views.decorators import staff_member_required
-
+from django.utils.dateparse import parse_datetime
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -431,9 +431,29 @@ def brand_delete_confirm(request, pk):
 # PRODUCT
 # ---------------------------------------------------------------------------
 
+
+def parse_offer_datetime(value):
+    """
+    Parses a datetime-local input value ('YYYY-MM-DDTHH:MM') into an
+    aware datetime, or returns None if empty/invalid.
+    """
+    if not value:
+        return None
+
+    dt = parse_datetime(value)
+    if dt is None:
+        return None
+
+    if timezone.is_naive(dt):
+        dt = timezone.make_aware(dt, timezone.get_current_timezone())
+
+    return dt
+
 @login_required
 @staff_member_required
 def product_list(request):
+    now = timezone.now()
+
     products = Product.objects.select_related(
         'category', 'brand'
     ).order_by('-created_at')
@@ -449,6 +469,14 @@ def product_list(request):
         products = products.filter(is_active=False)
     elif status == 'out_of_stock':
         products = products.filter(stock=0)
+    elif status == 'on_discount':
+        products = products.filter(
+            discount_percentage__gt=0
+        ).filter(
+            Q(offer_start__isnull=True) | Q(offer_start__lte=now)
+        ).filter(
+            Q(offer_end__isnull=True) | Q(offer_end__gte=now)
+        )
 
     paginator = Paginator(products, 20)
     page_obj  = paginator.get_page(request.GET.get('page'))
@@ -468,15 +496,17 @@ def product_edit(request, pk):
     brands     = Brand.objects.order_by('order', 'name')
 
     if request.method == 'POST':
-        name           = request.POST.get('name', '').strip()
-        description    = request.POST.get('description', '').strip()
-        price          = request.POST.get('price', '').strip()
-        discount_price = request.POST.get('discount_price', '').strip()
-        stock          = request.POST.get('stock', '').strip()
-        category_id    = request.POST.get('category')
-        brand_id       = request.POST.get('brand')
-        is_active      = request.POST.get('is_active') == 'on'
-        image          = request.FILES.get('image')
+        name                = request.POST.get('name', '').strip()
+        description         = request.POST.get('description', '').strip()
+        price               = request.POST.get('price', '').strip()
+        discount_percentage = request.POST.get('discount_percentage', '0').strip()
+        offer_start_raw     = request.POST.get('offer_start', '').strip()
+        offer_end_raw       = request.POST.get('offer_end', '').strip()
+        stock               = request.POST.get('stock', '').strip()
+        category_id         = request.POST.get('category')
+        brand_id            = request.POST.get('brand')
+        is_active           = request.POST.get('is_active') == 'on'
+        image               = request.FILES.get('image')
 
         errors = []
         if not name:
@@ -490,14 +520,23 @@ def product_edit(request, pk):
             errors.append('Price must be a valid number.')
             price = None
 
-        if discount_price:
-            try:
-                discount_price = float(discount_price)
-            except ValueError:
-                errors.append('Discount price must be a valid number.')
-                discount_price = None
-        else:
-            discount_price = None
+        try:
+            discount_percentage = int(discount_percentage) if discount_percentage else 0
+            if not (0 <= discount_percentage <= 100):
+                raise ValueError
+        except ValueError:
+            errors.append('Discount percentage must be a whole number between 0 and 100.')
+            discount_percentage = 0
+
+        offer_start = parse_offer_datetime(offer_start_raw)
+        offer_end = parse_offer_datetime(offer_end_raw)
+
+        if offer_start_raw and offer_start is None:
+            errors.append('Offer start date is invalid.')
+        if offer_end_raw and offer_end is None:
+            errors.append('Offer end date is invalid.')
+        if offer_start and offer_end and offer_end <= offer_start:
+            errors.append('Offer end must be after offer start.')
 
         try:
             stock = int(stock)
@@ -510,14 +549,16 @@ def product_edit(request, pk):
                 messages.error(request, e)
             return redirect('products:product_edit', pk=pk)
 
-        product.name           = name
-        product.description    = description
-        product.price          = price
-        product.discount_price = discount_price
-        product.stock          = stock
-        product.category_id    = category_id
-        product.brand_id       = brand_id or None
-        product.is_active      = is_active
+        product.name                = name
+        product.description         = description
+        product.price               = price
+        product.discount_percentage = discount_percentage
+        product.offer_start         = offer_start
+        product.offer_end           = offer_end
+        product.stock               = stock
+        product.category_id         = category_id
+        product.brand_id            = brand_id or None
+        product.is_active           = is_active
         if image:
             product.image = image
         product.save()
@@ -695,15 +736,17 @@ def product_add(request):
     brands     = Brand.objects.order_by('order', 'name')
 
     if request.method == 'POST':
-        name           = request.POST.get('name', '').strip()
-        description    = request.POST.get('description', '').strip()
-        price          = request.POST.get('price', '').strip()
-        discount_price = request.POST.get('discount_price', '').strip()
-        stock          = request.POST.get('stock', '').strip()
-        category_id    = request.POST.get('category')
-        brand_id       = request.POST.get('brand')
-        is_active      = request.POST.get('is_active') == 'on'
-        image          = request.FILES.get('image')
+        name                = request.POST.get('name', '').strip()
+        description         = request.POST.get('description', '').strip()
+        price               = request.POST.get('price', '').strip()
+        discount_percentage = request.POST.get('discount_percentage', '0').strip()
+        offer_start_raw     = request.POST.get('offer_start', '').strip()
+        offer_end_raw       = request.POST.get('offer_end', '').strip()
+        stock               = request.POST.get('stock', '').strip()
+        category_id         = request.POST.get('category')
+        brand_id            = request.POST.get('brand')
+        is_active           = request.POST.get('is_active') == 'on'
+        image               = request.FILES.get('image')
 
         errors = []
         if not name:
@@ -717,14 +760,23 @@ def product_add(request):
             errors.append('Price must be a valid number.')
             price = None
 
-        if discount_price:
-            try:
-                discount_price = float(discount_price)
-            except ValueError:
-                errors.append('Discount price must be a valid number.')
-                discount_price = None
-        else:
-            discount_price = None
+        try:
+            discount_percentage = int(discount_percentage) if discount_percentage else 0
+            if not (0 <= discount_percentage <= 100):
+                raise ValueError
+        except ValueError:
+            errors.append('Discount percentage must be a whole number between 0 and 100.')
+            discount_percentage = 0
+
+        offer_start = parse_offer_datetime(offer_start_raw)
+        offer_end = parse_offer_datetime(offer_end_raw)
+
+        if offer_start_raw and offer_start is None:
+            errors.append('Offer start date is invalid.')
+        if offer_end_raw and offer_end is None:
+            errors.append('Offer end date is invalid.')
+        if offer_start and offer_end and offer_end <= offer_start:
+            errors.append('Offer end must be after offer start.')
 
         try:
             stock = int(stock) if stock else 0
@@ -745,7 +797,9 @@ def product_add(request):
             name=name,
             description=description,
             price=price,
-            discount_price=discount_price,
+            discount_percentage=discount_percentage,
+            offer_start=offer_start,
+            offer_end=offer_end,
             stock=stock,
             category_id=category_id,
             brand_id=brand_id or None,
