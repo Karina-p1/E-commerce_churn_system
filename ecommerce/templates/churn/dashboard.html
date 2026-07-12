@@ -33,12 +33,16 @@
     margin: 0;
   }
 
-  .refresh-btn {
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .refresh-btn, .export-btn {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    background: #2931a3;
-    color: #fff;
     padding: 8px 14px;
     border-radius: 8px;
     font-size: 12.5px;
@@ -47,7 +51,18 @@
     transition: 0.15s ease;
   }
 
+  .refresh-btn {
+    background: #2931a3;
+    color: #fff;
+  }
   .refresh-btn:hover { opacity: 0.9; }
+
+  .export-btn {
+    background: #fff;
+    color: #1a1a1a;
+    border: 0.5px solid #e5e5e5;
+  }
+  .export-btn:hover { background: #f0f0f0; }
 
   /* 3-column grid now — medium card removed */
   .churn-metrics {
@@ -143,7 +158,7 @@
     text-align: left;
   }
 
-  .churn-table-card tbody tr { border-top: 0.5px solid #f5f5f4; }
+  .churn-table-card tbody tr { border-top: 0.5px solid #f5f5f4; cursor: pointer; }
   .churn-table-card tbody tr:hover { background: #fafafa; }
   .churn-table-card td { padding: 10px 0; font-size: 12px; }
 
@@ -191,6 +206,14 @@
   .score-bar-high { background: #A32D2D; }
   .score-bar-low  { background: #2931a3; }
 
+  .view-link {
+    font-size: 11px;
+    font-weight: 600;
+    color: #1a7ab5;
+    text-decoration: none;
+  }
+  .view-link:hover { text-decoration: underline; }
+
   .empty-state {
     padding: 36px 16px; text-align: center;
     color: #888; font-size: 12px;
@@ -217,9 +240,14 @@
       <h1>Churn Dashboard</h1>
       <p>Customer retention risk overview</p>
     </div>
-    <a href="{% url 'churn:dashboard' %}" class="refresh-btn">
-      <i class="ti ti-refresh"></i> Refresh scores
-    </a>
+    <div class="header-actions">
+      <a href="{% url 'churn:export_high_risk_csv' %}" class="export-btn">
+        <i class="ti ti-download"></i> Export high risk (CSV)
+      </a>
+      <a href="{% url 'churn:dashboard' %}" class="refresh-btn">
+        <i class="ti ti-refresh"></i> Refresh scores
+      </a>
+    </div>
   </div>
 
   <!-- 3 cards only — medium removed (model only predicts high/low) -->
@@ -254,11 +282,12 @@
           <th>Churn score</th>
           <th>Last scored</th>
           <th>Orders</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
         {% for s in scores %}
-        <tr>
+        <tr onclick="window.location='{% url 'churn:customer_detail' s.customer.id %}'">
           <td>
             <div class="customer-cell">
               <div class="customer-avatar">{{ s.customer.username|slice:":2"|upper }}</div>
@@ -289,10 +318,15 @@
 
           <td>{{ s.predicted_at|date:"M d, Y" }}</td>
           <td>{{ s.customer.orders.count }}</td>
+          <td>
+            <a href="{% url 'churn:customer_detail' s.customer.id %}" class="view-link" onclick="event.stopPropagation()">
+              View &rarr;
+            </a>
+          </td>
         </tr>
         {% empty %}
         <tr>
-          <td colspan="5" class="empty-state">
+          <td colspan="6" class="empty-state">
             No churn scores yet. Run <code>python manage.py score_customers</code> to generate scores.
           </td>
         </tr>

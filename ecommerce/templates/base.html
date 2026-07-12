@@ -964,9 +964,7 @@
 
             <span>Alerts</span>
 
-            {% if unread_notification_count %}
-            <span class="notif-badge"> {{ unread_notification_count }} </span>
-            {% endif %}
+            <span class="notif-badge" id="notifBadgeCount" style="{% if not unread_notification_count %}display:none;{% endif %}">{{ unread_notification_count }}</span>
           </a>
 
           <ul
@@ -1585,6 +1583,73 @@
           if (e.key === "Escape") dropdown.style.display = "none";
         });
       })();
+
+      // ── Notification polling (near-real-time, AJAX) ──────────────────
+      {% if request.user.is_authenticated %}
+      (function () {
+        let lastSeenId = null;
+
+        function showNotifToast(title, message) {
+          const container = document.getElementById('toast-container') || (function () {
+            const c = document.createElement('div');
+            c.id = 'toast-container';
+            document.body.appendChild(c);
+            return c;
+          })();
+
+          const toast = document.createElement('div');
+          toast.className = 'custom-toast info';
+          toast.innerHTML = `
+            <div class="toast-icon"><i class="fas fa-bell"></i></div>
+            <div class="toast-body">
+              <div class="toast-title">${title}</div>
+              <div class="toast-message">${message}</div>
+            </div>
+            <div class="toast-progress"></div>
+          `;
+          container.appendChild(toast);
+
+          setTimeout(() => {
+            toast.classList.add('fade-out');
+            setTimeout(() => toast.remove(), 400);
+          }, 4000);
+        }
+
+        function updateBadge(count) {
+          const badge = document.getElementById('notifBadgeCount');
+          if (!badge) return;
+          if (count > 0) {
+            badge.textContent = count;
+            badge.style.display = '';
+          } else {
+            badge.style.display = 'none';
+          }
+        }
+
+        function pollNotifications() {
+          fetch("{% url 'notifications:poll' %}")
+            .then((r) => r.json())
+            .then((data) => {
+              updateBadge(data.unread_count);
+
+              if (data.latest) {
+                if (lastSeenId === null) {
+                  // First poll after page load — just record it, don't toast
+                  // for something that may have already been seen/shown.
+                  lastSeenId = data.latest.id;
+                } else if (data.latest.id !== lastSeenId) {
+                  lastSeenId = data.latest.id;
+                  showNotifToast(data.latest.title, data.latest.message);
+                }
+              }
+            })
+            .catch(() => {}); // silent — a failed poll just tries again next cycle
+        }
+
+        pollNotifications();
+        setInterval(pollNotifications, 20000); // every 20 seconds
+      })();
+      {% endif %}
     </script>
 
     {% block extra_js %}{% endblock %}

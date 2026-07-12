@@ -7,4 +7,5 @@ urlpatterns = [
     path('', views.notification_list, name='list'),
     path('<int:notification_id>/read/', views.mark_notification_read, name='mark_read'),
     path('mark-all-read/', views.mark_all_read, name='mark_all_read'),
+    path('poll/', views.poll_notifications, name='poll'),
 ]

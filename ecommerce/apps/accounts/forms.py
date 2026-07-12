@@ -111,9 +111,15 @@ class ProfileUpdateForm(forms.ModelForm):
             'profile_image',
             'gender',
             'marital_status',
+            'email_notifications_enabled',
         ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        for field in self.fields.values():
-            field.widget.attrs['class'] = 'form-control'
+        for field_name, field in self.fields.items():
+            # Checkbox fields shouldn't get the text-input 'form-control' class —
+            # give them 'form-check-input' instead so they render correctly.
+            if isinstance(field.widget, forms.CheckboxInput):
+                field.widget.attrs['class'] = 'form-check-input'
+            else:
+                field.widget.attrs['class'] = 'form-control'

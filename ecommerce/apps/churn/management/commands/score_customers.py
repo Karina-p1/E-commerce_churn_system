@@ -34,12 +34,16 @@ class Command(BaseCommand):
                 features = extract_features(user)
                 result   = predict_churn(features)
 
-                ChurnScore.objects.update_or_create(
+                # NOTE: was previously update_or_create(customer=user, ...),
+                # which overwrote the customer's one existing row every run
+                # and silently discarded all history. Using create() instead
+                # keeps a full timeline of scores per customer, which the
+                # dashboard's "latest per customer" query already assumed
+                # existed, and which the new score-history chart depends on.
+                ChurnScore.objects.create(
                     customer=user,
-                    defaults={
-                        'score':      result['score'],
-                        'risk_level': result['risk_level'],
-                    }
+                    score=result['score'],
+                    risk_level=result['risk_level'],
                 )
 
                 if result['risk_level'] == 'high':

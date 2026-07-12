@@ -43,3 +43,29 @@ def mark_all_read(request):
         is_read=False
     ).update(is_read=True)
     return redirect('notifications:list')
+
+
+@login_required
+def poll_notifications(request):
+    """
+    Lightweight JSON endpoint polled every ~20s from base.html.
+    Returns the current unread count plus the single newest notification
+    (id/title/message) so the client can detect "is this new since I last
+    checked" and pop a toast without a full page reload.
+    """
+    unread_count = request.user.notifications.filter(is_read=False).count()
+    latest_qs = request.user.notifications.order_by('-created_at')[:1]
+
+    latest = None
+    if latest_qs:
+        n = latest_qs[0]
+        latest = {
+            'id': n.id,
+            'title': n.title,
+            'message': n.message,
+        }
+
+    return JsonResponse({
+        'unread_count': unread_count,
+        'latest': latest,
+    })

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body style="margin:0; padding:0; background:#f3f4f6; font-family: 'Segoe UI', Arial, sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6; padding:32px 0;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="480" cellpadding="0" cellspacing="0"
+               style="background:#ffffff; border-radius:14px; overflow:hidden; box-shadow:0 4px 18px rgba(0,0,0,0.06);">
+
+          <!-- Header -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#7c2d12,#dc2626); padding:28px 32px;">
+              <span style="font-size:22px; font-weight:800; color:#ffffff; letter-spacing:-0.5px;">
+                Shop<span style="color:#fecaca;">Mart</span>
+              </span>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:32px;">
+              <h1 style="margin:0 0 8px; font-size:20px; color:#7c2d12;">⏰ Offer expiring soon!</h1>
+              <p style="margin:0 0 24px; font-size:14px; color:#4b5563; line-height:1.6;">
+                Code <strong>{{ coupon.code }}</strong> expires
+                <strong>{{ coupon.valid_until|date:"F j, Y" }}</strong> — use it before it's gone.
+              </p>
+
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+                <tr>
+                  <td align="center" style="background:#fef2f2; border:2px dashed #dc2626; border-radius:10px; padding:18px;">
+                    <span style="font-size:12px; color:#991b1b; text-transform:uppercase; letter-spacing:0.06em;">Your code</span>
+                    <div style="font-size:26px; font-weight:800; color:#7c2d12; letter-spacing:2px; margin-top:4px;">
+                      {{ coupon.code }}
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+              <table role="presentation" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center" style="border-radius:8px; background:#dc2626;">
+                    <a href="{{ site_url }}" target="_blank"
+                       style="display:inline-block; padding:13px 28px; font-size:14px; font-weight:700;
+                              color:#ffffff; text-decoration:none;">
+                      Use it now →
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:20px 32px; background:#f9fafb; border-top:1px solid #e5e7eb;">
+              <p style="margin:0; font-size:11.5px; color:#9ca3af; line-height:1.5;">
+                You're receiving this because you're a registered ShopMart customer.
+                Don't want these emails? Turn them off anytime in your
+                <a href="{{ site_url }}/accounts/profile/update/" style="color:#dc2626;">profile settings</a>.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

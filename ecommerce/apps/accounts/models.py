@@ -59,6 +59,16 @@ class User(AbstractUser):
     blank=True,
     null=True
     )
+
+    # Controls whether this user receives coupon/limited-time-offer emails.
+    # In-app notifications (the bell dropdown) are unaffected by this — it
+    # only gates the email side, checked by apps.notifications.emails.send_bulk_html_email.
+    email_notifications_enabled = models.BooleanField(
+        default=True,
+        help_text="If off, this user will not receive coupon/offer emails "
+                   "(they still get in-app notifications either way)."
+    )
+
     # Automatically stores when the user account was created (useful for analytics & churn tracking)
     created_at = models.DateTimeField(auto_now_add=True)
 

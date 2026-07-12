@@ -20,10 +20,19 @@
                     {% csrf_token %}
                     {% for field in form %}
                     <div class="mb-3">
+                        {% if field.field.widget.input_type == 'checkbox' %}
+                        <div class="form-check">
+                            {{ field }}
+                            <label class="form-check-label" for="{{ field.id_for_label }}">
+                                {{ field.label }}
+                            </label>
+                        </div>
+                        {% else %}
                         <label class="form-label fw-semibold">
                             {{ field.label }}
                         </label>
                         {{ field }}
+                        {% endif %}
                         {% if field.errors %}
                         <div class="text-danger small">
                             {{ field.errors.as_text }}
