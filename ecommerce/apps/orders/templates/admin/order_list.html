@@ -2,7 +2,7 @@
 {% block title %}Manage Orders - ShopMart Admin{% endblock %}
 
 {% block start %}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/dist/tabler-icons.min.css">
 
 <style>
   .mgmt-page { font-family: 'Segoe UI', system-ui, sans-serif; background: #f5f5f4; padding: 20px; border-radius: 12px; color: #1a1a1a; }
@@ -137,9 +137,30 @@
               </div>
             </div>
           </td>
-          <td><span class="items-count">{{ order.items.count }} item{{ order.items.count|pluralize }}</span></td>
+          <td><span class="items-count">{{ order.items_count }} item{{ order.items_count|pluralize }}</span></td>
           <td><span class="order-total">Rs. {{ order.total_price }}</span></td>
-          <td><span class="payment-pill payment-{{ order.payment_status }}">{{ order.get_payment_status_display }}</span></td>
+          <td>
+
+          {% if order.payment_status == "REFUND_PENDING" %}
+
+          <a
+              href="#"
+              class="payment-pill payment-REFUND_PENDING text-decoration-none refund-btn"
+              data-id="{{ order.id }}"
+              data-amount="{{ order.total_price }}"
+              data-url="{% url 'process_refund' order.pk %}">
+              {{ order.get_payment_status_display }}
+          </a>
+
+          {% else %}
+
+          <span class="payment-pill payment-{{ order.payment_status }}">
+              {{ order.get_payment_status_display }}
+          </span>
+
+          {% endif %}
+
+          </td>
           <td>
             {% if order.status == 'cancelled' %}
               <span class="status-pill status-cancelled">Cancelled</span>
@@ -195,4 +216,126 @@
   {% endif %}
 
 </div>
+
+<!-- Refund modal rendered ONCE, outside the table/loop, populated dynamically by JS -->
+<div class="modal fade" id="refundModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+
+            <form id="refundForm" method="post" action="">
+
+                {% csrf_token %}
+
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        Process Refund
+                    </h5>
+
+                    <button
+                        type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal">
+                    </button>
+                </div>
+
+                <div class="modal-body">
+
+                    <input
+                        type="hidden"
+                        id="refundOrderId"
+                        name="order_id">
+
+                    <div class="mb-3">
+
+                        <label class="form-label">
+                            Refund Amount
+                        </label>
+
+                        <input
+                            id="refundAmount"
+                            name="refund_amount"
+                            class="form-control"
+                            readonly>
+
+                    </div>
+
+                    <div class="mb-3">
+
+                        <label class="form-label">
+                            Reference ID
+                        </label>
+
+                        <input
+                            id="referenceId"
+                            name="reference_id"
+                            class="form-control"
+                            required>
+
+                    </div>
+
+                    <div class="mb-3">
+
+                        <label class="form-label">
+                            Notes
+                        </label>
+
+                        <textarea
+                            id="refundNotes"
+                            name="notes"
+                            rows="3"
+                            class="form-control"></textarea>
+
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+
+                    <button
+                        type="button"
+                        class="btn btn-secondary"
+                        data-bs-dismiss="modal">
+
+                        Cancel
+
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="btn btn-success">
+
+                        Refund
+
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+  const modalEl = document.getElementById("refundModal");
+  if (!modalEl) return; // no refund modal on the page (e.g. no orders), nothing to wire up
+
+  const refundModal = new bootstrap.Modal(modalEl);
+
+  document.querySelectorAll(".refund-btn").forEach(function (btn) {
+    btn.addEventListener("click", function (e) {
+      e.preventDefault();
+
+      document.getElementById("refundOrderId").value = this.dataset.id;
+      document.getElementById("refundAmount").value = "Rs. " + this.dataset.amount;
+      document.getElementById("referenceId").value = "";
+      document.getElementById("refundNotes").value = "";
+      document.getElementById("refundForm").action = this.dataset.url;
+
+      refundModal.show();
+    });
+  });
+})();
+</script>
 {% endblock %}

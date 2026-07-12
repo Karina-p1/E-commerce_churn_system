@@ -3,7 +3,7 @@
 
 {% block start %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
- 
+
 <style>
   .edit-page {
     font-family: 'Segoe UI', system-ui, sans-serif;
@@ -16,15 +16,8 @@
     flex-direction: column;
     align-items: center;
   }
- 
-  .edit-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 22px;
-    width: 100%;
-    max-width: 640px;
-  }
+
+  .edit-header { display: flex; align-items: center; gap: 10px; margin-bottom: 22px; width: 100%; max-width: 640px; }
   .back-link {
     width: 34px; height: 34px; border-radius: 8px; background: #fff;
     border: 0.5px solid #e5e5e5; display: flex; align-items: center; justify-content: center;
@@ -33,60 +26,88 @@
   .back-link:hover { background: #2931a3; color: #fff; border-color: #2931a3; transform: translateX(-2px); }
   .edit-header h1 { font-size: 19px; font-weight: 600; margin: 0; }
   .edit-header .subtitle { font-size: 12px; color: #888; margin: 2px 0 0; }
- 
+
   .edit-card {
-    background: #fff;
-    border: 0.5px solid #e5e5e5;
-    border-radius: 14px;
-    padding: 28px;
-    width: 100%;
-    max-width: 640px;
+    background: #fff; border: 0.5px solid #e5e5e5; border-radius: 14px; padding: 28px;
+    width: 100%; max-width: 640px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.03), 0 8px 24px rgba(0,0,0,0.04);
     animation: cardIn 0.35s ease;
   }
   @keyframes cardIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
- 
+
   .form-row { margin-bottom: 18px; }
   .form-row label {
     display: flex; justify-content: space-between; align-items: baseline;
     font-size: 12px; font-weight: 600; color: #666; margin-bottom: 6px;
     text-transform: uppercase; letter-spacing: 0.03em;
   }
-  .form-row label .char-count { font-size: 11px; font-weight: 400; color: #aaa; text-transform: none; letter-spacing: 0; }
- 
+  .form-row label .char-count,
+  .form-row label .hint { font-size: 11px; font-weight: 400; color: #aaa; text-transform: none; letter-spacing: 0; }
+
   .form-row input[type="text"],
   .form-row input[type="number"],
-  .form-row textarea,
-  .form-row select {
-    width: 100%;
-    padding: 10px 12px;
-    border: 1px solid #d4d4d4;
-    border-radius: 8px;
-    font-size: 13.5px;
-    font-family: inherit;
-    color: #1a1a1a;
-    box-sizing: border-box;
-    background: #fff;
+  .form-row input[type="datetime-local"],
+  .form-row textarea {
+    width: 100%; padding: 10px 12px; border: 1px solid #d4d4d4; border-radius: 8px;
+    font-size: 13.5px; font-family: inherit; color: #1a1a1a; box-sizing: border-box;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
   }
-  .form-row input:hover, .form-row textarea:hover, .form-row select:hover { border-color: #b8b8b8; }
-  .form-row input:focus, .form-row textarea:focus, .form-row select:focus {
-    outline: none;
-    border-color: #2931a3;
-    box-shadow: 0 0 0 3px rgba(41, 49, 163, 0.12);
+  .form-row input:hover, .form-row textarea:hover { border-color: #b8b8b8; }
+  .form-row input:focus, .form-row textarea:focus {
+    outline: none; border-color: #2931a3; box-shadow: 0 0 0 3px rgba(41, 49, 163, 0.12);
   }
   .form-row textarea { resize: vertical; min-height: 90px; line-height: 1.5; }
- 
+
   .price-input { position: relative; }
-  .price-input span {
-    position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
-    font-size: 13px; color: #999; pointer-events: none;
-  }
+  .price-input span { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 13px; color: #999; pointer-events: none; }
   .price-input input { padding-left: 38px !important; }
- 
+
+  .percent-input { position: relative; }
+  .percent-input span { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 13px; color: #999; pointer-events: none; }
+  .percent-input input { padding-right: 32px !important; }
+
   .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
- 
-  /* Image upload / preview */
+
+  /* ---- Custom picture select ---- */
+  .pic-select { position: relative; }
+  .pic-select-trigger {
+    width: 100%; display: flex; align-items: center; gap: 10px;
+    padding: 7px 12px; border: 1px solid #d4d4d4; border-radius: 8px; background: #fff;
+    cursor: pointer; box-sizing: border-box; transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .pic-select-trigger:hover { border-color: #b8b8b8; }
+  .pic-select.open .pic-select-trigger { border-color: #2931a3; box-shadow: 0 0 0 3px rgba(41, 49, 163, 0.12); }
+  .pic-select-thumb {
+    width: 28px; height: 28px; border-radius: 6px; object-fit: cover; flex-shrink: 0;
+    border: 1px solid #eee; background: #f5f5f4;
+  }
+  .pic-select-thumb.placeholder { display: flex; align-items: center; justify-content: center; color: #ccc; font-size: 13px; }
+  .pic-select-label { font-size: 13.5px; color: #1a1a1a; flex: 1; text-align: left; }
+  .pic-select-label.muted { color: #999; }
+  .pic-select-trigger i.ti-chevron-down { color: #999; font-size: 15px; transition: transform 0.15s ease; }
+  .pic-select.open .ti-chevron-down { transform: rotate(180deg); }
+
+  .pic-select-menu {
+    position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+    background: #fff; border: 1px solid #e5e5e5; border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.1); max-height: 230px; overflow-y: auto;
+    z-index: 30; display: none; padding: 6px;
+  }
+  .pic-select.open .pic-select-menu { display: block; }
+  .pic-select-option {
+    display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 7px;
+    cursor: pointer; font-size: 13px; color: #1a1a1a;
+  }
+  .pic-select-option:hover, .pic-select-option.highlighted { background: #f3f4fb; }
+  .pic-select-option.selected { background: #ececf8; font-weight: 600; }
+  .pic-select-option img {
+    width: 26px; height: 26px; border-radius: 6px; object-fit: cover; border: 1px solid #eee; flex-shrink: 0;
+  }
+  .pic-select-option .no-img {
+    width: 26px; height: 26px; border-radius: 6px; background: #f5f5f4; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; color: #ccc; font-size: 12px;
+  }
+
   .image-upload-row { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 18px; }
   .image-preview-box {
     width: 76px; height: 76px; border-radius: 10px; border: 1px solid #e5e5e5;
@@ -95,67 +116,60 @@
   }
   .image-preview-box img { width: 100%; height: 100%; object-fit: cover; }
   .image-preview-box i { font-size: 22px; color: #ccc; }
- 
+
   .dropzone {
-    flex: 1;
-    border: 1.5px dashed #d4d4d4;
-    border-radius: 10px;
-    padding: 14px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    position: relative;
-    background: #fafafa;
+    flex: 1; border: 1.5px dashed #d4d4d4; border-radius: 10px; padding: 14px;
+    text-align: center; cursor: pointer; transition: all 0.15s ease; position: relative; background: #fafafa;
   }
   .dropzone:hover, .dropzone.dragover { border-color: #2931a3; background: #f3f4fb; }
   .dropzone i { font-size: 18px; color: #999; display: block; margin-bottom: 4px; }
   .dropzone .dz-text { font-size: 12.5px; color: #777; }
   .dropzone .dz-text strong { color: #2931a3; }
   .dropzone .dz-filename { font-size: 12px; color: #2931a3; font-weight: 600; margin-top: 2px; }
-  .dropzone input[type="file"] {
-    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  .dropzone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+
+  .offer-fields {
+    background: #f9fafb; border: 1px solid #eee; border-radius: 10px; padding: 16px; margin-bottom: 18px;
+    display: none;
   }
- 
+  .offer-fields.show { display: block; }
+  .offer-fields .offer-fields-label {
+    font-size: 11.5px; font-weight: 700; color: #2931a3; margin-bottom: 12px;
+    text-transform: uppercase; letter-spacing: 0.03em; display: flex; align-items: center; gap: 6px;
+  }
+  .offer-fields .offer-fields-label i { font-size: 14px; }
+
   .checkbox-row {
     display: flex; align-items: center; gap: 10px; padding: 12px 14px;
     background: #f9fafb; border-radius: 8px; border: 1px solid #eee;
   }
   .checkbox-row input { width: 16px; height: 16px; accent-color: #2931a3; cursor: pointer; }
   .checkbox-row label { margin: 0; font-size: 13px; font-weight: 500; color: #1a1a1a; cursor: pointer; }
-  .checkbox-row .status-dot {
-    width: 7px; height: 7px; border-radius: 50%; background: #ccc; margin-left: auto; transition: background 0.15s ease;
-  }
+  .checkbox-row .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #ccc; margin-left: auto; transition: background 0.15s ease; }
   .checkbox-row.active .status-dot { background: #22c55e; }
- 
-  .form-actions {
-    display: flex; gap: 10px; margin-top: 26px;
-    align-items: center;
-  }
+
+  .form-actions { display: flex; gap: 10px; margin-top: 26px; align-items: center; }
   .btn {
     padding: 11px 20px; border-radius: 8px; font-size: 13px; font-weight: 600;
-    text-decoration: none; text-align: center; cursor: pointer; border: none;
-    transition: all 0.15s ease;
+    text-decoration: none; text-align: center; cursor: pointer; border: none; transition: all 0.15s ease;
   }
   .btn-primary { background: #2931a3; color: #fff; }
   .btn-primary:hover { background: #232a8a; transform: translateY(-1px); box-shadow: 0 4px 10px rgba(41,49,163,0.25); }
   .btn-primary:active { transform: translateY(0); }
   .btn-secondary { background: #f5f5f4; border: 1px solid #d4d4d4; color: #1a1a1a; }
   .btn-secondary:hover { background: #ececeb; }
- 
+
   .unsaved-pill {
     margin-left: auto; font-size: 11.5px; color: #b45309; background: #fef3c7;
     padding: 5px 10px; border-radius: 999px; display: none; align-items: center; gap: 5px;
   }
   .unsaved-pill.show { display: flex; }
   .unsaved-pill .dot { width: 6px; height: 6px; border-radius: 50%; background: #f59e0b; }
- 
-  @media (max-width: 560px) {
-    .form-grid-2 { grid-template-columns: 1fr; }
-  }
+
+  @media (max-width: 560px) { .form-grid-2 { grid-template-columns: 1fr; } }
 </style>
- 
 <div class="edit-page">
- 
+
   <div class="edit-header">
     <a href="{% url 'products:product_list' %}" class="back-link"><i class="ti ti-arrow-left"></i></a>
     <div>
@@ -163,11 +177,11 @@
       <p class="subtitle">{{ product.name }}</p>
     </div>
   </div>
- 
+
   <div class="edit-card">
     <form method="post" enctype="multipart/form-data" id="productForm">
       {% csrf_token %}
- 
+
       <div class="image-upload-row">
         <div class="image-preview-box" id="previewBox">
           {% if product.image %}
@@ -183,65 +197,123 @@
           <input type="file" id="image" name="image" accept="image/*">
         </div>
       </div>
- 
+
       <div class="form-row">
         <label for="name">Product name</label>
         <input type="text" id="name" name="name" value="{{ product.name }}" required>
       </div>
- 
+
       <div class="form-row">
         <label for="description">Description <span class="char-count" id="descCount">0 characters</span></label>
         <textarea id="description" name="description">{{ product.description }}</textarea>
       </div>
- 
+
       <div class="form-grid-2">
         <div class="form-row">
-          <label for="category">Category</label>
-          <select id="category" name="category" required>
-            {% for c in categories %}
-              <option value="{{ c.pk }}" {% if c.pk == product.category_id %}selected{% endif %}>{{ c.name }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="form-row">
-          <label for="brand">Brand</label>
-          <select id="brand" name="brand">
-            <option value="">No brand</option>
-            {% for b in brands %}
-              <option value="{{ b.pk }}" {% if b.pk == product.brand_id %}selected{% endif %}>{{ b.name }}</option>
-            {% endfor %}
-          </select>
-        </div>
-      </div>
- 
-      <div class="form-grid-2">
-        <div class="form-row">
-          <label for="price">Price</label>
-          <div class="price-input">
-            <span>Rs.</span>
-            <input type="number" step="0.01" id="price" name="price" value="{{ product.price }}" required>
+          <label>Category</label>
+          <div class="pic-select" id="categoryPicSelect">
+            <input type="hidden" name="category" id="categoryInput" value="{{ form_data.category|default:'' }}">
+            <div class="pic-select-trigger" tabindex="0">
+              <span class="pic-select-thumb placeholder"><i class="ti ti-category"></i></span>
+              <span class="pic-select-label muted">Select category</span>
+              <i class="ti ti-chevron-down"></i>
+            </div>
+            <div class="pic-select-menu">
+              {% for c in categories %}
+                <div class="pic-select-option"
+                     data-value="{{ c.pk }}"
+                     data-label="{{ c.name }}"
+                     data-img="{% if c.image %}{{ c.image.url }}{% endif %}">
+                  {% if c.image %}
+                    <img src="{{ c.image.url }}" alt="{{ c.name }}">
+                  {% else %}
+                    <span class="no-img"><i class="ti ti-category"></i></span>
+                  {% endif %}
+                  <span>{{ c.name }}</span>
+                </div>
+              {% endfor %}
+            </div>
           </div>
         </div>
+
         <div class="form-row">
-          <label for="discount_price">Discount price</label>
-          <div class="price-input">
-            <span>Rs.</span>
-            <input type="number" step="0.01" id="discount_price" name="discount_price" value="{{ product.discount_price|default:'' }}">
+          <label>Brand</label>
+          <div class="pic-select" id="brandPicSelect">
+            <input type="hidden" name="brand" id="brandInput" value="{{ form_data.brand|default:'' }}">
+            <div class="pic-select-trigger" tabindex="0">
+              <span class="pic-select-thumb placeholder"><i class="ti ti-tag"></i></span>
+              <span class="pic-select-label muted">No brand</span>
+              <i class="ti ti-chevron-down"></i>
+            </div>
+            <div class="pic-select-menu">
+              <div class="pic-select-option" data-value="" data-label="No brand" data-img="">
+                <span class="no-img"><i class="ti ti-ban"></i></span>
+                <span>No brand</span>
+              </div>
+              {% for b in brands %}
+                <div class="pic-select-option"
+                     data-value="{{ b.pk }}"
+                     data-label="{{ b.name }}"
+                     data-img="{% if b.logo %}{{ b.logo.url }}{% endif %}">
+                  {% if b.logo %}
+                    <img src="{{ b.logo.url }}" alt="{{ b.name }}">
+                  {% else %}
+                    <span class="no-img"><i class="ti ti-tag"></i></span>
+                  {% endif %}
+                  <span>{{ b.name }}</span>
+                </div>
+              {% endfor %}
+            </div>
           </div>
         </div>
       </div>
- 
+
+      <div class="form-row">
+        <label for="price">Price</label>
+        <div class="price-input">
+          <span>Rs.</span>
+          <input type="number" step="0.01" id="price" name="price" value="{{ product.price }}" required>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label for="discount_percentage">Discount percentage <span class="hint">0 = no discount</span></label>
+        <div class="percent-input">
+          <input type="number" min="0" max="100" id="discount_percentage" name="discount_percentage" value="{{ product.discount_percentage }}">
+          <span>%</span>
+        </div>
+      </div>
+
+      <div class="offer-fields" id="offerFields">
+        <div class="offer-fields-label"><i class="ti ti-clock"></i> Offer window <span class="hint">Optional — leave blank for an always-on discount</span></div>
+        <div class="form-grid-2">
+          <div class="form-row" style="margin-bottom:0;">
+            <label for="offer_start">Offer starts</label>
+            <input type="datetime-local" id="offer_start" name="offer_start" value="{{ product.offer_start|date:'Y-m-d\TH:i' }}">
+          </div>
+          <div class="form-row" style="margin-bottom:0;">
+            <label for="offer_end">Offer ends</label>
+            <input type="datetime-local" id="offer_end" name="offer_end" value="{{ product.offer_end|date:'Y-m-d\TH:i' }}">
+          </div>
+        </div>
+        {% if product.is_offer_active %}
+          <div style="margin-top:10px; font-size:11px; color:#3a8c1c; font-weight:600;">
+            <i class="ti ti-check"></i> Offer currently active — selling at Rs. {{ product.effective_price|floatformat:0 }}
+          </div>
+        {% endif %}
+      </div>
+
       <div class="form-row">
         <label for="stock">Stock</label>
         <input type="number" id="stock" name="stock" value="{{ product.stock }}" required>
       </div>
- 
+
       <div class="form-row checkbox-row" id="activeRow">
         <input type="checkbox" id="is_active" name="is_active" {% if product.is_active %}checked{% endif %}>
         <label for="is_active">Active (visible to customers)</label>
         <span class="status-dot"></span>
       </div>
- 
+
       <div class="form-actions">
         <button type="submit" class="btn btn-primary">Save changes</button>
         <a href="{% url 'products:product_list' %}" class="btn btn-secondary" id="cancelLink">Cancel</a>
@@ -249,9 +321,9 @@
       </div>
     </form>
   </div>
- 
+
 </div>
- 
+
 <script>
 (function() {
   const form = document.getElementById('productForm');
@@ -261,45 +333,49 @@
   const dzFilename = document.getElementById('dzFilename');
   const descTextarea = document.getElementById('description');
   const descCount = document.getElementById('descCount');
+  const discountInput = document.getElementById('discount_percentage');
+  const offerFields = document.getElementById('offerFields');
   const activeCheckbox = document.getElementById('is_active');
   const activeRow = document.getElementById('activeRow');
   const unsavedPill = document.getElementById('unsavedPill');
   const cancelLink = document.getElementById('cancelLink');
- 
+
   let dirty = false;
   const markDirty = () => { dirty = true; unsavedPill.classList.add('show'); };
- 
-  // Description char counter
+
   function updateCount() { descCount.textContent = descTextarea.value.length + ' characters'; }
   updateCount();
   descTextarea.addEventListener('input', () => { updateCount(); markDirty(); });
- 
-  // Active toggle visual state
+
+  // Offer start/end only matter once a discount is set
+  function syncOfferFields() {
+    const hasDiscount = parseFloat(discountInput.value) > 0;
+    offerFields.classList.toggle('show', hasDiscount);
+  }
+  syncOfferFields();
+  discountInput.addEventListener('input', () => { syncOfferFields(); markDirty(); });
+
   function syncActiveState() { activeRow.classList.toggle('active', activeCheckbox.checked); }
   syncActiveState();
   activeCheckbox.addEventListener('change', () => { syncActiveState(); markDirty(); });
- 
-  // Track dirty state on any field
-  form.querySelectorAll('input, select, textarea').forEach(el => {
+
+  form.querySelectorAll('input, textarea').forEach(el => {
     el.addEventListener('input', markDirty);
     el.addEventListener('change', markDirty);
   });
- 
-  // Image preview + drag and drop
+
   function showPreview(file) {
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = e => {
-      previewBox.innerHTML = '<img src="' + e.target.result + '" alt="preview">';
-    };
+    reader.onload = e => { previewBox.innerHTML = '<img src="' + e.target.result + '" alt="preview">'; };
     reader.readAsDataURL(file);
     dzFilename.textContent = file.name;
   }
- 
+
   fileInput.addEventListener('change', () => {
     if (fileInput.files[0]) { showPreview(fileInput.files[0]); markDirty(); }
   });
- 
+
   ['dragenter', 'dragover'].forEach(evt => {
     dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.add('dragover'); });
   });
@@ -308,22 +384,84 @@
   });
   dropzone.addEventListener('drop', e => {
     const file = e.dataTransfer.files[0];
-    if (file) {
-      fileInput.files = e.dataTransfer.files;
-      showPreview(file);
-      markDirty();
-    }
+    if (file) { fileInput.files = e.dataTransfer.files; showPreview(file); markDirty(); }
   });
- 
-  // Warn before leaving with unsaved changes via Cancel
+
   cancelLink.addEventListener('click', e => {
-    if (dirty && !confirm('You have unsaved changes. Discard them and leave?')) {
-      e.preventDefault();
-    }
+    if (dirty && !confirm('You have unsaved changes. Discard them and leave?')) { e.preventDefault(); }
   });
- 
-  form.addEventListener('submit', () => { dirty = false; });
+
+  form.addEventListener('submit', (e) => {
+    const categoryInput = document.getElementById('categoryInput');
+    if (!categoryInput.value) {
+      e.preventDefault();
+      document.getElementById('categoryPicSelect').querySelector('.pic-select-trigger').style.borderColor = '#dc2626';
+      alert('Please select a category.');
+      return;
+    }
+    const discount = parseFloat(discountInput.value);
+    if (discount < 0 || discount > 100) {
+      e.preventDefault();
+      alert('Discount percentage must be between 0 and 100.');
+      return;
+    }
+    dirty = false;
+  });
+
+  // ---- Picture select component ----
+  function initPicSelect(rootId) {
+    const root = document.getElementById(rootId);
+    if (!root) return;
+    const trigger = root.querySelector('.pic-select-trigger');
+    const menu = root.querySelector('.pic-select-menu');
+    const hiddenInput = root.querySelector('input[type="hidden"]');
+    const thumb = root.querySelector('.pic-select-thumb');
+    const label = root.querySelector('.pic-select-label');
+    const options = Array.from(root.querySelectorAll('.pic-select-option'));
+
+    function setSelected(opt, fromUserAction) {
+      options.forEach(o => o.classList.remove('selected'));
+      opt.classList.add('selected');
+      hiddenInput.value = opt.dataset.value;
+      label.textContent = opt.dataset.label;
+      label.classList.remove('muted');
+      const img = opt.dataset.img;
+      if (img) {
+        thumb.outerHTML = '<img class="pic-select-thumb" src="' + img + '" alt="">';
+      } else {
+        thumb.outerHTML = '<span class="pic-select-thumb placeholder"><i class="ti ti-photo-off"></i></span>';
+      }
+      if (fromUserAction) markDirty();
+    }
+
+    trigger.addEventListener('click', () => {
+      root.classList.toggle('open');
+    });
+    trigger.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); root.classList.toggle('open'); }
+      if (e.key === 'Escape') root.classList.remove('open');
+    });
+
+    options.forEach(opt => {
+      opt.addEventListener('click', () => {
+        setSelected(opt, true);
+        root.classList.remove('open');
+      });
+    });
+
+    document.addEventListener('click', e => {
+      if (!root.contains(e.target)) root.classList.remove('open');
+    });
+
+    const existing = hiddenInput.value;
+    if (existing) {
+      const match = options.find(o => o.dataset.value === existing);
+      if (match) setSelected(match, false);
+    }
+  }
+
+  initPicSelect('categoryPicSelect');
+  initPicSelect('brandPicSelect');
 })();
 </script>
 {% endblock %}
- 

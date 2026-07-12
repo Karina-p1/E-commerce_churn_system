@@ -277,8 +277,8 @@
     </a>
 
     <div class="nav-section">Finance</div>
-    <a href="{% url 'analytics' %}"
-      class="nav-item {% if request.resolver_match.url_name == 'analytics' %}active{% endif %}">
+    <a href="{% url 'analytics_finance' %}"
+      class="nav-item {% if request.resolver_match.url_name == 'analytics_finance' %}active{% endif %}">
       <i class="ti ti-chart-line"></i>
       Analytics
     </a>
@@ -315,6 +315,11 @@
       class="nav-item {% if request.resolver_match.url_name in "order_list_admin,order_detail_admin" %}active{% endif %}">
       <i class="ti ti-shopping-bag"></i>
       Manage Orders
+    </a>
+    <a href="{% url 'coupon_list' %}"
+      class="nav-item {% if request.resolver_match.url_name in "coupon_list,coupon_add,coupon_edit" %}active{% endif %}">
+      <i class="ti ti-ticket"></i>
+      Manage Coupons
     </a>
 
     <div class="nav-dropdown">

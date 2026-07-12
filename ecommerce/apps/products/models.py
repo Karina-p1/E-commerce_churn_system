@@ -2,7 +2,7 @@ from django.db import models
 from django.utils.text import slugify
 
 from django.conf import settings
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from django.utils import timezone
 
 class Brand(models.Model):
@@ -111,7 +111,12 @@ class Product(models.Model):
     def effective_price(self):
         if self.is_offer_active:
             discount = Decimal(self.discount_percentage) / Decimal("100")
-            return self.price * (Decimal("1") - discount)
+            discounted_price = self.price * (Decimal("1") - discount)
+
+            return discounted_price.quantize(
+                Decimal("0.01"),
+                rounding=ROUND_HALF_UP
+            )
 
         return self.price
     
