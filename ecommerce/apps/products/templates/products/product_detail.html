@@ -323,12 +323,22 @@
       </div>
 
       <div class="d-flex align-items-baseline gap-2 mb-3">
-        {% if product.discount_price %}
-          <span class="price-main">Rs{{ product.discount_price }}</span>
-          <span class="price-orig">Rs{{ product.price }}</span>
-          <span class="badge-discount">{{ product.discount_percent }}% off</span>
+        {% if product.is_offer_active %}
+            <h3 class="text-danger fw-bold">
+                Rs. {{ product.effective_price|floatformat:2 }}
+            </h3>
+
+            <del class="text-muted">
+                Rs. {{ product.price|floatformat:2 }}
+            </del>
+
+            <span class="badge bg-danger">
+                {{ product.discount_percentage }}% OFF
+            </span>
         {% else %}
-          <span class="price-main">Rs{{ product.price }}</span>
+            <h3 class="fw-bold">
+                Rs. {{ product.price|floatformat:2 }}
+            </h3>
         {% endif %}
       </div>
 
