@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.http import JsonResponse
 from .models import RevenueSummary,RevenueSnapshot
 from django.db.models import Sum, F, DecimalField, ExpressionWrapper
@@ -7,7 +9,7 @@ from django.db.models.functions import (
     TruncMonth,
     TruncYear,
 )
-from apps.orders.models import OrderItem
+from apps.orders.models import Order, OrderItem
 
 def dashboard_summary(request):
 
@@ -192,31 +194,62 @@ def orders_chart_data(request):
 
 def category_revenue_chart(request):
 
-    revenue = ExpressionWrapper(
+    line_total = ExpressionWrapper(
         F("price") * F("quantity"),
         output_field=DecimalField(max_digits=12, decimal_places=2)
     )
 
-    qs = (
+    # Step 1: gross total per order (sum of price*qty across its items,
+    # i.e. revenue BEFORE any coupon discount)
+    order_gross = (
         OrderItem.objects
         .filter(order__payment_status="PAID")
-        .values("product__category__name")
-        .annotate(
-            revenue=Sum(revenue)
-        )
-        .order_by("-revenue")
+        .values("order_id")
+        .annotate(gross=Sum(line_total))
+    )
+    gross_by_order = {row["order_id"]: row["gross"] for row in order_gross}
+
+    # Step 2: what the customer actually paid per order (already net of discount)
+    orders = Order.objects.filter(payment_status="PAID").values("id", "total_price")
+    paid_total_by_order = {row["id"]: row["total_price"] for row in orders}
+
+    # Step 3: walk items, scale each line by (order.total_price / order.gross)
+    items = (
+        OrderItem.objects
+        .filter(order__payment_status="PAID")
+        .select_related("product__category")
+        .annotate(line_total=line_total)
     )
 
-    labels = []
-    values = []
+    category_revenue = {}
 
-    for row in qs:
+    for item in items:
+        order_id = item.order_id
+        gross = gross_by_order.get(order_id) or Decimal("0")
+        paid_total = paid_total_by_order.get(order_id)
 
-        labels.append(
-            row["product__category__name"] or "Uncategorized"
+        if gross > 0 and paid_total is not None:
+            scale = paid_total / gross
+        else:
+            scale = Decimal("1")
+
+        actual_line_revenue = item.line_total * scale
+
+        category_name = (
+            item.product.category.name
+            if item.product and item.product.category
+            else "Uncategorized"
         )
 
-        values.append(float(row["revenue"]))
+        category_revenue[category_name] = (
+            category_revenue.get(category_name, Decimal("0")) + actual_line_revenue
+        )
+
+    # Step 4: sort descending by revenue
+    sorted_items = sorted(category_revenue.items(), key=lambda x: x[1], reverse=True)
+
+    labels = [name for name, _ in sorted_items]
+    values = [float(rev) for _, rev in sorted_items]
 
     return JsonResponse({
         "labels": labels,
