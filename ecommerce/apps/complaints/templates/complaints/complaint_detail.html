@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+{% block title %}Complaint Details{% endblock %}
+
+{% block start %}
+
+<div class="container mt-5">
+
+    <div class="card shadow-sm border-0">
+
+        <div class="card-header bg-dark text-white">
+            <h3 class="mb-0">
+                {{ complaint.subject }}
+            </h3>
+        </div>
+
+        <div class="card-body">
+
+            <div class="row">
+
+                <div class="col-md-6">
+
+                    <p>
+                        <strong>Complaint Type:</strong>
+                        {{ complaint.get_complaint_type_display }}
+                    </p>
+
+                    <p>
+                        <strong>Status:</strong>
+
+                        {% if complaint.status == "PENDING" %}
+                            <span class="badge bg-warning text-dark">
+                                Pending
+                            </span>
+
+                        {% elif complaint.status == "IN_PROGRESS" %}
+                            <span class="badge bg-primary">
+                                In Progress
+                            </span>
+
+                        {% elif complaint.status == "RESOLVED" %}
+                            <span class="badge bg-success">
+                                Resolved
+                            </span>
+
+                        {% else %}
+                            <span class="badge bg-danger">
+                                Rejected
+                            </span>
+                        {% endif %}
+                    </p>
+
+
+                    {% if complaint.order %}
+                    <p>
+                        <strong>Order:</strong>
+                        #{{ complaint.order.id }}
+                    </p>
+                    {% endif %}
+
+                    <p>
+                        <strong>Submitted:</strong>
+                        {{ complaint.created_at|date:"M d, Y H:i" }}
+                    </p>
+
+                    {% if complaint.resolved_at %}
+                    <p>
+                        <strong>Resolved:</strong>
+                        {{ complaint.resolved_at|date:"M d, Y H:i" }}
+                    </p>
+
+                    <p>
+                        <strong>Resolution Time:</strong>
+                        {{ complaint.resolution_days }} day{{ complaint.resolution_days|pluralize }}
+                    </p>
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+            <hr>
+
+            <h5>Description</h5>
+
+            <p>
+                {{ complaint.description }}
+            </p>
+
+            {% if complaint.image %}
+
+            <div class="mt-4">
+
+                <h5>Attached Image</h5>
+
+                <img
+                    src="{{ complaint.image.url }}"
+                    class="img-fluid rounded shadow"
+                    style="max-width:400px;">
+
+            </div>
+
+            {% endif %}
+
+            <hr>
+
+            <h5>Support Reply</h5>
+
+            {% if complaint.admin_reply %}
+
+                <div class="alert alert-success">
+
+                    {{ complaint.admin_reply|linebreaks }}
+
+                </div>
+
+            {% else %}
+
+                <div class="alert alert-warning">
+
+                    No reply from support yet.
+
+                </div>
+
+            {% endif %}
+
+            {% if complaint.status == "RESOLVED" %}
+
+                <hr>
+
+                <h5>Customer Satisfaction</h5>
+
+                {% if complaint.customer_rating %}
+
+                    <div class="alert alert-info">
+
+                        <p>
+
+                            <strong>Rating:</strong>
+
+                            {{ complaint.customer_rating }} ⭐
+
+                        </p>
+
+                        {% if complaint.customer_feedback %}
+
+                        <p class="mb-0">
+
+                            <strong>Your Feedback:</strong><br>
+
+                            {{ complaint.customer_feedback }}
+
+                        </p>
+
+                        {% endif %}
+
+                    </div>
+
+                {% else %}
+
+                    <a
+                        href="{% url 'complaints:feedback' complaint.id %}"
+                        class="btn btn-success">
+
+                        ⭐ Rate Our Support
+
+                    </a>
+
+                {% endif %}
+
+            {% endif %}
+
+        </div>
+
+        <div class="card-footer bg-white">
+
+            {% if complaint.status == "PENDING" %}
+
+                <a
+                    href="{% url 'complaints:edit' complaint.id %}"
+                    class="btn btn-warning">
+
+                    Edit Complaint
+
+                </a>
+
+            {% endif %}
+
+            <a
+                href="{% url 'complaints:list' %}"
+                class="btn btn-secondary">
+
+                Back to My Complaints
+
+            </a>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

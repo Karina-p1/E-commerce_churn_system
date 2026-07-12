@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Complaint{% endblock %}
+
+{% block start %}
+
+<div class="container mt-4">
+
+<div class="card shadow">
+
+<div class="card-body">
+
+<h3>
+
+{% if edit %}
+
+Edit Complaint
+
+{% else %}
+
+Submit Complaint
+
+{% endif %}
+
+</h3>
+
+<form method="POST" enctype="multipart/form-data">
+
+{% csrf_token %}
+
+{{ form.as_p }}
+
+<button class="btn btn-dark">
+
+{% if edit %}
+
+Update Complaint
+
+{% else %}
+
+Submit Complaint
+
+{% endif %}
+
+</button>
+
+</form>
+
+</div>
+
+</div>
+
+</div>
+
+{% endblock %}

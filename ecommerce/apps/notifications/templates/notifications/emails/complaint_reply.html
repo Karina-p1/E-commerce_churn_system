@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+
+<html>
+
+<body style="font-family:Arial">
+
+<h2>Hello {{ user.first_name }}</h2>
+
+<p>
+
+Your complaint has been updated.
+
+</p>
+
+<hr>
+
+<p>
+
+<b>Status:</b>
+
+{{ complaint.get_status_display }}
+
+</p>
+
+<p>
+
+<b>Reply:</b>
+
+</p>
+
+<p>
+
+{{ complaint.admin_reply }}
+
+</p>
+
+<p>
+
+Thank you,
+
+ShopMart Support Team
+
+</p>
+
+</body>
+
+</html>

@@ -1134,25 +1134,45 @@
               </a>
             </li>
 
-            <li>
-              <a class="dropdown-item" href="{% url 'products:wishlist' %}">
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  style="margin-right: 10px"
-                >
-                  <path
-                    d="M20.8 4.6c-1.5-1.4-4-1.4-5.5 0L12 7.9 8.7 4.6c-1.5-1.4-4-1.4-5.5 0-1.5 1.5-1.5 4 0 5.5L12 20l8.8-9.9c1.5-1.5 1.5-4 0-5.5z"
-                  />
-                </svg>
+           <li>
+  <a class="dropdown-item" href="{% url 'products:wishlist' %}">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      style="margin-right: 10px"
+    >
+      <path
+        d="M20.8 4.6c-1.5-1.4-4-1.4-5.5 0L12 7.9 8.7 4.6c-1.5-1.4-4-1.4-5.5 0-1.5 1.5-1.5 4 0 5.5L12 20l8.8-9.9c1.5-1.5 1.5-4 0-5.5z"
+      />
+    </svg>
 
-                Wishlist
-              </a>
-            </li>
+    Wishlist
+  </a>
+</li>
+
+<li>
+  <a class="dropdown-item" href="{% url 'complaints:list' %}">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      style="margin-right: 10px"
+    >
+      <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+      <line x1="8" y1="9" x2="16" y2="9"/>
+      <line x1="8" y1="13" x2="13" y2="13"/>
+    </svg>
+
+    My Complaints
+  </a>
+</li>
             {% if request.user.is_staff %}
             <li><hr class="dropdown-divider" /></li>
 

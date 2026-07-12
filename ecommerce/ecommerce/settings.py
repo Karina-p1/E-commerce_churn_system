@@ -62,6 +62,7 @@ INSTALLED_APPS = [
     "apps.dashboard",
     "apps.addresses",
     "apps.notifications",
+    "apps.complaints",
 ]
 
 

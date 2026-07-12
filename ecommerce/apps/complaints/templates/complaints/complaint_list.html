@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}My Complaints{% endblock %}
+
+{% block start %}
+
+<div class="container mt-4">
+
+<div class="d-flex justify-content-between mb-3">
+
+<h3>My Complaints</h3>
+
+<a href="{% url 'complaints:create' %}"
+class="btn btn-primary">
+
+New Complaint
+
+</a>
+
+</div>
+
+<table class="table table-bordered">
+
+<thead>
+
+<tr>
+
+<th>ID</th>
+
+<th>Subject</th>
+
+<th>Type</th>
+
+<th>Status</th>
+
+<th>Date</th>
+
+<th></th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for complaint in complaints %}
+
+<tr>
+
+<td>#{{ complaint.id }}</td>
+
+<td>{{ complaint.subject }}</td>
+
+<td>{{ complaint.get_complaint_type_display }}</td>
+
+<td>
+
+<span class="badge bg-secondary">
+
+{{ complaint.get_status_display }}
+
+</span>
+
+</td>
+
+<td>{{ complaint.created_at|date:"M d, Y" }}</td>
+
+<td>
+
+<a
+href="{% url 'complaints:detail' complaint.id %}"
+class="btn btn-sm btn-dark">
+
+View
+
+</a>
+
+</td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+
+<td colspan="6">
+
+No complaints yet.
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+</div>
+
+{% endblock %}

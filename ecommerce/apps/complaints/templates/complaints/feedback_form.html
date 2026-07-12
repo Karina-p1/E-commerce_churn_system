@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block start %}
+
+<div class="container mt-5">
+
+    <div class="row justify-content-center">
+
+        <div class="col-lg-8">
+
+            <div class="card shadow">
+
+                <div class="card-header bg-primary text-white">
+
+                    <h3 class="mb-0">
+                        ⭐ Rate Your Support Experience
+                    </h3>
+
+                </div>
+
+                <div class="card-body">
+
+                    <h5>{{ complaint.subject }}</h5>
+
+                    <p class="text-muted">
+                        Your complaint has been resolved. We'd appreciate your feedback.
+                    </p>
+
+                    <form method="POST">
+
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label class="form-label">Rating</label>
+                            {{ form.customer_rating }}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Feedback</label>
+                            {{ form.customer_feedback }}
+                        </div>
+
+                        <button class="btn btn-success">
+                            Submit Feedback
+                        </button>
+
+                        <a href="{% url 'complaints:detail' complaint.id %}"
+                           class="btn btn-secondary">
+                            Cancel
+                        </a>
+
+                    </form>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}
