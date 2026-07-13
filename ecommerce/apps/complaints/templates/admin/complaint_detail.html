@@ -1,0 +1,228 @@
+{% extends 'admin_base.html' %}
+{% load humanize %}
+{% block title %}Complaint #{{ complaint.id }} - ShopMart Admin{% endblock %}
+
+{% block start %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+
+<style>
+  .mgmt-page {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #f5f5f4;
+    padding: 20px;
+    border-radius: 12px;
+    color: #1a1a1a;
+  }
+
+  .back-link {
+    display: inline-flex; align-items: center; gap: 6px; color: #888;
+    text-decoration: none; font-size: 12px; margin-bottom: 14px;
+  }
+  .back-link:hover { color: #1a1a1a; }
+
+  .mgmt-header {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; margin-bottom: 18px; flex-wrap: wrap;
+  }
+  .mgmt-title h1 { font-size: 18px; font-weight: 500; margin: 0 0 2px; }
+  .mgmt-title p { color: #888; font-size: 12px; margin: 0; }
+
+  .detail-grid {
+    display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px;
+  }
+  @media (max-width: 900px) { .detail-grid { grid-template-columns: 1fr; } }
+
+  .card {
+    background: #fff; border: 0.5px solid #e5e5e5; border-radius: 10px;
+    padding: 18px; margin-bottom: 16px;
+  }
+  .card h3 {
+    font-size: 12px; font-weight: 600; color: #888; text-transform: uppercase;
+    letter-spacing: 0.06em; margin: 0 0 14px;
+  }
+
+  .info-row {
+    display: flex; justify-content: space-between; padding: 8px 0;
+    border-top: 0.5px solid #f5f5f4; font-size: 13px;
+  }
+  .info-row:first-child { border-top: none; }
+  .info-row .label { color: #888; }
+  .info-row .value { font-weight: 500; text-align: right; }
+
+  .desc-text {
+    font-size: 13px; line-height: 1.6; color: #333; white-space: pre-wrap;
+  }
+
+  .type-pill {
+    display: inline-block; padding: 2px 8px; border-radius: 20px;
+    font-size: 10px; font-weight: 600; background: #eef2ff; color: #4338ca;
+  }
+
+  .priority-pill, .status-pill {
+    display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px;
+    border-radius: 20px; font-size: 10px; font-weight: 600;
+  }
+  .priority-pill::before, .status-pill::before { content: ""; width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
+  .priority-LOW { background: #f0f0f0; color: #6c757d; }
+  .priority-MEDIUM { background: #eaf1ff; color: #0d6efd; }
+  .priority-HIGH { background: #f8e3e3; color: #A32D2D; }
+  .status-PENDING { background: #fff6e0; color: #b8860b; }
+  .status-IN_PROGRESS { background: #e0f6fb; color: #0e7c9c; }
+  .status-RESOLVED { background: #e8f3e1; color: #3a8c1c; }
+  .status-REJECTED { background: #f8e3e3; color: #A32D2D; }
+
+  .complaint-image {
+    width: 100%; border-radius: 8px; border: 0.5px solid #e5e5e5; margin-top: 10px;
+  }
+
+  .form-group { margin-bottom: 14px; }
+  .form-group label {
+    display: block; font-size: 11px; font-weight: 600; color: #888;
+    text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;
+  }
+  .form-group select, .form-group textarea {
+    width: 100%; border: 0.5px solid #e5e5e5; border-radius: 8px; padding: 9px 11px;
+    font-size: 13px; font-family: inherit; color: #1a1a1a; outline: none; background: #fff;
+    box-sizing: border-box;
+  }
+  .form-group select:focus, .form-group textarea:focus { border-color: #b5b8f0; }
+  .form-group textarea { resize: vertical; min-height: 100px; }
+
+  .save-btn {
+    background: #2931a3; color: #fff; border: none; padding: 10px 18px;
+    border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; width: 100%;
+  }
+  .save-btn:hover { opacity: 0.9; }
+
+  .feedback-box {
+    background: #fafaf9; border-radius: 8px; padding: 12px 14px; font-size: 13px;
+  }
+  .feedback-box .stars { color: #f5b301; font-size: 13px; margin-bottom: 6px; }
+  .feedback-box .fb-text { color: #555; line-height: 1.5; }
+  .no-feedback { color: #bbb; font-size: 12px; }
+
+  .existing-reply {
+    background: #f3f4fb; border-radius: 8px; padding: 12px 14px; font-size: 12.5px;
+    color: #2931a3; line-height: 1.5; margin-bottom: 12px;
+  }
+</style>
+
+<div class="mgmt-page">
+
+  <a href="{% url 'complaints:complaint_list' %}" class="back-link">
+    <i class="ti ti-arrow-left"></i> Back to complaints
+  </a>
+
+  <div class="mgmt-header">
+    <div class="mgmt-title">
+      <h1>Complaint #{{ complaint.id }}</h1>
+      <p>Filed by {{ complaint.user.username }} on {{ complaint.created_at|date:"M d, Y — H:i" }}</p>
+    </div>
+    <div>
+      <span class="priority-pill priority-{{ complaint.priority }}">{{ complaint.get_priority_display }}</span>
+      <span class="status-pill status-{{ complaint.status }}">{{ complaint.get_status_display }}</span>
+    </div>
+  </div>
+
+  <div class="detail-grid">
+
+    <!-- LEFT COLUMN -->
+    <div>
+      <div class="card">
+        <h3>Complaint Details</h3>
+        <div class="info-row">
+          <span class="label">Subject</span>
+          <span class="value">{{ complaint.subject }}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Type</span>
+          <span class="value"><span class="type-pill">{{ complaint.get_complaint_type_display }}</span></span>
+        </div>
+        <div class="info-row">
+          <span class="label">Order</span>
+          <span class="value">
+            {% if complaint.order %}#{{ complaint.order.id }}{% else %}—{% endif %}
+          </span>
+        </div>
+        <div class="info-row">
+          <span class="label">Customer</span>
+          <span class="value">{{ complaint.user.username }} ({{ complaint.user.email }})</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Resolved in</span>
+          <span class="value">
+            {% if complaint.resolution_days is not None %}{{ complaint.resolution_days }} day{{ complaint.resolution_days|pluralize }}{% else %}—{% endif %}
+          </span>
+        </div>
+
+        <div style="margin-top:14px;">
+          <div class="info-row" style="border-top:none;padding-bottom:4px;"><span class="label">Description</span></div>
+          <p class="desc-text">{{ complaint.description }}</p>
+        </div>
+
+        {% if complaint.image %}
+        <img src="{{ complaint.image.url }}" alt="Complaint attachment" class="complaint-image">
+        {% endif %}
+      </div>
+
+      <div class="card">
+        <h3>Customer Feedback</h3>
+        {% if complaint.customer_rating %}
+          <div class="feedback-box">
+            <div class="stars">{{ complaint.customer_rating }} ⭐ out of 5</div>
+            {% if complaint.customer_feedback %}
+              <div class="fb-text">{{ complaint.customer_feedback }}</div>
+            {% endif %}
+          </div>
+        {% else %}
+          <span class="no-feedback">Customer hasn't rated this complaint yet.</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div>
+      <div class="card">
+        <h3>Update Complaint</h3>
+
+        {% if complaint.admin_reply %}
+          <div class="existing-reply">
+            <strong>Current reply:</strong><br>{{ complaint.admin_reply }}
+          </div>
+        {% endif %}
+
+        <form method="post">
+          {% csrf_token %}
+
+          <div class="form-group">
+            <label for="status">Status</label>
+            <select name="status" id="status">
+              {% for value, label in complaint.STATUS_CHOICES %}
+                <option value="{{ value }}" {% if complaint.status == value %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="priority">Priority</label>
+            <select name="priority" id="priority">
+              {% for value, label in complaint.PRIORITY_CHOICES %}
+                <option value="{{ value }}" {% if complaint.priority == value %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="admin_reply">Reply to customer</label>
+            <textarea name="admin_reply" id="admin_reply" placeholder="Write a response...">{{ complaint.admin_reply }}</textarea>
+          </div>
+
+          <button type="submit" class="save-btn">Save changes</button>
+        </form>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}

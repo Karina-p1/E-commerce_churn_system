@@ -1,0 +1,68 @@
+{% extends 'admin_base.html' %}
+{% block title %}Delete Complaint - ShopMart Admin{% endblock %}
+
+{% block start %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+
+<style>
+  .confirm-page {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #f5f5f4;
+    padding: 20px;
+    border-radius: 12px;
+    color: #1a1a1a;
+    display: flex;
+    justify-content: center;
+  }
+
+  .confirm-card {
+    background: #fff; border: 0.5px solid #e5e5e5; border-radius: 12px;
+    padding: 32px; max-width: 420px; width: 100%; text-align: center;
+  }
+
+  .confirm-icon {
+    width: 52px; height: 52px; border-radius: 50%; background: #f8e3e3;
+    color: #A32D2D; display: flex; align-items: center; justify-content: center;
+    font-size: 24px; margin: 0 auto 16px;
+  }
+
+  .confirm-card h2 { font-size: 16px; font-weight: 600; margin: 0 0 8px; }
+  .confirm-card p { font-size: 13px; color: #888; margin: 0 0 20px; line-height: 1.5; }
+  .confirm-card p strong { color: #1a1a1a; }
+
+  .confirm-actions {
+    display: flex; gap: 10px; justify-content: center;
+  }
+
+  .btn {
+    padding: 9px 18px; border-radius: 8px; font-size: 13px; font-weight: 600;
+    text-decoration: none; border: none; cursor: pointer;
+  }
+  .btn-cancel {
+    background: #fff; color: #888; border: 0.5px solid #e5e5e5;
+  }
+  .btn-cancel:hover { background: #f0f0f0; color: #1a1a1a; }
+  .btn-delete {
+    background: #A32D2D; color: #fff;
+  }
+  .btn-delete:hover { opacity: 0.9; }
+</style>
+
+<div class="confirm-page">
+  <div class="confirm-card">
+    <div class="confirm-icon"><i class="ti ti-alert-triangle"></i></div>
+    <h2>Delete this complaint?</h2>
+    <p>
+      Are you sure you want to delete complaint <strong>#{{ complaint.id }} — {{ complaint.subject }}</strong>
+      filed by <strong>{{ complaint.user.username }}</strong>? This action cannot be undone.
+    </p>
+    <div class="confirm-actions">
+      <a href="{% url 'complaints:complaint_list' %}" class="btn btn-cancel">Cancel</a>
+      <form method="post" style="display:inline;">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-delete">Yes, delete</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

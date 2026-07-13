@@ -34,4 +34,7 @@ urlpatterns = [
         views.complaint_feedback,
         name="feedback"
     ),
+    path('manage/', views.complaint_list_admin, name='complaint_list'),
+    path('manage/<int:pk>/', views.complaint_detail_admin, name='complaint_detail'),
+    path('manage/<int:pk>/delete/', views.complaint_delete_confirm, name='complaint_delete_confirm'),
 ]
