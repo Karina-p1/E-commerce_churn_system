@@ -321,10 +321,11 @@ def coupon_summary(request):
         ],
     })
 
-
 def refund_summary(request):
 
-    # Order.refund_status: NONE / PENDING / COMPLETED / REJECTED
+    refunded_orders = Order.objects.filter(refund_status="COMPLETED")
+
+    # Order.refund_status breakdown (all statuses, not just completed)
     refund_status_counts = (
         Order.objects
         .values("refund_status")
@@ -332,15 +333,23 @@ def refund_summary(request):
     )
 
     total_refunded_amount = (
-        Order.objects
-        .filter(refund_status="COMPLETED")
-        .aggregate(total=Sum("total_price"))["total"] or Decimal("0")
+        refunded_orders.aggregate(total=Sum("total_price"))["total"] or Decimal("0")
     )
 
     pending_refund_amount = (
         Order.objects
         .filter(refund_status="PENDING")
         .aggregate(total=Sum("total_price"))["total"] or Decimal("0")
+    )
+
+    total_refunded_orders = refunded_orders.count()
+
+    # total individual product units refunded, summed across all
+    # OrderItems belonging to refunded orders
+    total_products_refunded = (
+        OrderItem.objects
+        .filter(order__refund_status="COMPLETED")
+        .aggregate(total=Sum("quantity"))["total"] or 0
     )
 
     # RefundRequest is the actual submitted request/ticket queue
@@ -363,6 +372,8 @@ def refund_summary(request):
         },
         "total_refunded_amount": float(total_refunded_amount),
         "pending_refund_amount": float(pending_refund_amount),
+        "total_refunded_orders": total_refunded_orders,
+        "total_products_refunded": total_products_refunded,
         "refund_request_status_breakdown": {
             row["status"]: row["count"] for row in refund_request_counts
         },

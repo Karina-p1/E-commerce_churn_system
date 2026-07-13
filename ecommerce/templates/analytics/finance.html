@@ -304,7 +304,6 @@
                             <div class="chart-loading" id="refundLoading">
                                 <div class="spinner-border spinner-border-sm text-danger" role="status"></div>
                             </div>
-
                             <div class="row g-3 mb-3">
                                 <div class="col-6">
                                     <small class="text-muted d-block">Total Refunded</small>
@@ -314,8 +313,15 @@
                                     <small class="text-muted d-block">Pending Refund Amount</small>
                                     <h5 class="fw-bold text-warning mb-0" id="pendingRefundAmount">--</h5>
                                 </div>
+                                <div class="col-6">
+                                    <small class="text-muted d-block">Orders Refunded</small>
+                                    <h5 class="fw-bold mb-0" id="totalRefundedOrders">--</h5>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted d-block">Products Refunded</small>
+                                    <h5 class="fw-bold mb-0" id="totalProductsRefunded">--</h5>
+                                </div>
                             </div>
-
                             <div style="height:180px">
                                 <canvas id="refundStatusChart"></canvas>
                             </div>
@@ -915,6 +921,12 @@ async function loadRefundSummary(){
         document.getElementById("pendingRefundAmount").innerText =
             "Rs. " + nprFormatter.format(data.pending_refund_amount);
 
+        document.getElementById("totalRefundedOrders").innerText =
+            data.total_refunded_orders;
+
+        document.getElementById("totalProductsRefunded").innerText =
+            data.total_products_refunded;
+
         const statusLabels = Object.keys(data.refund_status_breakdown);
         const statusValues = Object.values(data.refund_status_breakdown);
 
@@ -942,6 +954,10 @@ async function loadRefundSummary(){
         });
     } catch (err) {
         console.error("Failed to load refund summary", err);
+        document.getElementById("totalRefundedAmount").innerText = "Error";
+        document.getElementById("pendingRefundAmount").innerText = "Error";
+        document.getElementById("totalRefundedOrders").innerText = "Error";
+        document.getElementById("totalProductsRefunded").innerText = "Error";
     } finally {
         toggleLoading("refundLoading", false);
     }
