@@ -321,6 +321,11 @@
       <i class="ti ti-ticket"></i>
       Manage Coupons
     </a>
+    <a href="{% url 'complaints:complaint_list' %}"
+      class="nav-item {% if request.resolver_match.url_name in "complaint_list,complaint_detail" %}active{% endif %}">
+      <i class="ti ti-alert-circle"></i>
+      Manage Complaints
+    </a>
 
     <div class="nav-dropdown">
       <div class="nav-item nav-dropdown-toggle

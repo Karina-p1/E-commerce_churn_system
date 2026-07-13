@@ -1,0 +1,220 @@
+{% extends 'admin_base.html' %}
+{% load humanize %}
+{% block title %}Manage Complaints - ShopMart Admin{% endblock %}
+
+{% block start %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+
+<style>
+  .mgmt-page {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #f5f5f4;
+    padding: 20px;
+    border-radius: 12px;
+    color: #1a1a1a;
+  }
+
+  .mgmt-header {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; margin-bottom: 18px; flex-wrap: wrap;
+  }
+
+  .mgmt-title h1 { font-size: 18px; font-weight: 500; margin: 0 0 2px; }
+  .mgmt-title p { color: #888; font-size: 12px; margin: 0; }
+
+  .stat-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .stat-chip {
+    background: #fff; border: 0.5px solid #e5e5e5; border-radius: 8px;
+    padding: 6px 12px; font-size: 11px; color: #888;
+  }
+  .stat-chip b { color: #1a1a1a; font-size: 13px; margin-right: 4px; }
+
+  .mgmt-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+
+  .mgmt-search {
+    flex: 1; min-width: 200px; display: flex; align-items: center; gap: 8px;
+    background: #fff; border: 0.5px solid #e5e5e5; border-radius: 8px; padding: 8px 12px;
+  }
+  .mgmt-search input { border: none; outline: none; font-size: 13px; flex: 1; background: transparent; color: #1a1a1a; }
+  .mgmt-search i { color: #bbb; font-size: 15px; }
+
+  .filter-btn {
+    padding: 6px 13px; border-radius: 999px; font-size: 12px; font-weight: 500;
+    text-decoration: none; background: #fff; border: 0.5px solid #e5e5e5; color: #888;
+    transition: 0.15s ease; white-space: nowrap;
+  }
+  .filter-btn:hover { background: #f0f0f0; color: #1a1a1a; }
+  .filter-btn.active { background: #e8eafd; border-color: #b5b8f0; color: #2931a3; }
+
+  select.filter-select {
+    padding: 6px 11px; border-radius: 999px; font-size: 12px; font-weight: 500;
+    background: #fff; border: 0.5px solid #e5e5e5; color: #888; outline: none;
+  }
+
+  .mgmt-table-card {
+    background: #fff; border: 0.5px solid #e5e5e5; border-radius: 10px; padding: 16px; overflow-x: auto;
+  }
+  .mgmt-table-card table { width: 100%; border-collapse: collapse; }
+  .mgmt-table-card thead th {
+    font-size: 10px; font-weight: 600; color: #bbb; text-transform: uppercase;
+    letter-spacing: 0.06em; padding: 0 0 8px; text-align: left;
+  }
+  .mgmt-table-card tbody tr { border-top: 0.5px solid #f5f5f4; }
+  .mgmt-table-card tbody tr:hover { background: #fafafa; }
+  .mgmt-table-card td { padding: 10px 8px 10px 0; font-size: 12px; vertical-align: middle; }
+
+  .subject-cell { max-width: 220px; }
+  .subject-cell .subj { font-weight: 600; display: block; }
+  .subject-cell .cust { color: #888; font-size: 11px; }
+
+  .type-pill {
+    display: inline-block; padding: 2px 8px; border-radius: 20px;
+    font-size: 10px; font-weight: 600; background: #eef2ff; color: #4338ca;
+    white-space: nowrap;
+  }
+
+  .priority-pill {
+    display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px;
+    border-radius: 20px; font-size: 10px; font-weight: 600;
+  }
+  .priority-pill::before { content: ""; width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
+  .priority-LOW { background: #f0f0f0; color: #6c757d; }
+  .priority-MEDIUM { background: #eaf1ff; color: #0d6efd; }
+  .priority-HIGH { background: #f8e3e3; color: #A32D2D; }
+
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px;
+    border-radius: 20px; font-size: 10px; font-weight: 600;
+  }
+  .status-pill::before { content: ""; width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
+  .status-PENDING { background: #fff6e0; color: #b8860b; }
+  .status-IN_PROGRESS { background: #e0f6fb; color: #0e7c9c; }
+  .status-RESOLVED { background: #e8f3e1; color: #3a8c1c; }
+  .status-REJECTED { background: #f8e3e3; color: #A32D2D; }
+
+  .rating-stars { color: #f5b301; font-size: 11px; white-space: nowrap; }
+  .no-rating { color: #ccc; font-size: 11px; }
+
+  .row-actions { display: flex; gap: 6px; justify-content: flex-end; }
+  .icon-btn {
+    width: 28px; height: 28px; border-radius: 7px; display: flex; align-items: center;
+    justify-content: center; text-decoration: none; font-size: 13px;
+    border: 0.5px solid #e5e5e5; background: #fff; color: #888; transition: 0.15s ease;
+  }
+  .icon-btn:hover { background: #f0f0f0; color: #1a1a1a; }
+  .icon-btn.danger:hover { background: #f8e3e3; color: #A32D2D; border-color: #e8bcbc; }
+
+  .empty-state { padding: 36px 16px; text-align: center; color: #888; font-size: 12px; }
+
+  .pagination { display: flex; justify-content: center; gap: 6px; margin-top: 16px; }
+  .page-link {
+    padding: 6px 11px; border-radius: 7px; font-size: 12px; text-decoration: none;
+    border: 0.5px solid #e5e5e5; background: #fff; color: #888;
+  }
+  .page-link:hover { background: #f0f0f0; color: #1a1a1a; }
+  .page-link.current { background: #2931a3; border-color: #2931a3; color: #fff; }
+
+  @media (max-width: 640px) { .mgmt-header { flex-direction: column; align-items: flex-start; } }
+</style>
+
+<div class="mgmt-page">
+
+  <div class="mgmt-header">
+    <div class="mgmt-title">
+      <h1>Manage Complaints</h1>
+      <p>{{ page_obj.paginator.count }} complaint{{ page_obj.paginator.count|pluralize }} total</p>
+    </div>
+    <div class="stat-chips">
+      <div class="stat-chip"><b>{{ pending_count }}</b>Pending</div>
+      <div class="stat-chip"><b>{{ in_progress_count }}</b>In Progress</div>
+      <div class="stat-chip"><b>{{ resolved_count }}</b>Resolved</div>
+    </div>
+  </div>
+
+  <form method="get" class="mgmt-toolbar">
+    <div class="mgmt-search">
+      <i class="ti ti-search"></i>
+      <input type="text" name="q" value="{{ query }}" placeholder="Search by subject, customer, order...">
+    </div>
+
+    <select name="priority" class="filter-select" onchange="this.form.submit()">
+      <option value="all" {% if priority == 'all' %}selected{% endif %}>All priorities</option>
+      <option value="low" {% if priority == 'low' %}selected{% endif %}>Low</option>
+      <option value="medium" {% if priority == 'medium' %}selected{% endif %}>Medium</option>
+      <option value="high" {% if priority == 'high' %}selected{% endif %}>High</option>
+    </select>
+
+    <input type="hidden" name="status" value="{{ status }}">
+
+    <a href="?status=all{% if query %}&q={{ query }}{% endif %}" class="filter-btn {% if status == 'all' %}active{% endif %}">All</a>
+    <a href="?status=pending{% if query %}&q={{ query }}{% endif %}" class="filter-btn {% if status == 'pending' %}active{% endif %}">Pending</a>
+    <a href="?status=in_progress{% if query %}&q={{ query }}{% endif %}" class="filter-btn {% if status == 'in_progress' %}active{% endif %}">In Progress</a>
+    <a href="?status=resolved{% if query %}&q={{ query }}{% endif %}" class="filter-btn {% if status == 'resolved' %}active{% endif %}">Resolved</a>
+    <a href="?status=rejected{% if query %}&q={{ query }}{% endif %}" class="filter-btn {% if status == 'rejected' %}active{% endif %}">Rejected</a>
+  </form>
+
+  <div class="mgmt-table-card">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Complaint</th>
+          <th>Type</th>
+          <th>Priority</th>
+          <th>Status</th>
+          <th>Rating</th>
+          <th>Filed on</th>
+          <th style="text-align:right">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for complaint in page_obj %}
+        <tr>
+          <td>#{{ complaint.id }}</td>
+          <td class="subject-cell">
+            <span class="subj">{{ complaint.subject|truncatechars:40 }}</span>
+            <span class="cust">{{ complaint.user.username }}{% if complaint.order %} · Order #{{ complaint.order.id }}{% endif %}</span>
+          </td>
+          <td><span class="type-pill">{{ complaint.get_complaint_type_display }}</span></td>
+          <td><span class="priority-pill priority-{{ complaint.priority }}">{{ complaint.get_priority_display }}</span></td>
+          <td><span class="status-pill status-{{ complaint.status }}">{{ complaint.get_status_display }}</span></td>
+          <td>
+            {% if complaint.customer_rating %}
+            <span class="rating-stars">{{ complaint.customer_rating }} ⭐</span>
+            {% else %}
+            <span class="no-rating">Not rated</span>
+            {% endif %}
+          </td>
+          <td>{{ complaint.created_at|date:"M d, Y" }}</td>
+          <td>
+            <div class="row-actions">
+              <a href="{% url 'complaints:complaint_detail' complaint.pk %}" class="icon-btn" title="View / Respond"><i class="ti ti-eye"></i></a>
+              <a href="{% url 'complaints:complaint_delete_confirm' complaint.pk %}" class="icon-btn danger" title="Delete"><i class="ti ti-trash"></i></a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8" class="empty-state">No complaints found{% if query %} for "{{ query }}"{% endif %}.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if page_obj.paginator.num_pages > 1 %}
+  <div class="pagination">
+    {% if page_obj.has_previous %}
+      <a href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}&status={{ status }}&priority={{ priority }}" class="page-link">‹</a>
+    {% endif %}
+    {% for num in page_obj.paginator.page_range %}
+      <a href="?page={{ num }}{% if query %}&q={{ query }}{% endif %}&status={{ status }}&priority={{ priority }}" class="page-link {% if num == page_obj.number %}current{% endif %}">{{ num }}</a>
+    {% endfor %}
+    {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}&status={{ status }}&priority={{ priority }}" class="page-link">›</a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
