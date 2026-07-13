@@ -1002,6 +1002,7 @@ def process_refund(request, pk):
     order.refund_reference = reference
     order.refund_notes = notes
     order.payment_status = "REFUNDED"
+    order.refund_status = "COMPLETED"
     order.refunded_at = timezone.now()
     order.save()
 

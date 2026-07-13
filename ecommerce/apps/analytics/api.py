@@ -10,6 +10,8 @@ from django.db.models.functions import (
     TruncYear,
 )
 from apps.orders.models import Order, OrderItem
+from django.db.models import Count
+from apps.orders.models import RefundRequest
 
 def dashboard_summary(request):
 
@@ -254,4 +256,118 @@ def category_revenue_chart(request):
     return JsonResponse({
         "labels": labels,
         "revenue": values,
+    })
+
+
+
+
+def coupon_summary(request):
+
+    paid_orders = Order.objects.filter(payment_status="PAID")
+
+    total_discount_given = (
+        paid_orders.aggregate(total=Sum("discount_amount"))["total"] or Decimal("0")
+    )
+
+    orders_with_coupon = paid_orders.exclude(coupon__isnull=True).count()
+    total_paid_orders = paid_orders.count()
+
+    top_coupons = (
+        paid_orders
+        .exclude(coupon__isnull=True)
+        .values("coupon__code", "coupon__coupon_type")
+        .annotate(
+            times_used=Count("id"),
+            discount_given=Sum("discount_amount"),
+        )
+        .order_by("-discount_given")[:10]
+    )
+
+    coupon_type_breakdown = (
+        paid_orders
+        .exclude(coupon__isnull=True)
+        .values("coupon__coupon_type")
+        .annotate(
+            times_used=Count("id"),
+            discount_given=Sum("discount_amount"),
+        )
+        .order_by("-discount_given")
+    )
+
+    return JsonResponse({
+        "total_discount_given": float(total_discount_given),
+        "orders_with_coupon": orders_with_coupon,
+        "total_paid_orders": total_paid_orders,
+        "coupon_usage_rate": (
+            round((orders_with_coupon / total_paid_orders) * 100, 1)
+            if total_paid_orders else 0
+        ),
+        "top_coupons": [
+            {
+                "code": row["coupon__code"],
+                "type": row["coupon__coupon_type"],
+                "times_used": row["times_used"],
+                "discount_given": float(row["discount_given"] or 0),
+            }
+            for row in top_coupons
+        ],
+        "coupon_type_breakdown": [
+            {
+                "type": row["coupon__coupon_type"],
+                "times_used": row["times_used"],
+                "discount_given": float(row["discount_given"] or 0),
+            }
+            for row in coupon_type_breakdown
+        ],
+    })
+
+
+def refund_summary(request):
+
+    # Order.refund_status: NONE / PENDING / COMPLETED / REJECTED
+    refund_status_counts = (
+        Order.objects
+        .values("refund_status")
+        .annotate(count=Count("id"))
+    )
+
+    total_refunded_amount = (
+        Order.objects
+        .filter(refund_status="COMPLETED")
+        .aggregate(total=Sum("total_price"))["total"] or Decimal("0")
+    )
+
+    pending_refund_amount = (
+        Order.objects
+        .filter(refund_status="PENDING")
+        .aggregate(total=Sum("total_price"))["total"] or Decimal("0")
+    )
+
+    # RefundRequest is the actual submitted request/ticket queue
+    refund_request_counts = (
+        RefundRequest.objects
+        .values("status")
+        .annotate(count=Count("id"))
+    )
+
+    refund_reason_breakdown = (
+        RefundRequest.objects
+        .values("reason")
+        .annotate(count=Count("id"))
+        .order_by("-count")
+    )
+
+    return JsonResponse({
+        "refund_status_breakdown": {
+            row["refund_status"]: row["count"] for row in refund_status_counts
+        },
+        "total_refunded_amount": float(total_refunded_amount),
+        "pending_refund_amount": float(pending_refund_amount),
+        "refund_request_status_breakdown": {
+            row["status"]: row["count"] for row in refund_request_counts
+        },
+        "refund_reason_breakdown": [
+            {"reason": row["reason"], "count": row["count"]}
+            for row in refund_reason_breakdown
+        ],
     })

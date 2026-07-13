@@ -251,6 +251,80 @@
                 </div>
             </div>
         </div>
+        <!-- COUPON & REFUND ANALYTICS -->
+        <div class="col-12">
+            <div class="row g-4">
+
+                <!-- COUPON SUMMARY -->
+                <div class="col-lg-6">
+                    <div class="card chart-card shadow-sm border-0 h-100">
+                        <div class="card-header bg-white">
+                            <h5 class="fw-bold mb-0">Coupon Usage</h5>
+                        </div>
+                        <div class="card-body position-relative">
+                            <div class="chart-loading" id="couponLoading">
+                                <div class="spinner-border spinner-border-sm text-success" role="status"></div>
+                            </div>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-6">
+                                    <small class="text-muted d-block">Total Discount Given</small>
+                                    <h5 class="fw-bold text-success mb-0" id="totalDiscountGiven">--</h5>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted d-block">Coupon Usage Rate</small>
+                                    <h5 class="fw-bold mb-0" id="couponUsageRate">--</h5>
+                                </div>
+                            </div>
+
+                            <table class="table table-sm align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Code</th>
+                                        <th>Type</th>
+                                        <th class="text-end">Used</th>
+                                        <th class="text-end">Discount Given</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="topCouponsBody">
+                                    <tr><td colspan="4" class="text-center text-muted">Loading...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- REFUND SUMMARY -->
+                <div class="col-lg-6">
+                    <div class="card chart-card shadow-sm border-0 h-100">
+                        <div class="card-header bg-white">
+                            <h5 class="fw-bold mb-0">Refunds</h5>
+                        </div>
+                        <div class="card-body position-relative">
+                            <div class="chart-loading" id="refundLoading">
+                                <div class="spinner-border spinner-border-sm text-danger" role="status"></div>
+                            </div>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-6">
+                                    <small class="text-muted d-block">Total Refunded</small>
+                                    <h5 class="fw-bold text-danger mb-0" id="totalRefundedAmount">--</h5>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted d-block">Pending Refund Amount</small>
+                                    <h5 class="fw-bold text-warning mb-0" id="pendingRefundAmount">--</h5>
+                                </div>
+                            </div>
+
+                            <div style="height:180px">
+                                <canvas id="refundStatusChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
     </div>
 
 </div>
@@ -788,6 +862,94 @@ loadRevenueChart("daily");
 loadOrdersChart("daily");
 loadPaymentChart();
 
+
+async function loadCouponSummary(){
+    toggleLoading("couponLoading", true);
+    try {
+        const res = await fetch("/analytics/api/coupon-summary/");
+        if (!res.ok) throw new Error(`Coupon summary failed: ${res.status}`);
+        const data = await res.json();
+
+        document.getElementById("totalDiscountGiven").innerText =
+            "Rs. " + nprFormatter.format(data.total_discount_given);
+
+        document.getElementById("couponUsageRate").innerText =
+            data.coupon_usage_rate + "%";
+
+        const tbody = document.getElementById("topCouponsBody");
+        tbody.innerHTML = "";
+
+        if (!data.top_coupons.length) {
+            tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">No coupon usage yet.</td></tr>`;
+        } else {
+            data.top_coupons.forEach(row => {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td class="fw-semibold">${row.code}</td>
+                    <td><span class="badge text-bg-light">${row.type}</span></td>
+                    <td class="text-end">${row.times_used}</td>
+                    <td class="text-end">Rs. ${nprFormatter.format(row.discount_given)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+    } catch (err) {
+        console.error("Failed to load coupon summary", err);
+    } finally {
+        toggleLoading("couponLoading", false);
+    }
+}
+
+let refundStatusChart;
+
+async function loadRefundSummary(){
+    toggleLoading("refundLoading", true);
+    try {
+        const res = await fetch("/analytics/api/refund-summary/");
+        if (!res.ok) throw new Error(`Refund summary failed: ${res.status}`);
+        const data = await res.json();
+
+        document.getElementById("totalRefundedAmount").innerText =
+            "Rs. " + nprFormatter.format(data.total_refunded_amount);
+
+        document.getElementById("pendingRefundAmount").innerText =
+            "Rs. " + nprFormatter.format(data.pending_refund_amount);
+
+        const statusLabels = Object.keys(data.refund_status_breakdown);
+        const statusValues = Object.values(data.refund_status_breakdown);
+
+        if (refundStatusChart) refundStatusChart.destroy();
+
+        refundStatusChart = new Chart(document.getElementById("refundStatusChart"), {
+            type: "doughnut",
+            data: {
+                labels: statusLabels,
+                datasets: [{
+                    data: statusValues,
+                    backgroundColor: ["#adb5bd", "#ffc107", "#198754", "#dc3545"],
+                    borderWidth: 2,
+                    borderColor: "#fff"
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: "55%",
+                plugins: {
+                    legend: { display: true, position: "bottom" }
+                }
+            }
+        });
+    } catch (err) {
+        console.error("Failed to load refund summary", err);
+    } finally {
+        toggleLoading("refundLoading", false);
+    }
+}
+
+// add to init
+loadCouponSummary();
+loadRefundSummary();
 </script>
 
 {% endblock %}

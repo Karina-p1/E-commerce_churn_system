@@ -38,4 +38,6 @@ urlpatterns = [
         api.category_revenue_chart,
         name="category_revenue_chart",
     ),
+    path("api/coupon-summary/", api.coupon_summary, name="coupon-summary"),
+    path("api/refund-summary/", api.refund_summary, name="refund-summary"),
 ]
