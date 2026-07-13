@@ -17,14 +17,17 @@ def login_log(sender, request, user, **kwargs):
 
 
 @receiver(user_logged_out)
-def logout_log(sender, request, user, **kwargs):
-    UserEvent.objects.create(
-        user=user,
-        event_type='LOGOUT'
+def close_session(sender, request, user, **kwargs):
+
+    session = (
+        UserSession.objects.filter(
+            user=user,
+            ended_at__isnull=True
+        )
+        .order_by("-started_at")
+        .first()
     )
-    UserSession.objects.filter(
-        user=user,
-        ended_at__isnull=True
-    ).update(
-        ended_at=timezone.now()
-    )
+
+    if session:
+        session.ended_at = timezone.now()
+        session.save(update_fields=["ended_at"])

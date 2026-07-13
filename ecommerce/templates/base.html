@@ -1392,28 +1392,22 @@
           lastActivity = Date.now();
       }
 
-      document.addEventListener("mousemove", markActivity);
-      document.addEventListener("click", markActivity);
-      document.addEventListener("keydown", markActivity);
-      document.addEventListener("scroll", markActivity);
+      ["mousemove", "click", "keydown", "scroll", "touchstart"].forEach(event => {
+          document.addEventListener(event, markActivity, { passive: true });
+      });
 
       const IDLE_LIMIT = 2 * 60 * 1000;
 
       setInterval(function () {
-
           const idleTime = Date.now() - lastActivity;
-
           if (idleTime < IDLE_LIMIT) {
-
               fetch("/activity/ping/", {
                   method: "POST",
                   headers: {
                       "X-CSRFToken": "{{ csrf_token }}"
                   }
               });
-
           }
-
       }, 60000);
 
       // Brand Popup
