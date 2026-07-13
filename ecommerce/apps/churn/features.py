@@ -1,10 +1,13 @@
 from django.db import models as django_models
+
 from django.utils import timezone
+from datetime import timedelta
+from django.db.models import Sum
+
 from apps.activity.models import UserEvent, UserSession
 from apps.orders.models import Order
 from apps.products.models import Review
 from apps.addresses.models import Address
-from django.db.models import Sum
 
 def extract_features(user) -> dict:
     """
@@ -26,17 +29,25 @@ def extract_features(user) -> dict:
     # ── Tenure ────────────────────────────────────────
     tenure_months = max(1, (timezone.now() - user.date_joined).days // 30)
 
-   # ── Activity (Real usage time) ─────────────────────────
+   # ── Hours Spent on App ───────────────────────────────
 
-    # last_30_days = timezone.now() - timezone.timedelta(days=30)
+    # Average daily usage over the last 30 days.
+    # If the account is newer than 30 days, use the account age instead.
+    account_age_days = max((timezone.now() - user.date_joined).days, 1)
+
+    lookback_days = min(account_age_days, 30)
+    lookback_start = timezone.now() - timedelta(days=lookback_days)
 
     total_active_seconds = (
-        UserSession.objects.filter(user=user)
-        .aggregate(total=Sum("active_seconds"))["total"]
-        or 0
+        UserSession.objects.filter(
+            user=user,
+            started_at__gte=lookback_start
+        ).aggregate(
+            total=Sum("active_seconds")
+        )["total"] or 0
     )
 
-    hours_on_app = round(total_active_seconds / 3600, 2)
+    hours_on_app = round((total_active_seconds / 3600) / lookback_days, 2)
 
     # Real coupon usage: count of this user's non-cancelled orders that
     # had a coupon attached at checkout.

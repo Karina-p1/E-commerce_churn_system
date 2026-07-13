@@ -207,6 +207,13 @@ CELERY_RESULT_SERIALIZER = "json"
 
 CELERY_TIMEZONE = "Asia/Kathmandu"
 
+CELERY_BEAT_SCHEDULE = {
+    "close-inactive-sessions": {
+        "task": "apps.activity.tasks.close_inactive_sessions",
+        "schedule": 300,   # every 5 minutes
+    },
+}
+
 # Email
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
