@@ -33,7 +33,7 @@ def _describe_savings(coupon):
     return f"Rs. {coupon.discount_value} off"
 
 
-@receiver(post_save, sender=Coupon)
+@receiver(post_save, sender=Coupon, dispatch_uid="notify_users_of_new_coupon")
 def notify_users_of_new_coupon(sender, instance, created, **kwargs):
     if not created or not instance.is_active:
         return

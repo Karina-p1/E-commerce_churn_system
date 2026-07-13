@@ -8,12 +8,6 @@ from .models import (
     Coupon,
 )
 
-# NEW
-from apps.notifications.services import (
-    send_coupon_notifications,
-    send_offer_expiring_notifications,
-)
-
 
 class CartItemInline(admin.TabularInline):
     model = CartItem
@@ -125,7 +119,10 @@ class CouponAdmin(admin.ModelAdmin):
                     'valid_until',
                 ),
                 'description':
-                    'Coupons with a valid until date will also notify users that the offer is limited.',
+                    'Coupons with a "valid until" date automatically notify users this is a '
+                    'limited-time offer (handled by apps.notifications.signals on creation, '
+                    'and by the notify_expiring_coupons management command as the actual date '
+                    'approaches — no manual admin action needed here).',
             },
         ),
     )
@@ -134,23 +131,15 @@ class CouponAdmin(admin.ModelAdmin):
         'used_count',
     ]
 
-    def save_model(self, request, obj, form, change):
-        """
-        Automatically notify all registered users whenever
-        a NEW coupon is created.
-
-        Also sends Limited-Time Offer notifications if
-        the coupon has a valid_until date.
-        """
-
-        is_new = obj.pk is None
-
-        super().save_model(request, obj, form, change)
-
-        # Notify only when creating a new coupon
-        if is_new:
-            send_coupon_notifications(obj)
-
-        # Notify users about limited-time offers
-        if obj.valid_until:
-            send_offer_expiring_notifications(obj)
+    # NOTE: save_model() used to manually call send_coupon_notifications() and
+    # send_offer_expiring_notifications() here, IN ADDITION to the post_save
+    # signal in apps/notifications/signals.py already doing the same job.
+    # That caused every new coupon to notify + email users twice, and every
+    # single edit to an existing limited-time coupon to re-send an "expiring
+    # soon" notification (not just on creation, not just near actual expiry).
+    # The signal alone is the correct, single source of truth for
+    # "notify on new coupon" — it fires from anywhere (admin, shell, API),
+    # not just this admin form, and correctly checks `created` so it only
+    # runs once. The real "expiring soon" reminder belongs solely in the
+    # notify_expiring_coupons scheduled command, which checks actual days
+    # remaining rather than firing on every unrelated field edit.
