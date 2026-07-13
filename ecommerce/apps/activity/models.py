@@ -95,6 +95,10 @@ class UserSession(models.Model):
         seconds = self.active_seconds % 60
 
         return f"{hours}h {minutes}m {seconds}s"
+    
+    # @property
+    # def active_hours(self):
+    #     return round(self.active_seconds / 3600, 2)
 
     def __str__(self):
         return f"{self.user.username} - {self.started_at}"

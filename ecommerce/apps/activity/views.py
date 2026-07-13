@@ -51,6 +51,7 @@ def activity_ping(request):
     )
 
     if session:
+
         elapsed = (
             timezone.now() -
             session.last_activity
