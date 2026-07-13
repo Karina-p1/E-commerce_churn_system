@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import UserEvent
-
+from apps.activity.models import UserSession
 
 @admin.register(UserEvent)
 class UserEventAdmin(admin.ModelAdmin):
@@ -23,4 +23,14 @@ class UserEventAdmin(admin.ModelAdmin):
 
     ordering = (
         '-created_at',
+    )
+
+@admin.register(UserSession)
+class UserSessionAdmin(admin.ModelAdmin):
+    list_display = (
+        "user",
+        "started_at",
+        "active_time",
+        "last_activity",
+        "ended_at",
     )
