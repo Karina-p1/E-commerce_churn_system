@@ -67,7 +67,7 @@
                         <div>
                             <small class="text-muted d-block">Orders</small>
                             <h4 class="fw-bold mb-0">{{ total_orders|intcomma }}</h4>
-                            <small class="text-muted">COD + eSewa</small>
+                            <small class="text-muted">COD + eSewa + refunded</small>
                         </div>
                     </div>
                 </div>
@@ -170,7 +170,7 @@
             </div>
         </div>
 
-    </div> -->
+    </div>  -->
 
     <!-- WISHLISTED + CATEGORY -->
     <div class="row g-4 mb-1">
@@ -207,6 +207,7 @@
         </div>
 
         <div class="col-lg-6">
+            <a href="{% url 'products:category_list' %}" class="text-decoration-none text-reset">
             <div class="card chart-card shadow-sm border-0 h-100">
                 <div class="card-header bg-white">
                     <h5 class="fw-bold mb-0">Category analysis</h5>
@@ -229,6 +230,7 @@
                     {% endfor %}
                 </div>
             </div>
+            </a>
         </div>
 
     </div>
@@ -268,31 +270,33 @@
         </div>
 
         <div class="col-lg-6">
-            <div class="card chart-card shadow-sm border-0 h-100">
-                <div class="card-header bg-white">
-                    <h5 class="fw-bold mb-0">Brand analysis</h5>
-                    <small class="text-muted">Product count by brand</small>
+            <a href="{% url 'products:brand_list' %}" class="text-decoration-none text-reset">
+                <div class="card chart-card shadow-sm border-0 h-100">
+                    <div class="card-header bg-white">
+                        <h5 class="fw-bold mb-0">Brand analysis</h5>
+                        <small class="text-muted">Product count by brand</small>
+                    </div>
+                    <div class="card-body">
+                        <table class="table analytics-table mb-0">
+                            <thead>
+                                <tr><th>Brand</th><th>Products</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for brand in brand_analysis %}
+                                    <tr>
+                                        <td>{{ brand.name }}</td>
+                                        <td>
+                                            <span class="badge rounded-pill text-bg-primary-subtle text-primary">{{ brand.product_count }}</span>
+                                        </td>
+                                    </tr>
+                                {% empty %}
+                                    <tr><td colspan="2" class="text-muted">No brand data available.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <table class="table analytics-table mb-0">
-                        <thead>
-                            <tr><th>Brand</th><th>Products</th></tr>
-                        </thead>
-                        <tbody>
-                            {% for brand in brand_analysis %}
-                                <tr>
-                                    <td>{{ brand.name }}</td>
-                                    <td>
-                                        <span class="badge rounded-pill text-bg-primary-subtle text-primary">{{ brand.product_count }}</span>
-                                    </td>
-                                </tr>
-                            {% empty %}
-                                <tr><td colspan="2" class="text-muted">No brand data available.</td></tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+            </a>
         </div>
 
     </div>
