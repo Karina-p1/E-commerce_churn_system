@@ -8,7 +8,7 @@ from .models import UserSession
 @shared_task
 def close_inactive_sessions():
 
-    cutoff = timezone.now() - timedelta(minutes=5)
+    cutoff = timezone.now() - timedelta(minutes=30)
 
     sessions = UserSession.objects.filter(
         ended_at__isnull=True,
@@ -16,7 +16,7 @@ def close_inactive_sessions():
     )
 
     for session in sessions:
-        session.ended_at = session.last_activity
+        session.ended_at = session.last_activity + timedelta(minutes=30)
         session.save(update_fields=["ended_at"])
 
 
