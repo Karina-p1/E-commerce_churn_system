@@ -50,25 +50,31 @@ def activity_ping(request):
         .first()
     )
 
-    if session:
-
-        elapsed = (
-            timezone.now() -
-            session.last_activity
-        ).total_seconds()
-
-        session.active_seconds += min(
-            int(elapsed),
-            60
+    # No active session? Create one.
+    if session is None:
+        session = UserSession.objects.create(
+            user=request.user
         )
 
-        session.last_activity = timezone.now()
+        return JsonResponse({"success": True})
 
-        session.save(
-            update_fields=[
-                "active_seconds",
-                "last_activity",
-            ]
-        )
+    elapsed = (
+        timezone.now() -
+        session.last_activity
+    ).total_seconds()
+
+    session.active_seconds += min(
+        int(elapsed),
+        60
+    )
+
+    session.last_activity = timezone.now()
+
+    session.save(
+        update_fields=[
+            "active_seconds",
+            "last_activity",
+        ]
+    )
 
     return JsonResponse({"success": True})
