@@ -95,12 +95,6 @@ def analytics_dashboard(request):
     OrderItem = get_model_or_none("orders", "OrderItem")
     UserEvent = get_model_or_none("activity", "UserEvent")
 
-    ChurnScore = (
-        get_model_or_none("churn", "ChurnScore")
-        or get_model_or_none("churn", "ChurnPrediction")
-        or get_model_or_none("churn", "Prediction")
-    )
-
     total_orders = Order.objects.filter(
         Q(payment_method__iexact='cod') | Q(payment_method__iexact='esewa')
     ).exclude(
@@ -172,14 +166,14 @@ def analytics_dashboard(request):
     most_wishlisted_products = (
         Product.objects
         .annotate(wishlist_count=Count("wishlisted_by"))
-        .order_by("-wishlist_count")[:5]
+        .order_by("-wishlist_count")[:6]
     )
 
     best_rated_products = (
         Product.objects
         .annotate(avg_rating=Avg("reviews__rating"), review_total=Count("reviews"))
         .filter(review_total__gt=0)
-        .order_by("-avg_rating")[:5]
+        .order_by("-avg_rating")[:6]
     )
 
     category_analysis = (

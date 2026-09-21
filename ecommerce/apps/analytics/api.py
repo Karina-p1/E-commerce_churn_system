@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from django.http import JsonResponse
+from django.conf import settings
 from .models import RevenueSummary,RevenueSnapshot
 from django.db.models import Sum, F, DecimalField, ExpressionWrapper
 from django.db.models.functions import (
@@ -10,27 +11,28 @@ from django.db.models.functions import (
     TruncYear,
 )
 from apps.orders.models import Order, OrderItem
-from django.db.models import Count
+from django.db.models import Count,Sum
 from apps.orders.models import RefundRequest
-
+from django.utils import timezone
 def dashboard_summary(request):
 
     summary = RevenueSummary.objects.first()
 
+    # Today's revenue from the snapshot table (0 if there is no data for today)
+    today = timezone.localdate()
+    today_revenue = (
+        RevenueSnapshot.objects
+        .filter(date=today)
+        .aggregate(total=Sum("total_revenue"))["total"]
+    ) or 0
+
     data = {
-
-        "total_revenue": float(summary.total_revenue),
-
-        "total_orders": summary.total_orders,
-
-        "average_order_value": float(
-            summary.average_order_value
-        ),
-
-        "esewa_revenue": float(summary.esewa_revenue),
-
-        "cod_revenue": float(summary.cod_revenue),
-
+        "total_revenue": float(summary.total_revenue) if summary else 0,
+        "total_orders": summary.total_orders if summary else 0,
+        "average_order_value": float(summary.average_order_value) if summary else 0,
+        "esewa_revenue": float(summary.esewa_revenue) if summary else 0,
+        "cod_revenue": float(summary.cod_revenue) if summary else 0,
+        "today_revenue": float(today_revenue),
     }
 
     return JsonResponse(data)
@@ -194,72 +196,48 @@ def orders_chart_data(request):
         "orders": orders,
     })
 
-def category_revenue_chart(request):
-
-    line_total = ExpressionWrapper(
-        F("price") * F("quantity"),
-        output_field=DecimalField(max_digits=12, decimal_places=2)
-    )
-
-    # Step 1: gross total per order (sum of price*qty across its items,
-    # i.e. revenue BEFORE any coupon discount)
-    order_gross = (
+def category_sales(request):
+    rows = list(
         OrderItem.objects
         .filter(order__payment_status="PAID")
-        .values("order_id")
-        .annotate(gross=Sum(line_total))
-    )
-    gross_by_order = {row["order_id"]: row["gross"] for row in order_gross}
-
-    # Step 2: what the customer actually paid per order (already net of discount)
-    orders = Order.objects.filter(payment_status="PAID").values("id", "total_price")
-    paid_total_by_order = {row["id"]: row["total_price"] for row in orders}
-
-    # Step 3: walk items, scale each line by (order.total_price / order.gross)
-    items = (
-        OrderItem.objects
-        .filter(order__payment_status="PAID")
-        .select_related("product__category")
-        .annotate(line_total=line_total)
+        .values("product_id", "product__category__name", "product__name")
+        .annotate(qty=Sum("quantity"))
+        .order_by("-qty")
     )
 
-    category_revenue = {}
+    # Load the products so we can ask each one for its Cloudinary link
+    Product = OrderItem._meta.get_field("product").related_model
+    product_map = Product.objects.in_bulk({r["product_id"] for r in rows})
 
-    for item in items:
-        order_id = item.order_id
-        gross = gross_by_order.get(order_id) or Decimal("0")
-        paid_total = paid_total_by_order.get(order_id)
+    products = {}
+    for r in rows:
+        category = r["product__category__name"] or "Uncategorized"
 
-        if gross > 0 and paid_total is not None:
-            scale = paid_total / gross
-        else:
-            scale = Decimal("1")
+        image_url = ""
+        product = product_map.get(r["product_id"])
+        if product and product.image:
+            try:
+                image_url = product.image.url
+            except Exception:
+                image_url = ""
 
-        actual_line_revenue = item.line_total * scale
+        products.setdefault(category, []).append({
+            "name": r["product__name"],
+            "quantity": r["qty"] or 0,
+            "image": image_url,
+        })
 
-        category_name = (
-            item.product.category.name
-            if item.product and item.product.category
-            else "Uncategorized"
-        )
-
-        category_revenue[category_name] = (
-            category_revenue.get(category_name, Decimal("0")) + actual_line_revenue
-        )
-
-    # Step 4: sort descending by revenue
-    sorted_items = sorted(category_revenue.items(), key=lambda x: x[1], reverse=True)
-
-    labels = [name for name, _ in sorted_items]
-    values = [float(rev) for _, rev in sorted_items]
+    totals = sorted(
+        ((cat, sum(p["quantity"] for p in items)) for cat, items in products.items()),
+        key=lambda x: x[1],
+        reverse=True,
+    )
 
     return JsonResponse({
-        "labels": labels,
-        "revenue": values,
+        "labels": [t[0] for t in totals],
+        "quantities": [t[1] for t in totals],
+        "products": products,
     })
-
-
-
 
 def coupon_summary(request):
 
