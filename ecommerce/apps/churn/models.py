@@ -16,6 +16,12 @@ class ChurnScore(models.Model):
     predicted_at = models.DateTimeField(auto_now_add=True)
     is_churned   = models.BooleanField(null=True, blank=True)
 
+    # Explains WHY risk_level is 'high' when the model's own score is low —
+    # e.g. "Inactive 45+ days with a thin order history". Set by an
+    # override rule in predictor.py; blank when the model's own score
+    # already agrees with the final risk_level (no override needed).
+    override_reason = models.CharField(max_length=255, blank=True, null=True)
+
     class Meta:
         ordering = ['-predicted_at']
 

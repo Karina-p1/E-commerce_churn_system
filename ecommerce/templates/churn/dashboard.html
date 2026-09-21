@@ -190,6 +190,14 @@
   .risk-high { background: #f8e3e3; color: #A32D2D; }
   .risk-low  { background: #e8eafd; color: #2931a3; }
 
+  .risk-reason {
+    display: block;
+    font-size: 10px;
+    color: #b08b2a;
+    margin-top: 3px;
+    max-width: 220px;
+  }
+
   .score-wrap { display: flex; align-items: center; gap: 8px; }
 
   .score-value {
@@ -301,6 +309,11 @@
           <td>
             {% if s.risk_level == 'high' %}
               <span class="risk-badge risk-high">High</span>
+              {% if s.override_reason %}
+                <span class="risk-reason">&#9888; {{ s.override_reason }}</span>
+              {% else %}
+                <span class="risk-reason">Model prediction</span>
+              {% endif %}
             {% else %}
               <span class="risk-badge risk-low">Low</span>
             {% endif %}

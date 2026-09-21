@@ -8,6 +8,7 @@ from apps.activity.models import UserEvent, UserSession
 from apps.orders.models import Order
 from apps.products.models import Review
 from apps.addresses.models import Address
+from apps.complaints.models import Complaint
 
 def extract_features(user) -> dict:
     """
@@ -74,7 +75,15 @@ def extract_features(user) -> dict:
     else:
         satisfaction_score = 3
 
-    complain = 1 if reviews.filter(rating__lte=2).exists() else 0
+    # Real complaint data from the complaints app, not a review-rating
+    # proxy. REJECTED complaints are excluded — those were reviewed by
+    # an admin and deemed invalid, so they shouldn't count as a real
+    # signal of a dissatisfied customer. PENDING / IN_PROGRESS / RESOLVED
+    # all count, since even a resolved complaint means something went
+    # wrong for this customer at some point.
+    complain = 1 if Complaint.objects.filter(
+        user=user
+    ).exclude(status='REJECTED').exists() else 0
 
     # ── Addresses ─────────────────────────────────────
     number_of_addresses = Address.objects.filter(user=user).count()

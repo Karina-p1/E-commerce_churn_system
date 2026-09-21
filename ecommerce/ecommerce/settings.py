@@ -207,10 +207,16 @@ CELERY_RESULT_SERIALIZER = "json"
 
 CELERY_TIMEZONE = "Asia/Kathmandu"
 
+from celery.schedules import crontab
+
 CELERY_BEAT_SCHEDULE = {
     "close-inactive-sessions": {
         "task": "apps.activity.tasks.close_inactive_sessions",
         "schedule": 300,   # every 5 minutes
+    },
+    "score-customer-churn-daily": {
+        "task": "apps.churn.tasks.score_all_customers_task",
+        "schedule": crontab(hour=2, minute=0),   # every day at 2:00 AM
     },
 }
 
