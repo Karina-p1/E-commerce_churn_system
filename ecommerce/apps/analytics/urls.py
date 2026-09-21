@@ -34,9 +34,9 @@ urlpatterns = [
         name="payment_method_chart",
     ),
     path(
-        "api/category-revenue/",
-        api.category_revenue_chart,
-        name="category_revenue_chart",
+        "api/category-sales/",
+        api.category_sales,
+        name="category_sales",
     ),
     path("api/coupon-summary/", api.coupon_summary, name="coupon-summary"),
     path("api/refund-summary/", api.refund_summary, name="refund-summary"),
