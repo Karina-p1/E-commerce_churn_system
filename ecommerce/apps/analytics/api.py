@@ -13,25 +13,26 @@ from django.db.models.functions import (
 from apps.orders.models import Order, OrderItem
 from django.db.models import Count,Sum
 from apps.orders.models import RefundRequest
-
+from django.utils import timezone
 def dashboard_summary(request):
 
     summary = RevenueSummary.objects.first()
 
+    # Today's revenue from the snapshot table (0 if there is no data for today)
+    today = timezone.localdate()
+    today_revenue = (
+        RevenueSnapshot.objects
+        .filter(date=today)
+        .aggregate(total=Sum("total_revenue"))["total"]
+    ) or 0
+
     data = {
-
-        "total_revenue": float(summary.total_revenue),
-
-        "total_orders": summary.total_orders,
-
-        "average_order_value": float(
-            summary.average_order_value
-        ),
-
-        "esewa_revenue": float(summary.esewa_revenue),
-
-        "cod_revenue": float(summary.cod_revenue),
-
+        "total_revenue": float(summary.total_revenue) if summary else 0,
+        "total_orders": summary.total_orders if summary else 0,
+        "average_order_value": float(summary.average_order_value) if summary else 0,
+        "esewa_revenue": float(summary.esewa_revenue) if summary else 0,
+        "cod_revenue": float(summary.cod_revenue) if summary else 0,
+        "today_revenue": float(today_revenue),
     }
 
     return JsonResponse(data)
