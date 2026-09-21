@@ -1,10 +1,21 @@
-from decimal import Decimal
+import io
+from xml.sax.saxutils import escape
 
+from django.http import HttpResponse
+from django.views.decorators.http import require_POST
+
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+
+from decimal import Decimal
 from django.http import JsonResponse
 from django.conf import settings
 from .models import RevenueSummary,RevenueSnapshot
 from django.db.models import Sum, F, DecimalField, ExpressionWrapper
 from django.db.models.functions import (
+    TruncDate,
     TruncDay,
     TruncWeek,
     TruncMonth,
@@ -360,3 +371,189 @@ def refund_summary(request):
             for row in refund_reason_breakdown
         ],
     })
+
+
+# ---------------------------------------
+# SYNC: rebuild snapshot + summary from paid orders
+# ---------------------------------------
+@require_POST
+def sync_analytics(request):
+    paid = Order.objects.filter(payment_status="PAID")
+
+    # One snapshot row per day
+    daily = (
+        paid
+        .annotate(day=TruncDate("created_at"))          # CHECK: your order date field
+        .values("day")
+        .annotate(revenue=Sum("total_price"), orders=Count("id"))
+    )
+    for row in daily:
+        RevenueSnapshot.objects.update_or_create(
+            date=row["day"],
+            defaults={
+                "total_revenue": row["revenue"] or 0,
+                "total_orders": row["orders"],
+            },
+        )
+
+    # Overall summary
+    total = paid.aggregate(t=Sum("total_price"))["t"] or Decimal("0")
+    orders = paid.count()
+    esewa = paid.filter(payment_method__iexact="esewa").aggregate(   # CHECK: field and value
+        t=Sum("total_price"))["t"] or Decimal("0")
+    cod = paid.filter(payment_method__iexact="cod").aggregate(       # CHECK: field and value
+        t=Sum("total_price"))["t"] or Decimal("0")
+
+    summary = RevenueSummary.objects.first() or RevenueSummary()
+    summary.total_revenue = total
+    summary.total_orders = orders
+    summary.average_order_value = (total / orders) if orders else Decimal("0")
+    summary.esewa_revenue = esewa
+    summary.cod_revenue = cod
+    summary.save()
+
+    return JsonResponse({"ok": True, "days_synced": len(daily)})
+
+
+# ---------------------------------------
+# PDF REPORT
+# ---------------------------------------
+def _table(data, col_widths=None, header=True):
+    t = Table(data, colWidths=col_widths, repeatRows=1 if header else 0)
+    style = [
+        ("GRID", (0, 0), (-1, -1), 0.4, colors.lightgrey),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("FONTSIZE", (0, 0), (-1, -1), 9),
+    ]
+    if header:
+        style += [
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#198754")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ]
+    t.setStyle(TableStyle(style))
+    return t
+
+
+def download_report(request):
+    styles = getSampleStyleSheet()
+    story = []
+    money = lambda v: f"Rs. {float(v or 0):,.2f}"
+
+    paid = Order.objects.filter(payment_status="PAID")
+    summary = RevenueSummary.objects.first()
+    today = timezone.localdate()
+
+    # Title
+    story.append(Paragraph("Revenue Analytics Report", styles["Title"]))
+    story.append(Paragraph(
+        f"Generated on {timezone.localtime().strftime('%d %b %Y, %I:%M %p')}",
+        styles["Normal"]))
+    story.append(Spacer(1, 14))
+
+    # 1. Summary
+    today_revenue = RevenueSnapshot.objects.filter(date=today).aggregate(
+        t=Sum("total_revenue"))["t"] or 0
+    story.append(Paragraph("1. Summary", styles["Heading2"]))
+    story.append(_table([
+        ["Measure", "Value"],
+        ["Total revenue", money(summary.total_revenue if summary else 0)],
+        ["Paid orders", str(summary.total_orders if summary else 0)],
+        ["Average order value", money(summary.average_order_value if summary else 0)],
+        ["Today's revenue", money(today_revenue)],
+        ["eSewa revenue", money(summary.esewa_revenue if summary else 0)],
+        ["Cash on delivery revenue", money(summary.cod_revenue if summary else 0)],
+    ], col_widths=[250, 200]))
+    story.append(Spacer(1, 14))
+
+    # 2. Last 7 days
+    story.append(Paragraph("2. Last 7 Days", styles["Heading2"]))
+    rows = [["Date", "Revenue", "Orders"]]
+    for s in RevenueSnapshot.objects.order_by("-date")[:7]:
+        rows.append([s.date.strftime("%d %b %Y"), money(s.total_revenue), str(s.total_orders)])
+    if len(rows) == 1:
+        rows.append(["No data", "-", "-"])
+    story.append(_table(rows, col_widths=[150, 200, 100]))
+    story.append(Spacer(1, 14))
+
+    # 3. Products sold by category
+    story.append(Paragraph("3. Products Sold by Category", styles["Heading2"]))
+    items = (
+        OrderItem.objects
+        .filter(order__payment_status="PAID")
+        .values("product__category__name", "product__name")
+        .annotate(qty=Sum("quantity"))
+        .order_by("-qty")
+    )
+    by_cat = {}
+    for r in items:
+        cat = r["product__category__name"] or "Uncategorized"
+        by_cat.setdefault(cat, []).append((r["product__name"], r["qty"] or 0))
+
+    cat_rows = [["Category", "Product", "Qty Sold"]]
+    for cat, plist in sorted(by_cat.items(), key=lambda x: -sum(q for _, q in x[1])):
+        for name, qty in plist:
+            cat_rows.append([
+                Paragraph(escape(cat), styles["Normal"]),
+                Paragraph(escape(str(name)), styles["Normal"]),
+                str(qty),
+            ])
+    if len(cat_rows) == 1:
+        cat_rows.append(["No sales yet", "-", "-"])
+    story.append(_table(cat_rows, col_widths=[150, 230, 70]))
+    story.append(Spacer(1, 14))
+
+    # 4. Coupons
+    discount = paid.aggregate(t=Sum("discount_amount"))["t"] or 0
+    with_coupon = paid.exclude(coupon__isnull=True).count()
+    total_paid = paid.count()
+    rate = round(with_coupon / total_paid * 100, 1) if total_paid else 0
+
+    story.append(Paragraph("4. Coupon Usage", styles["Heading2"]))
+    story.append(_table([
+        ["Measure", "Value"],
+        ["Total discount given", money(discount)],
+        ["Orders using a coupon", str(with_coupon)],
+        ["Coupon usage rate", f"{rate}%"],
+    ], col_widths=[250, 200]))
+    story.append(Spacer(1, 8))
+
+    top = (
+        paid.exclude(coupon__isnull=True)
+        .values("coupon__code", "coupon__coupon_type")
+        .annotate(used=Count("id"), given=Sum("discount_amount"))
+        .order_by("-given")[:10]
+    )
+    coupon_rows = [["Code", "Type", "Used", "Discount Given"]]
+    for r in top:
+        coupon_rows.append([
+            Paragraph(escape(str(r["coupon__code"])), styles["Normal"]),
+            str(r["coupon__coupon_type"]), str(r["used"]), money(r["given"]),
+        ])
+    if len(coupon_rows) > 1:
+        story.append(_table(coupon_rows, col_widths=[130, 110, 60, 150]))
+    story.append(Spacer(1, 14))
+
+    # 5. Refunds
+    refunded = Order.objects.filter(refund_status="COMPLETED")
+    pending = Order.objects.filter(refund_status="PENDING")
+    units = OrderItem.objects.filter(order__refund_status="COMPLETED").aggregate(
+        t=Sum("quantity"))["t"] or 0
+
+    story.append(Paragraph("5. Refunds", styles["Heading2"]))
+    story.append(_table([
+        ["Measure", "Value"],
+        ["Total refunded", money(refunded.aggregate(t=Sum("total_price"))["t"])],
+        ["Pending refund amount", money(pending.aggregate(t=Sum("total_price"))["t"])],
+        ["Orders refunded", str(refunded.count())],
+        ["Products refunded", str(units)],
+    ], col_widths=[250, 200]))
+
+    # Build the PDF
+    buffer = io.BytesIO()
+    SimpleDocTemplate(buffer, pagesize=A4, title="Revenue Analytics Report").build(story)
+
+    response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
+    response["Content-Disposition"] = (
+        f'attachment; filename="analytics-report-{today}.pdf"'
+    )
+    return response
