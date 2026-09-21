@@ -231,22 +231,42 @@
             </div>
         </div>
 
-        <!-- CATEGORY REVENUE -->
+        <!-- CATEGORY SALES -->
         <div class="col-12">
             <div class="card chart-card shadow-sm border-0">
-                <div class="card-header bg-white d-flex justify-content-between align-items-center">
-
-                    <h5 class="fw-bold mb-0">
-                        Revenue by Category
-                    </h5>
-
+                <div class="card-header bg-white">
+                    <h5 class="fw-bold mb-0">Products Sold by Category</h5>
+                    <small class="text-muted">Click a bar to see the products in that category</small>
                 </div>
                 <div class="card-body position-relative">
                     <div class="chart-loading" id="categoryLoading">
                         <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
                     </div>
-                    <div style="height:320px">
-                        <canvas id="categoryChart"></canvas>
+
+                    <div class="row g-4">
+                        <div class="col-lg-7">
+                            <div style="height:320px">
+                                <canvas id="categoryChart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-5">
+                            <h6 class="fw-bold mb-2" id="categoryProductsTitle">Products</h6>
+                            <div style="max-height:290px; overflow-y:auto;">
+                                <table class="table table-sm align-middle mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:60px;">Image</th>
+                                            <th>Product</th>
+                                            <th class="text-end">Qty Sold</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="categoryProductsBody">
+                                        <tr><td colspan="3" class="text-center text-muted">Loading...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -716,83 +736,126 @@ function loadOrders(period){
     loadOrdersChart(period);
 
 }
-async function loadCategoryChart(){
+let categoryChart;
+let categoryData = null;
 
-    const response = await fetch(
-        "/analytics/api/category-revenue/"
-    );
+function showCategoryProducts(category) {
+    const items = categoryData.products[category] || [];
+    const tbody = document.getElementById("categoryProductsBody");
 
-    const data = await response.json();
+    document.getElementById("categoryProductsTitle").textContent =
+        "Products in " + category;
 
-    new Chart(
+    tbody.innerHTML = "";
 
-        document.getElementById("categoryChart"),
+    if (!items.length) {
+        tbody.innerHTML = `<tr><td colspan="3" class="text-center text-muted">No products sold.</td></tr>`;
+        return;
+    }
 
-        {
+    items.forEach(p => {
+        const tr = document.createElement("tr");
 
-            type:"bar",
-
-            data:{
-
-                labels:data.labels,
-
-                datasets:[{
-
-                    label:"Revenue",
-
-                    data:data.revenue,
-
-                    backgroundColor:"#198754"
-
-                }]
-
-            },
-
-            options:{
-
-                responsive:true,
-
-                maintainAspectRatio:false,
-
-                indexAxis:"y",
-
-                plugins:{
-
-                    legend:{
-                        display:false
-                    }
-
-                },
-
-                scales:{
-
-                    x:{
-                        beginAtZero:true,
-                        title:{
-                            display:true,
-                            text:"Revenue (Rs.)"
-                        }
-                    },
-
-                    y:{
-                        title:{
-                            display:true,
-                            text:"Category"
-                        }
-                    }
-
-                }
-
-            }
-
+        // Image cell
+        const imgTd = document.createElement("td");
+        if (p.image) {
+            const img = document.createElement("img");
+            img.src = p.image;
+            img.alt = p.name;
+            img.style.cssText =
+                "width:48px;height:48px;object-fit:cover;border-radius:8px;";
+            img.onerror = () => {
+                imgTd.innerHTML = `<div class="bg-light text-muted d-flex align-items-center justify-content-center"
+                    style="width:48px;height:48px;border-radius:8px;"><i class="bi bi-image"></i></div>`;
+            };
+            imgTd.appendChild(img);
+        } else {
+            imgTd.innerHTML = `<div class="bg-light text-muted d-flex align-items-center justify-content-center"
+                style="width:48px;height:48px;border-radius:8px;"><i class="bi bi-image"></i></div>`;
         }
 
-    );
+        // Name cell
+        const nameTd = document.createElement("td");
+        nameTd.textContent = p.name;
 
+        // Quantity cell
+        const qtyTd = document.createElement("td");
+        qtyTd.className = "text-end fw-semibold";
+        qtyTd.textContent = p.quantity;
+
+        tr.appendChild(imgTd);
+        tr.appendChild(nameTd);
+        tr.appendChild(qtyTd);
+        tbody.appendChild(tr);
+    });
 }
+async function loadCategoryChart() {
+    toggleLoading("categoryLoading", true);
+    try {
+        const res = await fetch("/analytics/api/category-sales/");
+        if (!res.ok) throw new Error(`Category sales failed: ${res.status}`);
+        categoryData = await res.json();
 
+        if (categoryChart) categoryChart.destroy();
+
+        categoryChart = new Chart(document.getElementById("categoryChart"), {
+            type: "bar",
+            data: {
+                labels: categoryData.labels,
+                datasets: [{
+                    label: "Products Sold",
+                    data: categoryData.quantities,
+                    backgroundColor: "#198754",
+                    hoverBackgroundColor: "#146c43",
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: "y",
+                onClick: (evt, elements) => {
+                    if (!elements.length) return;
+                    showCategoryProducts(categoryData.labels[elements[0].index]);
+                },
+                onHover: (evt, elements) => {
+                    evt.native.target.style.cursor = elements.length ? "pointer" : "default";
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => `Sold: ${ctx.parsed.x} items`
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        ticks: { precision: 0 },
+                        title: { display: true, text: "Number of Products Sold" }
+                    },
+                    y: {
+                        title: { display: true, text: "Category" }
+                    }
+                }
+            }
+        });
+
+        // Show the top category by default
+        if (categoryData.labels.length) {
+            showCategoryProducts(categoryData.labels[0]);
+        } else {
+            document.getElementById("categoryProductsBody").innerHTML =
+                `<tr><td colspan="2" class="text-center text-muted">No sales yet.</td></tr>`;
+        }
+    } catch (err) {
+        console.error("Failed to load category sales", err);
+    } finally {
+        toggleLoading("categoryLoading", false);
+    }
+}
 loadCategoryChart();
-
 async function refreshEverything(){
 
     const btn =
