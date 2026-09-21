@@ -491,12 +491,12 @@ async function loadDashboard() {
         const data = await res.json();
 
         document.getElementById("todayRevenue").innerText =
-            "Rs. " + nprFormatter.format(Number(data.total_revenue || 0));
+            "Rs. " + nprFormatter.format(Number(data.today_revenue || 0));
 
         document.getElementById("lastUpdated").innerText =
             "Last updated " + new Date().toLocaleTimeString();
     } catch (err) {
-        document.getElementById("todayRevenue").innerText = "N/A";
+        document.getElementById("todayRevenue").innerText = "Rs. 0";
         console.error("Failed to load dashboard summary", err);
     }
 }
