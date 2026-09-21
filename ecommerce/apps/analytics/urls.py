@@ -40,4 +40,6 @@ urlpatterns = [
     ),
     path("api/coupon-summary/", api.coupon_summary, name="coupon-summary"),
     path("api/refund-summary/", api.refund_summary, name="refund-summary"),
+    path("api/sync/", api.sync_analytics, name="sync-analytics"),
+    path("api/report-pdf/", api.download_report, name="report-pdf"),
 ]
