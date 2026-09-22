@@ -135,33 +135,66 @@ def product_detail(request, slug):
         'review_stars': review_stars,
     })
 
-
 @login_required
 def post_review(request, slug):
-    product = get_object_or_404(Product, slug=slug, is_active=True)
+    product = get_object_or_404(
+        Product,
+        slug=slug,
+        is_active=True
+    )
 
     if request.method == 'POST':
-        if Review.objects.filter(product=product, customer=request.user).exists():
-            messages.warning(request, 'You have already reviewed this product.')
-            return redirect('products:product_detail', slug=slug)
+
+        # Prevent duplicate reviews
+        if Review.objects.filter(
+            product=product,
+            customer=request.user
+        ).exists():
+            messages.warning(
+                request,
+                'You have already reviewed this product.'
+            )
+            return redirect(
+                'products:product_detail',
+                slug=slug
+            )
 
         rating = request.POST.get('rating')
         comment = request.POST.get('comment', '').strip()
 
         if not rating or not comment:
-            messages.error(request, 'Please provide both a rating and a comment.')
-            return redirect('products:product_detail', slug=slug)
+            messages.error(
+                request,
+                'Please provide both a rating and a comment.'
+            )
+            return redirect(
+                'products:product_detail',
+                slug=slug
+            )
 
         try:
             rating = int(rating)
         except ValueError:
-            messages.error(request, 'Invalid rating value.')
-            return redirect('products:product_detail', slug=slug)
+            messages.error(
+                request,
+                'Invalid rating value.'
+            )
+            return redirect(
+                'products:product_detail',
+                slug=slug
+            )
 
         if not (1 <= rating <= 5):
-            messages.error(request, 'Rating must be between 1 and 5.')
-            return redirect('products:product_detail', slug=slug)
+            messages.error(
+                request,
+                'Rating must be between 1 and 5.'
+            )
+            return redirect(
+                'products:product_detail',
+                slug=slug
+            )
 
+        # Create the review
         Review.objects.create(
             product=product,
             customer=request.user,
@@ -169,15 +202,59 @@ def post_review(request, slug):
             comment=comment
         )
 
+        # Log review activity for churn/behavior analysis
         UserEvent.objects.create(
             user=request.user,
             product=product,
             event_type='REVIEW'
         )
 
-        messages.success(request, 'Your review has been posted.')
+        # --------------------------------------------------
+        # LOYALTY: Verified Purchase Review Reward
+        # --------------------------------------------------
 
-    return redirect('products:product_detail', slug=slug)
+        from apps.orders.models import Order, OrderItem
+        from apps.loyalty.services import LoyaltyService
+
+        qualifying_order = (
+            Order.objects
+            .filter(
+                user=request.user,
+                payment_status='PAID',
+                items__product=product,
+            )
+            .order_by('-paid_at', '-id')
+            .first()
+        )
+
+        if qualifying_order:
+            try:
+                LoyaltyService.award_review_points(
+                    user=request.user,
+                    order=qualifying_order,
+                    product=product,
+                )
+
+                messages.success(
+                    request,
+                    'Your review has been posted and you earned 50 loyalty points!'
+                )
+
+            except ValueError:
+                messages.success(
+                    request,
+                    'Your review has been posted.'
+                )
+        else:
+            messages.success(
+                request,
+                'Your review has been posted.'
+            )
+
+    return redirect(
+        'products:product_detail',
+        slug=slug
+    )
 
 
 @login_required
