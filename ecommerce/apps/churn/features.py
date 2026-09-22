@@ -48,7 +48,8 @@ def extract_features(user) -> dict:
         )["total"] or 0
     )
 
-    hours_on_app = round((total_active_seconds / 3600) / lookback_days, 2)
+    # hours_on_app = round((total_active_seconds / 3600) / lookback_days, 2)
+    hours_on_app = round(total_active_seconds / 3600, 2)
 
     # Real coupon usage: count of this user's non-cancelled orders that
     # had a coupon attached at checkout.
