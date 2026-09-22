@@ -54,15 +54,16 @@ def extract_features(user) -> dict:
     # had a coupon attached at checkout.
     coupon_used  = orders.filter(coupon__isnull=False).count()
 
-    # ── Spend ─────────────────────────────────────────
-    # NOTE: training data's CashbackAmount was a real monthly reward
-    # amount bounded 0-324.99 (mean ~177). We don't track real cashback
-    # yet, so this is a synthetic proxy from total spend — capped at
-    # 300 to stay in-range. High spenders will all cap out at 300,
-    # which loses some granularity, but keeps predictions reliable
-    # rather than extrapolating wildly beyond the trained distribution.
-    total_spent = sum(float(o.total_price) for o in orders)
-    cashback    = round(min(total_spent * 0.02, 300.0), 2)
+    # ── Reward proxy ──────────────────────────────────
+    # Real reward data: total coupon discount actually given to this
+    # customer across their orders — this is genuine money returned
+    # to them, not an invented percentage of spend. Much closer to
+    # what "cashback" represents in the training data than a made-up
+    # formula. Still capped at 300 — the training data's real
+    # CashbackAmount maxed out around 325, so we avoid feeding the
+    # model a number outside the range it was ever trained on.
+    total_discount_given = sum(float(o.discount_amount or 0) for o in orders)
+    cashback = round(min(total_discount_given, 300.0), 2)
 
     # ── Satisfaction score & complaints ───────────────
     reviews = Review.objects.filter(customer=user)

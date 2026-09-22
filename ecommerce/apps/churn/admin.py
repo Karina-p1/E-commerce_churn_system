@@ -5,11 +5,13 @@ from .models import ChurnScore, UserFeatureSnapshot, ChurnPrediction
 
 @admin.register(ChurnScore)
 class ChurnScoreAdmin(admin.ModelAdmin):
-    list_display    = ('customer', 'risk_badge', 'score', 'predicted_at')
+    list_display    = ('customer', 'risk_badge', 'score', 'override_reason', 'predicted_at')
     list_filter     = ('risk_level',)
     search_fields   = ('customer__username', 'customer__email')
     ordering        = ('-score',)
-    readonly_fields = ('customer', 'score', 'risk_level', 'predicted_at')
+    # override_reason added here too — it's set by predictor.py, never
+    # hand-edited by an admin, same as score/risk_level.
+    readonly_fields = ('customer', 'score', 'risk_level', 'override_reason', 'predicted_at')
 
     def risk_badge(self, obj):
         if obj.risk_level == 'high':
@@ -23,6 +25,16 @@ class ChurnScoreAdmin(admin.ModelAdmin):
         )
     risk_badge.short_description = 'Risk'
 
+
+# ── DEPRECATED ──────────────────────────────────────────────────────
+# UserFeatureSnapshot and ChurnPrediction are not written to or read
+# from anywhere in features.py, predictor.py, services.py, or
+# views.py. They appear to be leftovers from an earlier design
+# (before features were computed live on every scoring run) and are
+# currently dead tables — registered here only so existing data, if
+# any, remains visible/removable via admin. Confirm with the team
+# whether these are safe to drop (model + migration) before the exam,
+# or whether something outside apps/churn still depends on them.
 
 @admin.register(UserFeatureSnapshot)
 class UserFeatureSnapshotAdmin(admin.ModelAdmin):

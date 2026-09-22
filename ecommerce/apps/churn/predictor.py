@@ -14,6 +14,48 @@ assert len(_columns) == 11, (
     "Re-run score_customers after replacing the model artifacts."
 )
 
+# SHAP explainer is optional — only import/build it if the shap package
+# is installed (pip install shap). If it's missing, explanations are
+# silently skipped rather than crashing every prediction.
+try:
+    import shap
+    _explainer = shap.TreeExplainer(_model)
+    _SHAP_AVAILABLE = True
+except ImportError:
+    _explainer = None
+    _SHAP_AVAILABLE = False
+
+
+def _top_factors(df: pd.DataFrame, n: int = 3) -> list:
+    """
+    Returns the top N features that pushed THIS prediction toward
+    churn, using SHAP values — i.e. not "what matters most across all
+    customers" (that's fixed, from training) but "what mattered most
+    for this specific person's number today."
+
+    Returns [] if shap isn't installed, so this is always safe to call.
+    """
+    if not _SHAP_AVAILABLE:
+        return []
+
+    shap_values = _explainer.shap_values(df)
+    # Binary XGBoost classifier: shap_values is a single 2D array,
+    # one row per sample, one column per feature, in _columns order.
+    row_values = shap_values[0] if hasattr(shap_values, '__len__') else shap_values
+
+    contributions = list(zip(_columns, row_values, df.iloc[0].tolist()))
+    # Sort by how much each feature pushed TOWARD churn (positive SHAP
+    # value), largest first — negative/protective factors are excluded
+    # here since we're explaining "why is this risky", not the full
+    # picture both ways.
+    contributions.sort(key=lambda x: x[1], reverse=True)
+
+    return [
+        {'feature': feat, 'value': val, 'impact': round(float(shap_val), 3)}
+        for feat, shap_val, val in contributions[:n]
+        if shap_val > 0
+    ]
+
 
 def _apply_override_rules(feature_dict: dict, proba: float, risk: str) -> dict:
     """
@@ -117,5 +159,6 @@ def predict_churn(feature_dict: dict) -> dict:
         'model_score':      proba,          # raw model output, never adjusted
         'model_risk_level': model_risk,     # what the model alone would say
         'override_reason':  override['override_reason'],
+        'top_factors':      _top_factors(df),   # SHAP explanation, [] if shap not installed
         'debug':            {k: enc.get(k) for k in _columns},
     }
