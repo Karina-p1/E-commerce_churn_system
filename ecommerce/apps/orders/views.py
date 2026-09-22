@@ -20,6 +20,7 @@ from apps.products.models import Product
 from apps.activity.models import UserEvent
 from apps.addresses.models import Address
 from apps.notifications.models import Notification
+from apps.orders.task import send_payment_reminder
 from .forms import RefundRequestForm
 
 from .models import Cart, CartItem, Order, OrderItem, Coupon
@@ -215,6 +216,7 @@ def format_esewa_amount(value):
 
     return str(amount.normalize())
 
+
 def generate_esewa_signature(message):
     secret_key = settings.ESEWA_SECRET_KEY.encode('utf-8')
 
@@ -310,14 +312,14 @@ def checkout_view(request):
     cart, _ = Cart.objects.get_or_create(
         user=request.user
     )
-    
+
     addresses = Address.objects.filter(
         user=request.user
     ).order_by(
         "-is_default",
         "-created_at"
     )
-    
+
     payment_method = request.POST.get("payment_method")
 
     if not cart.items.exists():
@@ -326,7 +328,7 @@ def checkout_view(request):
             "Your cart is empty."
         )
         return redirect('cart')
-    
+
     if not addresses.exists():
         messages.warning(
             request,
@@ -350,14 +352,14 @@ def checkout_view(request):
             )
 
             return redirect("checkout")
-        
+
         try:
             selected_address = get_object_or_404(
                 Address,
                 id=selected_address_id,
                 user=request.user
             )
-            
+
             with transaction.atomic():
                 cart_items = cart.items.select_related('product')
 
@@ -380,11 +382,12 @@ def checkout_view(request):
                         return redirect('cart')
 
                 transaction_uuid = f"ORDER-{uuid.uuid4().hex[:12]}"
-                
+
                 address_id = request.POST.get("address")
 
                 if not address_id:
-                    messages.error(request, "Please select a delivery address.")
+                    messages.error(
+                        request, "Please select a delivery address.")
                     return redirect("checkout")
 
                 address = get_object_or_404(
@@ -394,7 +397,8 @@ def checkout_view(request):
                 )
 
                 # Coupon (if a valid one is stored in session for this cart)
-                coupon_obj, discount_amount = _get_session_coupon(request, cart)
+                coupon_obj, discount_amount = _get_session_coupon(
+                    request, cart)
                 final_total = cart.total_price - discount_amount
 
                 # Create unpaid order only. Do NOT reduce stock yet.
@@ -406,28 +410,36 @@ def checkout_view(request):
                     payment_status='INITIATED',
                     payment_method=payment_method,
                     transaction_uuid=transaction_uuid,
-                    
+
                     delivery_label=selected_address.label,
                     delivery_full_name=selected_address.full_name,
                     delivery_phone=selected_address.phone,
-                    
+
                     delivery_province=selected_address.province,
                     delivery_district=selected_address.district,
                     delivery_city=selected_address.city,
                     delivery_ward=selected_address.ward,
                     delivery_street=selected_address.street,
                     delivery_landmark=selected_address.landmark,
-                    
+
                     delivery_latitude=selected_address.latitude,
                     delivery_longitude=selected_address.longitude,
                 )
                 order.status_history.create(status='pending')
-                
+
                 UserEvent.objects.create(
                     user=request.user,
                     event_type='PAYMENT_STARTED'
                 )
-
+                # Schedule a payment reminder in case checkout isn't completed.
+                # COD orders never reach here with payment_status still
+                # INITIATED for long (handled separately below), so this
+                # effectively only applies to the eSewa flow.
+                transaction.on_commit(
+                    lambda oid=order.id: send_payment_reminder.apply_async(
+                        args=[oid], countdown=120
+                    )
+                )
                 for cart_item in cart_items:
                     product = cart_item.product
 
@@ -438,7 +450,7 @@ def checkout_view(request):
                         price=product.effective_price,
                         quantity=cart_item.quantity
                     )
-                
+
                 if payment_method == "COD":
 
                     order.payment_status = "UNPAID"
@@ -724,6 +736,7 @@ def esewa_success(request):
 
         return redirect("cart")
 
+
 @login_required
 def esewa_failure(request):
     UserEvent.objects.create(
@@ -837,6 +850,7 @@ def cancel_order(request, order_id):
         }
     )
 
+
 @login_required
 def request_refund(request, order_id):
     order = get_object_or_404(
@@ -888,42 +902,44 @@ def request_refund(request, order_id):
         },
     )
 
+
 @staff_member_required
 def order_list_admin(request):
     query = request.GET.get('q', '').strip()
     status = request.GET.get('status', 'all')
- 
+
     orders = Order.objects.select_related('user').prefetch_related('items')
- 
+
     if status != 'all':
         orders = orders.filter(status=status)
- 
+
     if query:
         orders = orders.filter(
             Q(id__icontains=query) |
             Q(user__username__icontains=query) |
             Q(user__email__icontains=query)
         )
- 
+
     paginator = Paginator(orders, 20)
     page_obj = paginator.get_page(request.GET.get('page'))
- 
+
     return render(request, 'admin/order_list.html', {
         'page_obj': page_obj,
         'query': query,
         'status': status,
     })
- 
- 
+
+
 @staff_member_required
 def order_detail_admin(request, pk):
     order = get_object_or_404(
-        Order.objects.select_related('user').prefetch_related('items', 'status_history'),
+        Order.objects.select_related('user').prefetch_related(
+            'items', 'status_history'),
         pk=pk
     )
     return render(request, 'admin/order_detail.html', {'order': order})
- 
- 
+
+
 @staff_member_required
 def order_update_status(request, pk):
     order = get_object_or_404(Order, pk=pk)
@@ -971,14 +987,17 @@ def order_update_status(request, pk):
     return redirect(
         request.META.get("HTTP_REFERER", "order_list_admin")
     )
- 
+
+
 @staff_member_required
 def order_cancel(request, pk):
     order = get_object_or_404(Order, pk=pk)
     if request.method == 'POST':
-        order.set_status('cancelled', note='Cancelled by admin', changed_by=request.user)
+        order.set_status('cancelled', note='Cancelled by admin',
+                         changed_by=request.user)
         messages.success(request, f"Order #{order.id} has been cancelled.")
     return redirect(request.META.get('HTTP_REFERER', 'order_list_admin'))
+
 
 @staff_member_required
 def process_refund(request, pk):
@@ -1026,6 +1045,7 @@ def process_refund(request, pk):
 # COUPON
 # ---------------------------------------------------------------------------
 
+
 @login_required
 @staff_member_required
 def coupon_list(request):
@@ -1067,7 +1087,8 @@ def coupon_add(request):
         min_quantity = request.POST.get('min_quantity', '').strip()
         buy_quantity = request.POST.get('buy_quantity', '').strip()
         get_quantity = request.POST.get('get_quantity', '').strip()
-        get_discount_percent = request.POST.get('get_discount_percent', '100').strip()
+        get_discount_percent = request.POST.get(
+            'get_discount_percent', '100').strip()
         max_uses = request.POST.get('max_uses', '').strip()
         is_active = request.POST.get('is_active') == 'on'
         valid_from = request.POST.get('valid_from', '').strip()
@@ -1089,7 +1110,8 @@ def coupon_add(request):
             errors.append('Minimum quantity is required for this coupon type.')
 
         if coupon_type == 'BUY_X_GET_Y' and (not buy_quantity or not get_quantity):
-            errors.append('Buy quantity and get quantity are required for this coupon type.')
+            errors.append(
+                'Buy quantity and get quantity are required for this coupon type.')
 
         if errors:
             for e in errors:
@@ -1134,7 +1156,8 @@ def coupon_edit(request, pk):
         min_quantity = request.POST.get('min_quantity', '').strip()
         buy_quantity = request.POST.get('buy_quantity', '').strip()
         get_quantity = request.POST.get('get_quantity', '').strip()
-        get_discount_percent = request.POST.get('get_discount_percent', '100').strip()
+        get_discount_percent = request.POST.get(
+            'get_discount_percent', '100').strip()
         max_uses = request.POST.get('max_uses', '').strip()
         is_active = request.POST.get('is_active') == 'on'
         valid_from = request.POST.get('valid_from', '').strip()
@@ -1156,7 +1179,8 @@ def coupon_edit(request, pk):
             errors.append('Minimum quantity is required for this coupon type.')
 
         if coupon_type == 'BUY_X_GET_Y' and (not buy_quantity or not get_quantity):
-            errors.append('Buy quantity and get quantity are required for this coupon type.')
+            errors.append(
+                'Buy quantity and get quantity are required for this coupon type.')
 
         if errors:
             for e in errors:

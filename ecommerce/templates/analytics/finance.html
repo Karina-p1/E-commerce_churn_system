@@ -15,6 +15,15 @@
             <p class="text-muted mb-0 small" id="lastUpdated">Loading latest data...</p>
         </div>
 
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-primary" id="syncBtn" onclick="syncData()">
+                <i class="bi bi-arrow-repeat"></i> <span id="syncBtnText">Sync Data</span>
+            </button>
+            <a class="btn btn-danger" href="/analytics/api/report-pdf/">
+                <i class="bi bi-file-earmark-pdf"></i> Download Report
+            </a>
+        </div>
+
     </div>
 
     <!-- SUMMARY CARDS -->
@@ -480,6 +489,29 @@ const nprFormatter = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }
 
 function toggleLoading(id, show) {
     document.getElementById(id).classList.toggle("active", show);
+}
+
+async function syncData() {
+    const btn = document.getElementById("syncBtn");
+    const text = document.getElementById("syncBtnText");
+
+    btn.disabled = true;
+    text.textContent = "Syncing...";
+
+    try {
+        const res = await fetch("/analytics/api/sync/", {
+            method: "POST",
+            headers: { "X-CSRFToken": "{{ csrf_token }}" }
+        });
+        if (!res.ok) throw new Error("Sync failed: " + res.status);
+
+        // Reload so the top cards and all charts show the new numbers
+        window.location.reload();
+    } catch (err) {
+        console.error(err);
+        text.textContent = "Sync failed - try again";
+        btn.disabled = false;
+    }
 }
 
 // ----------------------
