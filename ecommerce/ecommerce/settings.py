@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     "apps.addresses",
     "apps.notifications",
     "apps.complaints",
+    "apps.loyalty.apps.LoyaltyConfig",
 ]
 
 
