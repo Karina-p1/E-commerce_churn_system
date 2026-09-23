@@ -1,7 +1,8 @@
 import csv
 
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import get_user_model
 from django.db.models import Avg, OuterRef, Subquery
@@ -9,6 +10,7 @@ from django.db.models import Avg, OuterRef, Subquery
 from .models import ChurnScore
 from .features import extract_features
 from .predictor import predict_churn
+from .services import score_all_customers
 
 User = get_user_model()
 
@@ -68,6 +70,38 @@ def churn_dashboard(request):
 
 @login_required
 @user_passes_test(is_admin)
+def refresh_scores(request):
+    """
+    The dashboard's "Refresh scores" button. Runs the EXACT same
+    score_all_customers() function as `python manage.py score_customers`
+    and the nightly Celery task — so clicking this button is now
+    genuinely identical to running the command by hand, not just a
+    page reload showing stale data.
+
+    Runs synchronously (no Celery queue) so the new scores are already
+    saved by the time the redirect happens and the dashboard re-renders
+    — with only a handful of customers this completes in well under a
+    second. If your customer base grows large enough that this starts
+    feeling slow in the browser, that's the point to switch this to
+    queue score_all_customers_task.delay() instead and show a
+    "scoring in progress" state rather than blocking the request.
+    """
+    if request.method != 'POST':
+        return redirect('churn:dashboard')
+
+    summary = score_all_customers(debug=False, log=None)
+
+    messages.success(
+        request,
+        f"Scores refreshed — {summary['total']} customers scored "
+        f"({summary['high']} high risk, {summary['low']} low risk)."
+    )
+
+    return redirect('churn:dashboard')
+
+
+@login_required
+@user_passes_test(is_admin)
 def churn_customer_detail(request, customer_id):
     """
     Drill-down page for a single customer: their full current feature
@@ -86,7 +120,6 @@ def churn_customer_detail(request, customer_id):
         .order_by('predicted_at')
     )
 
-    # Data for the Chart.js line chart — dates + scores as parallel lists
     history_labels = [h.predicted_at.strftime('%b %d, %Y %H:%M') for h in history]
     history_scores = [h.score for h in history]
 

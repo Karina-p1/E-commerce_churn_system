@@ -5,6 +5,7 @@ app_name = 'churn'
 
 urlpatterns = [
     path('dashboard/', views.churn_dashboard, name='dashboard'),
+    path('dashboard/refresh/', views.refresh_scores, name='refresh_scores'),
     path('dashboard/customer/<int:customer_id>/', views.churn_customer_detail, name='customer_detail'),
     path('dashboard/export/high-risk/', views.export_high_risk_csv, name='export_high_risk_csv'),
 ]
