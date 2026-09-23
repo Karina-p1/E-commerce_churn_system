@@ -361,6 +361,99 @@
     .popular-grid { grid-template-columns: 1fr; }
     .product-grid { grid-template-columns: repeat(2,1fr); gap: 10px; }
   }
+
+  /* ── FILTER SIDEBAR ───────────────────────────────── */
+  .shop-layout {
+    display: grid;
+    grid-template-columns: 230px 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+  .filter-sidebar {
+    background: #fff;
+    border: 1px solid #f0f0f0;
+    border-radius: 14px;
+    padding: 20px;
+    position: sticky;
+    top: 90px;
+  }
+  .filter-sidebar h5 {
+    font-size: 15px;
+    font-weight: 800;
+    color: #0e3a5c;
+    margin: 0 0 16px;
+  }
+  .filter-group { margin-bottom: 20px; }
+  .filter-group:last-of-type { margin-bottom: 16px; }
+  .filter-group-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 10px;
+    display: block;
+  }
+  .price-range-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .price-range-row input {
+    width: 100%;
+    padding: 7px 9px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 12.5px;
+    color: #1a1a1a;
+  }
+  .price-range-row input:focus {
+    outline: none;
+    border-color: #0ea5e9;
+    box-shadow: 0 0 0 3px rgba(14,165,233,0.12);
+  }
+  .price-range-row span { color: #9ca3af; font-size: 12px; }
+
+  .rating-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+    cursor: pointer;
+    font-size: 13px;
+    color: #374151;
+  }
+  .rating-option input { accent-color: #0ea5e9; cursor: pointer; }
+  .rating-option .stars { color: #e89b2a; letter-spacing: 1px; }
+
+  .filter-apply-btn {
+    width: 100%;
+    background: #0e3a5c;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 4px;
+  }
+  .filter-apply-btn:hover { background: #1e5a8a; }
+
+  .filter-clear-link {
+    display: block;
+    text-align: center;
+    font-size: 12px;
+    color: #9ca3af;
+    text-decoration: none;
+    margin-top: 10px;
+  }
+  .filter-clear-link:hover { color: #0ea5e9; }
+
+  @media (max-width: 900px) {
+    .shop-layout { grid-template-columns: 1fr; }
+    .filter-sidebar { position: static; }
+  }
 </style>
 {% endblock %}
 
@@ -470,35 +563,82 @@
 </div>
 {% endif %}
 
-<!-- ── RESULTS BAR ── -->
-<div class="results-bar">
-  <h4>
-    {% if request.GET.brand %}
-      {{ active_brand|title }} Products
-    {% elif request.GET.category %}
-      {{ active_category|title }} Products
-    {% elif request.GET.q %}
-      Results for "{{ request.GET.q }}"
-    {% else %}
-      All Products
-    {% endif %}
-  </h4>
-  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-    {% if request.GET.brand or request.GET.category or request.GET.q %}
-    <span class="active-filter">
-      {% if request.GET.brand %}Brand: {{ active_brand }}{% endif %}
-      {% if request.GET.category %}Category: {{ active_category }}{% endif %}
-      {% if request.GET.q %}Search: {{ request.GET.q }}{% endif %}
-      <a href="{% url 'products:view_products' %}" title="Clear filter">×</a>
-    </span>
-    {% endif %}
-    <span class="results-count">{{ products|length }} item{{ products|length|pluralize }}</span>
-  </div>
-</div>
+<div class="shop-layout">
 
-<!-- ── PRODUCT GRID ── -->
-<div class="product-grid">
-  {% for p in products %}
+  <!-- ── FILTER SIDEBAR ── -->
+  <aside class="filter-sidebar">
+    <h5>Filters</h5>
+    <form method="get" action="{% url 'products:view_products' %}">
+      <!-- Preserve search/brand/category selections already in the URL -->
+      {% if request.GET.q %}<input type="hidden" name="q" value="{{ request.GET.q }}">{% endif %}
+      {% if request.GET.brand %}<input type="hidden" name="brand" value="{{ request.GET.brand }}">{% endif %}
+      {% if request.GET.category %}<input type="hidden" name="category" value="{{ request.GET.category }}">{% endif %}
+
+      <div class="filter-group">
+        <label class="filter-group-label">Price range (Rs.)</label>
+        <div class="price-range-row">
+          <input type="number" name="min_price" placeholder="Min" min="0" value="{{ min_price }}">
+          <span>–</span>
+          <input type="number" name="max_price" placeholder="Max" min="0" value="{{ max_price }}">
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-group-label">Minimum rating</label>
+        {% for r in "4321" %}
+        <label class="rating-option">
+          <input type="radio" name="min_rating" value="{{ r }}" {% if min_rating == r %}checked{% endif %}>
+          <span class="stars">{% for i in "12345" %}{% if forloop.counter <= r|add:0 %}★{% else %}☆{% endif %}{% endfor %}</span>
+          <span>&amp; up</span>
+        </label>
+        {% endfor %}
+        <label class="rating-option">
+          <input type="radio" name="min_rating" value="" {% if not min_rating %}checked{% endif %}>
+          <span>Any rating</span>
+        </label>
+      </div>
+
+      <button type="submit" class="filter-apply-btn">Apply filters</button>
+    </form>
+    {% if min_price or max_price or min_rating %}
+    <a href="{% url 'products:view_products' %}{% if request.GET.q %}?q={{ request.GET.q }}{% endif %}" class="filter-clear-link">Clear price/rating filters</a>
+    {% endif %}
+  </aside>
+
+  <div>
+
+    <!-- ── RESULTS BAR ── -->
+    <div class="results-bar">
+      <h4>
+        {% if request.GET.brand %}
+          {{ active_brand|title }} Products
+        {% elif request.GET.category %}
+          {{ active_category|title }} Products
+        {% elif request.GET.q %}
+          Results for "{{ request.GET.q }}"
+        {% else %}
+          All Products
+        {% endif %}
+      </h4>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        {% if request.GET.brand or request.GET.category or request.GET.q or min_price or max_price or min_rating %}
+        <span class="active-filter">
+          {% if request.GET.brand %}Brand: {{ active_brand }}{% endif %}
+          {% if request.GET.category %}Category: {{ active_category }}{% endif %}
+          {% if request.GET.q %}Search: {{ request.GET.q }}{% endif %}
+          {% if min_price %}Min Rs.{{ min_price }}{% endif %}
+          {% if max_price %}Max Rs.{{ max_price }}{% endif %}
+          {% if min_rating %}{{ min_rating }}★+{% endif %}
+          <a href="{% url 'products:view_products' %}" title="Clear all filters">×</a>
+        </span>
+        {% endif %}
+        <span class="results-count">{{ products|length }} item{{ products|length|pluralize }}</span>
+      </div>
+    </div>
+
+    <!-- ── PRODUCT GRID ── -->
+    <div class="product-grid">
+      {% for p in products %}
   <div class="product-card-wrapper">
     <div class="product-card">
       <div class="product-img-wrap">
@@ -569,7 +709,14 @@
     <a href="{% url 'products:view_products' %}">View All Products</a>
   </div>
   {% endfor %}
+    </div>
+    <!-- /product-grid -->
+
+  </div>
+  <!-- /right column -->
+
 </div>
+<!-- /shop-layout -->
 
 <script>
   document.querySelectorAll(".offer-kicker").forEach(function(badge){

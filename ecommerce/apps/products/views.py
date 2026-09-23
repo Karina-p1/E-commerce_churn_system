@@ -5,7 +5,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Q, ProtectedError
-from django.db.models import Count
+from django.db.models import Count, Avg
 from django.urls import reverse
 from django.utils import timezone
 from django.core.paginator import Paginator
@@ -75,6 +75,40 @@ def view_products(request):
             Q(category__name__icontains=q)
         )
 
+    # Filter by price range. Filters on the base `price` field, not
+    # `effective_price` — that's a computed property (discount applied
+    # at read time), not a real column, so it can't be filtered in a
+    # database query directly. A product on sale might therefore show
+    # up just outside a price band based on its list price even though
+    # its discounted price would fit — a reasonable simplification, but
+    # worth knowing.
+    min_price = request.GET.get('min_price', '').strip()
+    max_price = request.GET.get('max_price', '').strip()
+    if min_price:
+        try:
+            products = products.filter(price__gte=float(min_price))
+        except ValueError:
+            min_price = ''
+    if max_price:
+        try:
+            products = products.filter(price__lte=float(max_price))
+        except ValueError:
+            max_price = ''
+
+    # Filter by minimum rating. `rating` is also a computed property
+    # (averages Review.rating in Python), so instead we annotate an
+    # average rating computed IN THE DATABASE from the related reviews,
+    # and filter on that. Products with zero reviews get avg_rating=None
+    # and are correctly excluded from any "X stars and up" filter.
+    min_rating = request.GET.get('min_rating', '').strip()
+    if min_rating:
+        try:
+            products = products.annotate(
+                avg_rating=Avg('reviews__rating')
+            ).filter(avg_rating__gte=float(min_rating))
+        except ValueError:
+            min_rating = ''
+
     return render(request, "products/dashboard.html", {
         "products": products,
         "special_offers": special_offers,
@@ -84,6 +118,9 @@ def view_products(request):
         "active_brand": brand_slug,
         "active_category": category_slug,
         "wishlist_ids": wishlist_ids,
+        "min_price": min_price,
+        "max_price": max_price,
+        "min_rating": min_rating,
     })
 
 
