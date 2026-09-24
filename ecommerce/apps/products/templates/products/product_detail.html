@@ -88,6 +88,15 @@
     border-radius: 6px;
   }
 
+  .badge-low-stock {
+    background: #fef3c7;
+    color: #92400e;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 6px;
+  }
+
   .badge-discount {
     background: #fee2e2;
     color: #b91c1c;
@@ -287,10 +296,12 @@
     <!-- Right: details -->
     <div class="col-12 col-md-7">
 
-      {% if product.stock > 0 %}
-        <span class="badge-stock">In stock</span>
-      {% else %}
+      {% if product.stock_status == 'out' %}
         <span class="badge-out">Out of stock</span>
+      {% elif product.stock_status == 'low' %}
+        <span class="badge-low-stock">Only {{ product.stock }} left</span>
+      {% else %}
+        <span class="badge-stock">In stock</span>
       {% endif %}
 
       <h1 class="mt-2 mb-1 fs-4 fw-semibold">{{ product.name }}</h1>
@@ -348,11 +359,14 @@
         <span class="text-muted" style="min-width: 65px">Stock</span>
 
         <span class="fw-semibold">
-          {% if product.stock > 0 %}
+          {% if product.stock_status == 'out' %}
+            Unavailable
+          {% elif product.stock_status == 'low' %}
+            <span style="display:inline-block;width:8px;height:8px;background:#f59e0b;border-radius:50%;margin-right:4px;"></span>
+            <span class="text-warning fw-bold">Only {{ product.stock }} left — order soon!</span>
+          {% else %}
             <span style="display:inline-block;width:8px;height:8px;background:#16a34a;border-radius:50%;margin-right:4px;"></span>
             {{ product.stock }} units left
-          {% else %}
-            Unavailable
           {% endif %}
         </span>
       </div>

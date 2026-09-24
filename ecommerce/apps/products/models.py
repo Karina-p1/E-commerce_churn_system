@@ -85,6 +85,22 @@ class Product(models.Model):
     @property
     def review_count(self):
         return self.reviews.count()
+
+    # Single source of truth for stock badges across every template
+    # (shop grid, product detail, wishlist) — previously each template
+    # repeated its own "stock <= 5" check independently, so changing
+    # the low-stock threshold meant editing three separate files and
+    # risking them drifting out of sync. Now there's one place to
+    # change it, and every template just asks the product directly.
+    LOW_STOCK_THRESHOLD = 5
+
+    @property
+    def stock_status(self):
+        if self.stock == 0:
+            return 'out'
+        elif self.stock <= self.LOW_STOCK_THRESHOLD:
+            return 'low'
+        return 'in_stock'
     
     @property
     def is_offer_active(self):

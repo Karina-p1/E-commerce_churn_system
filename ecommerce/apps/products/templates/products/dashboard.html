@@ -234,6 +234,7 @@
     letter-spacing: 0.2px;
   }
   .badge-stock.out { background: #fee2e2; color: #b91c1c; }
+  .badge-stock.low { background: #fef3c7; color: #92400e; }
   .badge-discount {
     position: absolute; top: 10px; right: 10px;
     background: #ef4444; color: #fff;
@@ -648,10 +649,12 @@
           <div class="product-img-placeholder">No Image</div>
         {% endif %}
 
-        {% if p.stock > 0 %}
-          <span class="badge-stock">In Stock</span>
-        {% else %}
+        {% if p.stock_status == 'out' %}
           <span class="badge-stock out">Out of Stock</span>
+        {% elif p.stock_status == 'low' %}
+          <span class="badge-stock low">Only {{ p.stock }} left!</span>
+        {% else %}
+          <span class="badge-stock">In Stock</span>
         {% endif %}
 
         {% if p.discount_percent %}
