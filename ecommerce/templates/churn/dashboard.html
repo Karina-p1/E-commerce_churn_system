@@ -49,6 +49,9 @@
     font-weight: 600;
     text-decoration: none;
     transition: 0.15s ease;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
   }
 
   .refresh-btn {
@@ -56,6 +59,7 @@
     color: #fff;
   }
   .refresh-btn:hover { opacity: 0.9; }
+  .refresh-btn:disabled { opacity: 0.6; cursor: wait; }
 
   .export-btn {
     background: #fff;
@@ -252,9 +256,12 @@
       <a href="{% url 'churn:export_high_risk_csv' %}" class="export-btn">
         <i class="ti ti-download"></i> Export high risk (CSV)
       </a>
-      <a href="{% url 'churn:dashboard' %}" class="refresh-btn">
-        <i class="ti ti-refresh"></i> Refresh scores
-      </a>
+      <form method="post" action="{% url 'churn:refresh_scores' %}" style="display:inline;" id="refreshForm">
+        {% csrf_token %}
+        <button type="submit" class="refresh-btn" id="refreshBtn">
+          <i class="ti ti-refresh"></i> Refresh scores
+        </button>
+      </form>
     </div>
   </div>
 
@@ -359,6 +366,15 @@
   document.querySelectorAll(".score-bar[data-width]").forEach(function(el) {
     var width = Math.max(0, Math.min(100, Number(el.getAttribute("data-width")) || 0));
     el.style.width = width + "%";
+  });
+
+  // Disable the refresh button on click and show a scoring state, so
+  // impatient double-clicks can't fire score_all_customers() twice while
+  // the first request is still running.
+  document.getElementById("refreshForm").addEventListener("submit", function () {
+    var btn = document.getElementById("refreshBtn");
+    btn.disabled = true;
+    btn.innerHTML = '<i class="ti ti-refresh"></i> Refreshing...';
   });
 </script>
 {% endblock %}
