@@ -28,6 +28,9 @@ from django.core.paginator import Paginator
 from django.db.models import Q
 SESSION_COUPON_KEY = 'applied_coupon_code'
 
+from apps.loyalty.models import LoyaltyAccount
+from apps.loyalty.services import LoyaltyService
+
 
 def _get_cart_items_payload(cart):
     """Flattened {'price', 'quantity'} list used for BUY_X_GET_Y calculations."""
@@ -312,6 +315,20 @@ def checkout_view(request):
     cart, _ = Cart.objects.get_or_create(
         user=request.user
     )
+    
+    # Shipping fee
+    shipping_fee = Decimal("150.00")
+    
+    if coupon_obj:
+        shipping_fee = max(
+            Decimal("0.00"),
+            shipping_fee - coupon_obj.shipping_fee
+        )
+
+    # Get or create loyalty account for the logged-in user
+    loyalty_account = LoyaltyService.get_or_create_account(
+        request.user
+    )
 
     addresses = Address.objects.filter(
         user=request.user
@@ -327,7 +344,7 @@ def checkout_view(request):
             request,
             "Your cart is empty."
         )
-        return redirect('cart')
+        return redirect("cart")
 
     if not addresses.exists():
         messages.warning(
@@ -336,21 +353,27 @@ def checkout_view(request):
         )
         return redirect("addresses:add_address")
 
-    if request.method == 'GET':
+    # ---------------------------------------------------------
+    # GET REQUEST
+    # ---------------------------------------------------------
+    if request.method == "GET":
         UserEvent.objects.create(
             user=request.user,
-            event_type='CHECKOUT_STARTED'
+            event_type="CHECKOUT_STARTED"
         )
 
-    if request.method == 'POST':
-        selected_address_id = request.POST.get("address")
-        if not selected_address_id:
+    # ---------------------------------------------------------
+    # POST REQUEST
+    # ---------------------------------------------------------
+    if request.method == "POST":
 
+        selected_address_id = request.POST.get("address")
+
+        if not selected_address_id:
             messages.error(
                 request,
                 "Please select a delivery address."
             )
-
             return redirect("checkout")
 
         try:
@@ -361,9 +384,12 @@ def checkout_view(request):
             )
 
             with transaction.atomic():
-                cart_items = cart.items.select_related('product')
 
-                # Check stock before starting payment
+                # -------------------------------------------------
+                # CHECK STOCK
+                # -------------------------------------------------
+                cart_items = cart.items.select_related("product")
+
                 for cart_item in cart_items:
                     product = cart_item.product
 
@@ -372,22 +398,33 @@ def checkout_view(request):
                             request,
                             f"'{product.name}' is out of stock."
                         )
-                        return redirect('cart')
+                        return redirect("cart")
 
                     if cart_item.quantity > product.stock:
                         messages.error(
                             request,
-                            f"Only {product.stock} unit(s) of '{product.name}' are available."
+                            f"Only {product.stock} unit(s) of "
+                            f"'{product.name}' are available."
                         )
-                        return redirect('cart')
+                        return redirect("cart")
 
-                transaction_uuid = f"ORDER-{uuid.uuid4().hex[:12]}"
+                # -------------------------------------------------
+                # TRANSACTION UUID
+                # -------------------------------------------------
+                transaction_uuid = (
+                    f"ORDER-{uuid.uuid4().hex[:12]}"
+                )
 
+                # -------------------------------------------------
+                # ADDRESS
+                # -------------------------------------------------
                 address_id = request.POST.get("address")
 
                 if not address_id:
                     messages.error(
-                        request, "Please select a delivery address.")
+                        request,
+                        "Please select a delivery address."
+                    )
                     return redirect("checkout")
 
                 address = get_object_or_404(
@@ -396,18 +433,148 @@ def checkout_view(request):
                     user=request.user
                 )
 
-                # Coupon (if a valid one is stored in session for this cart)
+                # -------------------------------------------------
+                # COUPON
+                # -------------------------------------------------
                 coupon_obj, discount_amount = _get_session_coupon(
-                    request, cart)
-                final_total = cart.total_price - discount_amount
+                    request,
+                    cart
+                )
 
-                # Create unpaid order only. Do NOT reduce stock yet.
+                cart_total = Decimal(str(cart.total_price))
+                discount_amount = Decimal(str(discount_amount))
+
+                amount_after_coupon = (
+                    cart_total - discount_amount
+                )
+
+                amount_after_coupon = max(
+                    Decimal("0.00"),
+                    amount_after_coupon
+                )
+
+                # -------------------------------------------------
+                # LOYALTY POINT REDEMPTION
+                # -------------------------------------------------
+                try:
+                    requested_loyalty_points = int(
+                        request.POST.get(
+                            "loyalty_points",
+                            "0"
+                        ) or 0
+                    )
+                except (TypeError, ValueError):
+                    messages.error(
+                        request,
+                        "Invalid loyalty points value."
+                    )
+                    return redirect("checkout")
+
+                if requested_loyalty_points < 0:
+                    messages.error(
+                        request,
+                        "Loyalty points cannot be negative."
+                    )
+                    return redirect("checkout")
+
+                # Redemption must happen in 100-point blocks
+                if requested_loyalty_points % 100 != 0:
+                    messages.error(
+                        request,
+                        "Loyalty points must be redeemed in multiples of 100."
+                    )
+                    return redirect("checkout")
+
+                actual_loyalty_points = 0
+                loyalty_discount = Decimal("0.00")
+
+                if requested_loyalty_points > 0:
+
+                    # Refresh the account so we use the latest balance
+                    loyalty_account = (
+                        LoyaltyAccount.objects
+                        .select_for_update()
+                        .get(user=request.user)
+                    )
+
+                    # Check available balance
+                    if (
+                        requested_loyalty_points
+                        > loyalty_account.available_points
+                    ):
+                        messages.error(
+                            request,
+                            "You do not have enough loyalty points."
+                        )
+                        return redirect("checkout")
+
+                    # 100 points = Rs. 50
+                    requested_loyalty_discount = (
+                        LoyaltyService.calculate_reward_value(
+                            requested_loyalty_points
+                        )
+                    )
+
+                    # The customer cannot redeem more points
+                    # than the amount remaining after coupon.
+                    max_redeemable_points = int(
+                        amount_after_coupon / Decimal("0.50")
+                    )
+
+                    # Keep redemption in 100-point blocks
+                    max_redeemable_points = (
+                        max_redeemable_points // 100
+                    ) * 100
+
+                    if requested_loyalty_points > max_redeemable_points:
+                        messages.error(
+                            request,
+                            "You cannot redeem that many points "
+                            "for this order."
+                        )
+                        return redirect("checkout")
+
+                    actual_loyalty_points = (
+                        requested_loyalty_points
+                    )
+
+                    loyalty_discount = (
+                        requested_loyalty_discount
+                    )
+
+                # -------------------------------------------------
+                # FINAL ORDER TOTAL
+                # -------------------------------------------------
+
+                final_total = (
+                    amount_after_coupon
+                    - loyalty_discount
+                    + shipping_fee
+                )
+
+                final_total = max(
+                    Decimal("0.00"),
+                    final_total
+                )
+
+                # -------------------------------------------------
+                # CREATE ORDER
+                # -------------------------------------------------
                 order = Order.objects.create(
                     user=request.user,
+
                     total_price=final_total,
+
                     coupon=coupon_obj,
                     discount_amount=discount_amount,
-                    payment_status='INITIATED',
+
+                    # Loyalty information
+                    loyalty_points_redeemed=actual_loyalty_points,
+                    loyalty_discount_amount=loyalty_discount,
+                    
+                    shipping_fee=shipping_fee,
+
+                    payment_status="INITIATED",
                     payment_method=payment_method,
                     transaction_uuid=transaction_uuid,
 
@@ -425,21 +592,32 @@ def checkout_view(request):
                     delivery_latitude=selected_address.latitude,
                     delivery_longitude=selected_address.longitude,
                 )
-                order.status_history.create(status='pending')
 
+                order.status_history.create(
+                    status="pending"
+                )
+
+                # -------------------------------------------------
+                # PAYMENT STARTED EVENT
+                # -------------------------------------------------
                 UserEvent.objects.create(
                     user=request.user,
-                    event_type='PAYMENT_STARTED'
+                    event_type="PAYMENT_STARTED"
                 )
-                # Schedule a payment reminder in case checkout isn't completed.
-                # COD orders never reach here with payment_status still
-                # INITIATED for long (handled separately below), so this
-                # effectively only applies to the eSewa flow.
+
+                # -------------------------------------------------
+                # PAYMENT REMINDER
+                # -------------------------------------------------
                 transaction.on_commit(
                     lambda oid=order.id: send_payment_reminder.apply_async(
-                        args=[oid], countdown=120
+                        args=[oid],
+                        countdown=120
                     )
                 )
+
+                # -------------------------------------------------
+                # CREATE ORDER ITEMS
+                # -------------------------------------------------
                 for cart_item in cart_items:
                     product = cart_item.product
 
@@ -451,17 +629,35 @@ def checkout_view(request):
                         quantity=cart_item.quantity
                     )
 
+                # -------------------------------------------------
+                # COD PAYMENT
+                # -------------------------------------------------
                 if payment_method == "COD":
 
                     order.payment_status = "UNPAID"
-                    order.save()
+                    order.save(
+                        update_fields=[
+                            "payment_status",
+                            "updated_at"
+                        ]
+                    )
 
+                    # Coupon usage is incremented for the order
                     if order.coupon:
-                        Coupon.objects.filter(pk=order.coupon_id).update(
-                            used_count=F('used_count') + 1
+                        Coupon.objects.filter(
+                            pk=order.coupon_id
+                        ).update(
+                            used_count=F("used_count") + 1
                         )
 
-                    request.session.pop(SESSION_COUPON_KEY, None)
+                    # Loyalty points are NOT deducted here.
+                    # They will be deducted when the COD order
+                    # becomes PAID through paid_order_created.
+
+                    request.session.pop(
+                        SESSION_COUPON_KEY,
+                        None
+                    )
 
                     cart.items.all().delete()
 
@@ -470,26 +666,53 @@ def checkout_view(request):
                         "Your order has been placed successfully."
                     )
 
-                    return redirect("order_detail", order.id)
+                    return redirect(
+                        "order_detail",
+                        order.id
+                    )
 
+                # -------------------------------------------------
+                # ESEWA PAYMENT
+                # -------------------------------------------------
                 amount = Decimal(order.total_price)
+
                 tax_amount = Decimal("0")
                 service_charge = Decimal("0")
                 delivery_charge = Decimal("0")
-                total_amount = amount + tax_amount + service_charge + delivery_charge
 
-                amount_str = format_esewa_amount(amount)
-                tax_amount_str = format_esewa_amount(tax_amount)
-                service_charge_str = format_esewa_amount(service_charge)
-                delivery_charge_str = format_esewa_amount(delivery_charge)
-                total_amount_str = format_esewa_amount(total_amount)
+                total_amount = (
+                    amount
+                    + tax_amount
+                    + service_charge
+                    + delivery_charge
+                )
+
+                amount_str = format_esewa_amount(
+                    amount
+                )
+
+                tax_amount_str = format_esewa_amount(
+                    tax_amount
+                )
+
+                service_charge_str = format_esewa_amount(
+                    service_charge
+                )
+
+                delivery_charge_str = format_esewa_amount(
+                    delivery_charge
+                )
+
+                total_amount_str = format_esewa_amount(
+                    total_amount
+                )
 
                 success_url = request.build_absolute_uri(
-                    reverse('esewa_success')
+                    reverse("esewa_success")
                 )
 
                 failure_url = request.build_absolute_uri(
-                    reverse('esewa_failure')
+                    reverse("esewa_failure")
                 )
 
                 product_code = settings.ESEWA_PRODUCT_CODE
@@ -505,39 +728,84 @@ def checkout_view(request):
                 )
 
                 esewa_data = {
-                    'amount': amount_str,
-                    'tax_amount': tax_amount_str,
-                    'total_amount': total_amount_str,
-                    'transaction_uuid': transaction_uuid,
-                    'product_code': product_code,
-                    'product_service_charge': service_charge_str,
-                    'product_delivery_charge': delivery_charge_str,
-                    'success_url': success_url,
-                    'failure_url': failure_url,
-                    'signed_field_names': 'total_amount,transaction_uuid,product_code',
-                    'signature': signature,
+                    "amount": amount_str,
+                    "tax_amount": tax_amount_str,
+                    "total_amount": total_amount_str,
+                    "transaction_uuid": transaction_uuid,
+                    "product_code": product_code,
+                    "product_service_charge": service_charge_str,
+                    "product_delivery_charge": delivery_charge_str,
+                    "success_url": success_url,
+                    "failure_url": failure_url,
+                    "signed_field_names": (
+                        "total_amount,"
+                        "transaction_uuid,"
+                        "product_code"
+                    ),
+                    "signature": signature,
                 }
 
-                # Coupon is now snapshotted on the order; used_count is
-                # incremented only once payment is confirmed (esewa_success).
-                request.session.pop(SESSION_COUPON_KEY, None)
+                # Coupon and loyalty values are already
+                # stored on the Order.
+                request.session.pop(
+                    SESSION_COUPON_KEY,
+                    None
+                )
 
-                return render(request, 'orders/esewa_redirect.html', {
-                    'esewa_payment_url': settings.ESEWA_PAYMENT_URL,
-                    'esewa_data': esewa_data,
-                })
+                return render(
+                    request,
+                    "orders/esewa_redirect.html",
+                    {
+                        "esewa_payment_url": (
+                            settings.ESEWA_PAYMENT_URL
+                        ),
+                        "esewa_data": esewa_data,
+                    }
+                )
 
         except Exception as e:
             messages.error(
                 request,
                 f"Something went wrong while starting payment: {e}"
             )
-            return redirect('checkout')
+            return redirect("checkout")
 
-    # GET: show current coupon state (if any) alongside cart/addresses
-    applied_coupon, discount_amount = _get_session_coupon(request, cart)
-    cart_total = cart.total_price
-    final_total = cart_total - discount_amount
+    # =========================================================
+    # GET: DISPLAY CHECKOUT
+    # =========================================================
+
+    applied_coupon, discount_amount = _get_session_coupon(
+        request,
+        cart
+    )
+
+    cart_total = Decimal(str(cart.total_price))
+    discount_amount = Decimal(str(discount_amount))
+
+    amount_after_coupon = (
+        cart_total - discount_amount
+    )
+
+    amount_after_coupon = max(
+        Decimal("0.00"),
+        amount_after_coupon
+    )
+
+    # No loyalty points are redeemed until the user
+    # submits the checkout form.
+    loyalty_discount = Decimal("0.00")
+    loyalty_points_redeemed = 0
+
+    final_total = (
+        amount_after_coupon
+        - loyalty_discount
+        + shipping_fee
+    )
+
+    final_total = max(
+        Decimal("0.00"),
+        final_total
+    )
 
     return render(
         request,
@@ -545,10 +813,21 @@ def checkout_view(request):
         {
             "cart": cart,
             "addresses": addresses,
+
             "coupon": applied_coupon,
             "discount_amount": discount_amount,
+
             "cart_total": cart_total,
             "final_total": final_total,
+
+            # Loyalty information
+            "loyalty_account": loyalty_account,
+            "loyalty_discount": loyalty_discount,
+            "loyalty_points_redeemed": (
+                loyalty_points_redeemed
+            ),
+            
+            "shipping_fee": shipping_fee,
         }
     )
 
