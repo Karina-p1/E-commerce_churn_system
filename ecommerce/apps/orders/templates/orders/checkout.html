@@ -192,10 +192,10 @@
               <span> Rs. {{ cart_total|default:cart.total_price }} </span>
             </div>
 
-            <div class="d-flex justify-content-between mt-2">
-              <span>Delivery</span>
+            <div class="checkout-summary-row d-flex justify-content-between mt-2">
+              <span>Shipping</span>
 
-              <span class="text-success"> FREE </span>
+              <span>Rs. {{ shipping_fee }}</span>
             </div>
 
             <!-- Coupon -->
@@ -236,6 +236,28 @@
             </div>
 
             <hr />
+
+            <div class="loyalty-section">
+                <h5>Loyalty Points</h5>
+
+                <p>
+                    Available points:
+                    <strong>{{ loyalty_account.available_points }}</strong>
+                </p>
+
+                <p>
+                    100 points = Rs. 50 discount
+                </p>
+
+                <input
+                    type="number"
+                    name="loyalty_points"
+                    min="0"
+                    step="100"
+                    max="{{ loyalty_account.available_points }}"
+                    value="0"
+                >
+            </div>
 
             <div class="d-flex justify-content-between">
               <h5>Total</h5>

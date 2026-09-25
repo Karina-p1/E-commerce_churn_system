@@ -16,6 +16,8 @@ from apps.products.models import Category, Brand, Product, Review, Wishlist
 from apps.analytics.services import get_top_products
 from apps.activity.models import UserEvent
 
+from apps.orders.models import Order, OrderItem
+from apps.loyalty.services import LoyaltyService
 
 def view_products(request):
     categories = Category.objects.all()
@@ -212,10 +214,6 @@ def post_review(request, slug):
         # --------------------------------------------------
         # LOYALTY: Verified Purchase Review Reward
         # --------------------------------------------------
-
-        from apps.orders.models import Order, OrderItem
-        from apps.loyalty.services import LoyaltyService
-
         qualifying_order = (
             Order.objects
             .filter(

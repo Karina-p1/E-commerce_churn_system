@@ -11,12 +11,11 @@ class Coupon(models.Model):
         ('FLAT', 'Flat Amount'),
     ]
 
-    # ── New: what kind of eligibility rule this coupon uses ──────────
     COUPON_TYPE_CHOICES = [
-        ('STANDARD', 'Standard'),               # existing behavior — no extra condition
-        ('FIRST_ORDER', 'First Order Only'),     # only valid on the user's very first order
-        ('MIN_QUANTITY', 'Minimum Quantity'),    # only valid if cart has >= min_quantity items
-        ('BUY_X_GET_Y', 'Buy X Get Y'),          # buy_quantity items -> get_quantity items discounted
+        ('STANDARD', 'Standard'),
+        ('FIRST_ORDER', 'First Order Only'),
+        ('MIN_QUANTITY', 'Minimum Quantity'),
+        ('BUY_X_GET_Y', 'Buy X Get Y'),
     ]
 
     code = models.CharField(max_length=50, unique=True)
@@ -36,7 +35,23 @@ class Coupon(models.Model):
     discount_value = models.DecimalField(
         max_digits=10,
         decimal_places=2,
-        help_text="Percentage or flat amount. Ignored for BUY_X_GET_Y (use get_discount_percent instead)."
+        help_text=(
+            "Percentage or flat amount. "
+            "Ignored for BUY_X_GET_Y "
+            "(use get_discount_percent instead)."
+        )
+    )
+    
+    # Shipping discount
+    shipping_fee = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        help_text=(
+            "Shipping discount provided by this coupon. "
+            "Use 0 for no shipping discount. "
+            "The discount cannot exceed the shipping fee."
+        )
     )
 
     min_order_amount = models.DecimalField(
@@ -45,27 +60,53 @@ class Coupon(models.Model):
         default=0
     )
 
+    # Minimum loyalty tier required to use this coupon.
+    # Example:
+    # Gold coupon → Gold and Platinum customers can use it.
+    minimum_loyalty_tier = models.ForeignKey(
+        "loyalty.LoyaltyTier",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="coupons",
+        help_text="Minimum loyalty tier required to use this coupon."
+    )
+
     # ── MIN_QUANTITY fields ───────────────────────────────────────────
     min_quantity = models.PositiveIntegerField(
         null=True,
         blank=True,
-        help_text="MIN_QUANTITY type only: minimum total cart items required."
+        help_text=(
+            "MIN_QUANTITY type only: "
+            "minimum total cart items required."
+        )
     )
 
     # ── BUY_X_GET_Y fields ─────────────────────────────────────────────
     buy_quantity = models.PositiveIntegerField(
         null=True,
         blank=True,
-        help_text="BUY_X_GET_Y type only: number of items the customer must buy."
+        help_text=(
+            "BUY_X_GET_Y type only: "
+            "number of items the customer must buy."
+        )
     )
+
     get_quantity = models.PositiveIntegerField(
         null=True,
         blank=True,
-        help_text="BUY_X_GET_Y type only: number of additional items that get discounted."
+        help_text=(
+            "BUY_X_GET_Y type only: "
+            "number of additional items that get discounted."
+        )
     )
+
     get_discount_percent = models.PositiveIntegerField(
         default=100,
-        help_text="BUY_X_GET_Y type only: discount % applied to the 'get' items. 100 = free."
+        help_text=(
+            "BUY_X_GET_Y type only: discount % applied to "
+            "the 'get' items. 100 = free."
+        )
     )
 
     max_uses = models.PositiveIntegerField(
@@ -78,11 +119,18 @@ class Coupon(models.Model):
 
     is_active = models.BooleanField(default=True)
 
-    valid_from = models.DateTimeField(null=True, blank=True)
+    valid_from = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+
     valid_until = models.DateTimeField(
         null=True,
         blank=True,
-        help_text="Setting this also marks the coupon as a limited-time offer for notification purposes."
+        help_text=(
+            "Setting this also marks the coupon as a "
+            "limited-time offer for notification purposes."
+        )
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -96,13 +144,24 @@ class Coupon(models.Model):
 
     def is_valid(self, order_amount=None, user=None, cart_quantity=None):
         """
-        Returns (is_valid: bool, error_message: str).
+        Returns:
+            (is_valid: bool, error_message: str)
 
-        order_amount   — cart subtotal, used for min_order_amount + percentage/flat calc
-        user           — required to check FIRST_ORDER eligibility
-        cart_quantity  — total item count in cart, required for MIN_QUANTITY / BUY_X_GET_Y
+        order_amount:
+            Cart subtotal, used for minimum-order validation
+            and discount calculation.
+
+        user:
+            Used for FIRST_ORDER and loyalty-tier eligibility.
+
+        cart_quantity:
+            Total item count in cart, required for
+            MIN_QUANTITY / BUY_X_GET_Y.
         """
+
         now = timezone.now()
+
+        # ── Basic coupon validity ──────────────────────────────────────
 
         if not self.is_active:
             return False, "This coupon is no longer active."
@@ -113,92 +172,210 @@ class Coupon(models.Model):
         if self.valid_until and now > self.valid_until:
             return False, "This coupon has expired."
 
-        if self.max_uses is not None and self.used_count >= self.max_uses:
+        if (
+            self.max_uses is not None
+            and self.used_count >= self.max_uses
+        ):
             return False, "This coupon has reached its usage limit."
 
-        if order_amount is not None and Decimal(order_amount) < self.min_order_amount:
-            return False, f"Minimum order amount for this coupon is Rs.{self.min_order_amount}."
+        # ── Minimum order amount ───────────────────────────────────────
+
+        if (
+            order_amount is not None
+            and Decimal(order_amount) < self.min_order_amount
+        ):
+            return False, (
+                f"Minimum order amount for this coupon is "
+                f"Rs.{self.min_order_amount}."
+            )
+
+        # ── First-order eligibility ───────────────────────────────────
 
         if self.coupon_type == 'FIRST_ORDER':
             if user is None or not user.is_authenticated:
                 return False, "This coupon requires an account."
-            has_prior_order = Order.objects.filter(user=user).exclude(status='cancelled').exists()
+
+            has_prior_order = (
+                Order.objects
+                .filter(user=user)
+                .exclude(status='cancelled')
+                .exists()
+            )
+
             if has_prior_order:
-                return False, "This coupon is valid only on your first order."
+                return False, (
+                    "This coupon is valid only on your first order."
+                )
+
+        # ── Minimum quantity eligibility ──────────────────────────────
 
         if self.coupon_type == 'MIN_QUANTITY':
             required = self.min_quantity or 0
-            if cart_quantity is None or cart_quantity < required:
-                return False, f"This coupon requires at least {required} item(s) in your cart."
 
-        if self.coupon_type == 'BUY_X_GET_Y':
-            required = (self.buy_quantity or 0) + (self.get_quantity or 0)
-            if cart_quantity is None or cart_quantity < required:
+            if (
+                cart_quantity is None
+                or cart_quantity < required
+            ):
                 return False, (
-                    f"This coupon requires at least {required} item(s) in your cart "
-                    f"(buy {self.buy_quantity}, get {self.get_quantity})."
+                    f"This coupon requires at least "
+                    f"{required} item(s) in your cart."
                 )
 
-        return True, ""
+        # ── Buy X Get Y eligibility ───────────────────────────────────
+
+        if self.coupon_type == 'BUY_X_GET_Y':
+            required = (
+                (self.buy_quantity or 0)
+                + (self.get_quantity or 0)
+            )
+
+            if (
+                cart_quantity is None
+                or cart_quantity < required
+            ):
+                return False, (
+                    f"This coupon requires at least "
+                    f"{required} item(s) in your cart "
+                    f"(buy {self.buy_quantity}, "
+                    f"get {self.get_quantity})."
+                )
+
+        # ── Loyalty-tier eligibility ──────────────────────────────────
+        #
+        # If the coupon requires a loyalty tier, the customer
+        # must be authenticated and have a tier at or above
+        # the required tier.
+        #
+        # Example:
+        # Gold coupon:
+        #   Bronze  -> rejected
+        #   Silver  -> rejected
+        #   Gold    -> allowed
+        #   Platinum -> allowed
+
+        if self.minimum_loyalty_tier:
+            if user is None or not user.is_authenticated:
+                return False, (
+                    "This coupon requires a loyalty account."
+                )
+
+            from apps.loyalty.services import LoyaltyService
+
+            loyalty_account = (
+                LoyaltyService.get_or_create_account(user)
+            )
+
+            current_tier = loyalty_account.current_tier
+            required_tier = self.minimum_loyalty_tier
+
+            if current_tier is None:
+                return False, (
+                    "This coupon requires a higher loyalty tier."
+                )
+
+            if (
+                current_tier.minimum_points
+                < required_tier.minimum_points
+            ):
+                return False, (
+                    "This coupon requires a higher loyalty tier."
+                )
+
+        return True, "Coupon is valid."
 
     def calculate_discount(self, amount, cart_items=None):
         """
-        amount     — cart subtotal (Decimal-able)
-        cart_items — list of {'price': Decimal, 'quantity': int}, required for BUY_X_GET_Y
-                     to determine which units receive the discount.
+        amount:
+            Cart subtotal (Decimal-able).
+
+        cart_items:
+            List of:
+                {
+                    'price': Decimal,
+                    'quantity': int
+                }
+
+            Required for BUY_X_GET_Y.
         """
+
         amount = Decimal(amount)
 
         if self.coupon_type == 'BUY_X_GET_Y':
             if not cart_items:
                 return Decimal('0.00')
-            return self._calculate_buy_x_get_y_discount(cart_items)
+
+            return self._calculate_buy_x_get_y_discount(
+                cart_items
+            )
 
         if self.discount_type == 'PERCENTAGE':
-            discount = (amount * self.discount_value) / Decimal('100')
+            discount = (
+                amount * self.discount_value
+            ) / Decimal('100')
         else:
             discount = self.discount_value
 
         if discount > amount:
             discount = amount
 
-        return discount.quantize(Decimal('0.01'))
+        return discount.quantize(
+            Decimal('0.01')
+        )
 
     def _calculate_buy_x_get_y_discount(self, cart_items):
         """
-        Flattens cart_items into individual unit prices, sorts cheapest-first,
-        and discounts get_quantity cheapest units per complete
-        (buy_quantity + get_quantity) group present in the cart.
+        Flattens cart items into individual unit prices,
+        sorts cheapest-first, and discounts the eligible
+        cheapest units.
 
-        This is a simplified, transparent rule: the discount always applies to
-        the cheapest eligible units, once per complete group — e.g. buy 2 get 1
-        with 6 items in cart = 2 complete groups = 2 discounted units (the two
-        cheapest of the six).
+        Example:
+            Buy 2 Get 1
+            6 items in cart
+            → 2 complete groups
+            → 2 cheapest items receive the discount.
         """
+
         units = []
+
         for item in cart_items:
-            units.extend([Decimal(item['price'])] * item['quantity'])
+            units.extend(
+                [Decimal(item['price'])] * item['quantity']
+            )
 
         if not units:
             return Decimal('0.00')
 
         units.sort()
 
-        group_size = (self.buy_quantity or 0) + (self.get_quantity or 0)
+        group_size = (
+            (self.buy_quantity or 0)
+            + (self.get_quantity or 0)
+        )
+
         if group_size <= 0:
             return Decimal('0.00')
 
         eligible_groups = len(units) // group_size
-        discount_units_count = eligible_groups * (self.get_quantity or 0)
+
+        discount_units_count = (
+            eligible_groups
+            * (self.get_quantity or 0)
+        )
 
         if discount_units_count <= 0:
             return Decimal('0.00')
 
-        discount_total = sum(units[:discount_units_count]) * (
-            Decimal(self.get_discount_percent) / Decimal('100')
+        discount_total = (
+            sum(units[:discount_units_count])
+            * (
+                Decimal(self.get_discount_percent)
+                / Decimal('100')
+            )
         )
-        return discount_total.quantize(Decimal('0.01'))
 
+        return discount_total.quantize(
+            Decimal('0.01')
+        )
 
 class Cart(models.Model):
     user = models.OneToOneField(
@@ -356,6 +533,25 @@ class Order(models.Model):
         max_digits=10,
         decimal_places=2,
         default=0
+    )
+    
+    shipping_fee = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal("150.00"),
+        help_text="Shipping fee charged for this order."
+    )
+    
+    loyalty_points_redeemed = models.PositiveIntegerField(
+        default=0,
+        help_text="Number of loyalty points redeemed for this order."
+    )
+
+    loyalty_discount_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        help_text="Discount amount obtained from loyalty points."
     )
 
     # ==========================

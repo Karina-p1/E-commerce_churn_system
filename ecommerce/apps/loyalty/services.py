@@ -356,37 +356,70 @@ class LoyaltyService:
         return account
 
     @staticmethod
-    @transaction.atomic
-    def redeem_points(
-        user,
-        points,
-        description="Points redeemed",
-        order=None,
-    ):
-        """
-        Redeem customer points.
-
-        Redemption decreases available points but does NOT
-        decrease lifetime points earned.
-        """
-
-        if points <= 0:
-            raise ValueError(
-                "Redeemed points must be greater than zero."
-            )
-
-        # Lock ONLY the loyalty account.
+    def get_redeemable_points(user, requested_points):
         account = (
             LoyaltyAccount.objects
             .select_for_update()
             .get(user=user)
         )
 
+        requested_points = int(requested_points)
+
+        if requested_points <= 0:
+            raise ValueError("Points must be greater than zero.")
+
+        if requested_points > account.available_points:
+            raise ValueError("Insufficient loyalty points.")
+
+        return requested_points
+
+    @staticmethod
+    @transaction.atomic
+    def redeem_points(
+        user,
+        points,
+        description="Points redeemed",
+        order=None
+    ):
+        if points <= 0:
+            raise ValueError(
+                "Redeemed points must be greater than zero."
+            )
+
+        # Lock the loyalty account so two Celery executions
+        # cannot modify the balance at the same time.
+        account = (
+            LoyaltyAccount.objects
+            .select_for_update()
+            .get(user=user)
+        )
+
+        # ---------------------------------------------------------
+        # IDEMPOTENCY CHECK
+        # ---------------------------------------------------------
+        # If this order has already had its loyalty points
+        # redeemed, do nothing.
+        if order is not None:
+            already_redeemed = LoyaltyTransaction.objects.filter(
+                account=account,
+                order=order,
+                transaction_type="REDEMPTION",
+            ).exists()
+
+            if already_redeemed:
+                return account
+
+        # ---------------------------------------------------------
+        # CHECK AVAILABLE BALANCE
+        # ---------------------------------------------------------
         if account.available_points < points:
             raise ValueError(
                 "Insufficient loyalty points."
             )
 
+        # ---------------------------------------------------------
+        # DEDUCT POINTS
+        # ---------------------------------------------------------
         account.available_points -= points
         account.lifetime_points_redeemed += points
 
@@ -398,6 +431,9 @@ class LoyaltyService:
             ]
         )
 
+        # ---------------------------------------------------------
+        # CREATE TRANSACTION
+        # ---------------------------------------------------------
         LoyaltyTransaction.objects.create(
             account=account,
             transaction_type="REDEMPTION",
@@ -421,6 +457,15 @@ class LoyaltyService:
         Reverse previously awarded loyalty points.
 
         Used for refunds/cancellations.
+
+        Rules:
+        - A reversal can only happen once for an order.
+        - The loyalty account is locked during the operation.
+        - Available points cannot go below zero.
+        - Lifetime earned points are reduced by the refunded
+        points so the refunded purchase no longer contributes
+        toward the customer's tier.
+        - A REFUND_REVERSAL transaction is always recorded.
         """
 
         if points <= 0:
@@ -428,25 +473,54 @@ class LoyaltyService:
                 "Reversed points must be greater than zero."
             )
 
-        # Lock ONLY the loyalty account.
+        # ---------------------------------------------------------
+        # LOCK LOYALTY ACCOUNT
+        # ---------------------------------------------------------
         account = (
             LoyaltyAccount.objects
             .select_for_update()
             .get(user=user)
         )
 
-        points_to_remove = min(
+        # ---------------------------------------------------------
+        # IDEMPOTENCY CHECK
+        # ---------------------------------------------------------
+        # Prevent the same refund/cancellation from reversing
+        # loyalty points more than once.
+        if order is not None:
+            already_reversed = LoyaltyTransaction.objects.filter(
+                account=account,
+                order=order,
+                transaction_type="REFUND_REVERSAL",
+            ).exists()
+
+            if already_reversed:
+                return account
+
+        # ---------------------------------------------------------
+        # CALCULATE ACTUAL AVAILABLE POINTS TO REMOVE
+        # ---------------------------------------------------------
+        points_to_remove_from_balance = min(
             points,
-            account.available_points
+            account.available_points,
         )
 
-        account.available_points -= points_to_remove
+        # ---------------------------------------------------------
+        # UPDATE AVAILABLE POINTS
+        # ---------------------------------------------------------
+        account.available_points -= points_to_remove_from_balance
 
+        # ---------------------------------------------------------
+        # UPDATE LIFETIME EARNED POINTS
+        # ---------------------------------------------------------
         account.lifetime_points_earned = max(
             0,
-            account.lifetime_points_earned - points_to_remove
+            account.lifetime_points_earned - points,
         )
 
+        # ---------------------------------------------------------
+        # RECALCULATE TIER
+        # ---------------------------------------------------------
         new_tier = LoyaltyService.get_tier_for_points(
             account.lifetime_points_earned
         )
@@ -454,6 +528,9 @@ class LoyaltyService:
         if new_tier:
             account.current_tier = new_tier
 
+        # ---------------------------------------------------------
+        # SAVE ACCOUNT
+        # ---------------------------------------------------------
         account.save(
             update_fields=[
                 "available_points",
@@ -463,16 +540,69 @@ class LoyaltyService:
             ]
         )
 
+        # ---------------------------------------------------------
+        # RECORD REVERSAL TRANSACTION
+        # ---------------------------------------------------------
         LoyaltyTransaction.objects.create(
             account=account,
             transaction_type="REFUND_REVERSAL",
-            points=-points_to_remove,
+            points=-points,
             balance_after=account.available_points,
             description=description,
             order=order,
         )
 
         return account
+
+    @staticmethod
+    @transaction.atomic
+    def reverse_order_points(order, description=None):
+        """
+        Reverse loyalty points earned from a specific order.
+
+        The original PURCHASE transaction is used to determine
+        exactly how many points were awarded.
+        """
+
+        if not order:
+            raise ValueError(
+                "An order is required for point reversal."
+            )
+
+        # Find the original purchase reward
+        purchase_transaction = (
+            LoyaltyTransaction.objects
+            .filter(
+                order=order,
+                transaction_type="PURCHASE",
+            )
+            .first()
+        )
+
+        # This order never earned purchase points.
+        if not purchase_transaction:
+            return LoyaltyService.get_or_create_account(
+                order.user
+            )
+
+        points_earned = purchase_transaction.points
+
+        if points_earned <= 0:
+            return LoyaltyService.get_or_create_account(
+                order.user
+            )
+
+        if description is None:
+            description = (
+                f"Points reversed for Order #{order.id}"
+            )
+
+        return LoyaltyService.reverse_points(
+            user=order.user,
+            points=points_earned,
+            description=description,
+            order=order,
+        )
 
     @staticmethod
     def calculate_reward_value(points):

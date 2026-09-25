@@ -46,14 +46,20 @@ class CouponAdmin(admin.ModelAdmin):
         'min_order_amount',
         'max_uses',
         'used_count',
-        'is_active',
+        'minimum_loyalty_tier',
         'is_limited_time_offer',
+        'is_active',
+        'valid_from',
+        'valid_until',
     ]
 
     list_filter = [
         'coupon_type',
         'discount_type',
+        'minimum_loyalty_tier',
         'is_active',
+        'valid_from',
+        'valid_until',
     ]
 
     search_fields = [
@@ -82,6 +88,19 @@ class CouponAdmin(admin.ModelAdmin):
                 ),
                 'description':
                     'Used by STANDARD and FIRST_ORDER coupons.',
+            },
+        ),
+
+        (
+            'Loyalty Tier Requirement',
+            {
+                'fields': (
+                    'minimum_loyalty_tier',
+                ),
+                'description':
+                    'Leave blank for a coupon available to all loyalty tiers. '
+                    'Otherwise, customers must have this tier or a higher tier '
+                    'to use the coupon.',
             },
         ),
 
