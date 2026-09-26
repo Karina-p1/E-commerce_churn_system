@@ -317,19 +317,25 @@ def checkout_view(request):
         user=request.user
     )
     
-    # Shipping fee
-    shipping_fee = Decimal("150.00")
-    
-    if coupon_obj:
-        shipping_fee = max(
-            Decimal("0.00"),
-            shipping_fee - coupon_obj.shipping_fee
-        )
-
-    # Get or create loyalty account for the logged-in user
+    # ---------------------------------------------------------
+    # LOYALTY ACCOUNT
+    # ---------------------------------------------------------
     loyalty_account = LoyaltyService.get_or_create_account(
         request.user
     )
+
+    # ---------------------------------------------------------
+    # SHIPPING FEE
+    # ---------------------------------------------------------
+    # Standard shipping fee for customers without free shipping.
+    shipping_fee = Decimal("150.00")
+
+    # Gold and Platinum tiers have free shipping.
+    if (
+        loyalty_account.current_tier
+        and loyalty_account.current_tier.free_shipping
+    ):
+        shipping_fee = Decimal("0.00")
 
     addresses = Address.objects.filter(
         user=request.user
