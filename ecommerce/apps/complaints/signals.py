@@ -34,10 +34,16 @@ def complaint_updated(sender, instance, created, **kwargs):
     if previous_status == instance.status:
         return
 
-    if instance.status not in ("RESOLVED", "REJECTED"):
+    if instance.status not in ("IN_PROGRESS", "RESOLVED", "REJECTED"):
         return
 
-    if instance.status == "RESOLVED":
+    if instance.status == "IN_PROGRESS":
+        title = "Complaint Being Reviewed"
+        notif_message = (
+            f"Your complaint '{instance.subject}' is now being reviewed "
+            f"by our support team."
+        )
+    elif instance.status == "RESOLVED":
         title = "Complaint Resolved"
         notif_message = f"Your complaint '{instance.subject}' has been resolved."
     else:
