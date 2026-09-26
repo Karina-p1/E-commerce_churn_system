@@ -27,6 +27,7 @@ from .models import Cart, CartItem, Order, OrderItem, Coupon
 from django.core.paginator import Paginator
 from django.db.models import Q
 SESSION_COUPON_KEY = 'applied_coupon_code'
+ORDER_STATUS_SEQUENCE = ['pending', 'processing', 'shipped', 'delivered']
 
 from apps.loyalty.models import LoyaltyAccount
 from apps.loyalty.services import LoyaltyService
@@ -1065,8 +1066,39 @@ def order_detail(request, order_id):
         user=request.user,
     )
 
+    # Build the visual timeline from REAL OrderStatusHistory rows, not
+    # just the order's current status — so if an order skipped straight
+    # from pending to shipped, the timeline shows exactly that, instead
+    # of pretending every step happened. Only built for orders that are
+    # still progressing normally; a cancelled order breaks the linear
+    # flow entirely, so it gets its own separate alert block instead
+    # (already in the template) rather than being forced into this.
+    timeline = None
+    if order.status != 'cancelled':
+        history_by_status = {
+            h.status: h for h in order.status_history.all()
+        }
+        current_index = (
+            ORDER_STATUS_SEQUENCE.index(order.status)
+            if order.status in ORDER_STATUS_SEQUENCE
+            else 0
+        )
+        status_labels = dict(Order.STATUS_CHOICES)
+
+        timeline = []
+        for i, step_status in enumerate(ORDER_STATUS_SEQUENCE):
+            entry = history_by_status.get(step_status)
+            timeline.append({
+                'status': step_status,
+                'label': status_labels.get(step_status, step_status),
+                'done': i <= current_index,
+                'current': i == current_index,
+                'timestamp': entry.created_at if entry else None,
+            })
+
     return render(request, 'orders/order_detail.html', {
-        'order': order
+        'order': order,
+        'timeline': timeline,
     })
 
 
@@ -1094,11 +1126,17 @@ def cancel_order(request, order_id):
         reason = request.POST.get("reason")
         note = request.POST.get("note")
 
-        order.status = "cancelled"
         order.cancel_reason = reason
         order.cancel_note = note
-        order.cancelled_at = timezone.now()
-        order.save()
+        order.save(update_fields=['cancel_reason', 'cancel_note'])
+
+        # Route through set_status() instead of setting order.status
+        # directly — this is what actually writes a row to
+        # OrderStatusHistory (and sets cancelled_at). Setting the field
+        # by hand, as this used to do, silently skipped the history log,
+        # which meant a cancelled order's timeline would show no record
+        # of the cancellation at all.
+        order.set_status('cancelled', note=note, changed_by=request.user)
 
         # Restore stock
         for item in order.items.all():
