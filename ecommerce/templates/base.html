@@ -295,6 +295,19 @@
         background: #0ea5e9;
         margin-right: 6px;
       }
+      .notif-icon {
+        flex-shrink: 0;
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .notif-icon-COUPON { background: #e0f2fe; color: #0284c7; }
+      .notif-icon-OFFER_EXPIRING { background: #fef3c7; color: #b45309; }
+      .notif-icon-REFUND { background: #dcfce7; color: #16a34a; }
+      .notif-icon-GENERAL { background: #f3f4f6; color: #6b7280; }
       .dropdown-item:active,
       .dropdown-item:focus {
         background-color: #f0f9ff;
@@ -975,17 +988,30 @@
 
             <li>
               <a
-                class="notif-item"
+                class="notif-item d-flex gap-2"
                 href="{% url 'notifications:mark_read' n.id %}"
               >
-                <div class="notif-item-title">
-                  {% if not n.is_read %}
-                  <span class="notif-unread-dot"></span>
-                  {% endif %} {{ n.title }}
+                <div class="notif-icon notif-icon-{{ n.notif_type }}">
+                  {% if n.notif_type == 'COUPON' %}
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41L11 3.83V3H4v7h.83l9.58 9.58a2 2 0 002.83 0l3.35-3.35a2 2 0 000-2.82z"/><circle cx="7.5" cy="7.5" r="1.5" fill="currentColor"/></svg>
+                  {% elif n.notif_type == 'OFFER_EXPIRING' %}
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+                  {% elif n.notif_type == 'REFUND' %}
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8 12l2.5 2.5L16 9"/></svg>
+                  {% else %}
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+                  {% endif %}
                 </div>
+                <div class="flex-grow-1" style="min-width:0;">
+                  <div class="notif-item-title">
+                    {% if not n.is_read %}
+                    <span class="notif-unread-dot"></span>
+                    {% endif %} {{ n.title }}
+                  </div>
 
-                <div class="notif-item-message">
-                  {{ n.message|truncatechars:70 }}
+                  <div class="notif-item-message">
+                    {{ n.message }}
+                  </div>
                 </div>
               </a>
             </li>

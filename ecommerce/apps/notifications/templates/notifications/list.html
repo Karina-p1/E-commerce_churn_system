@@ -40,9 +40,17 @@
                 background:{% if not n.is_read %}#f0f9ff{% else %}#fff{% endif %};
                 border:1px solid #e8eaed; box-shadow:0 1px 4px rgba(0,0,0,0.03);">
       <div style="flex-shrink:0; width:38px; height:38px; border-radius:10px;
-                  background:#f0f9ff; display:flex; align-items:center; justify-content:center; color:#0ea5e9;">
+                  display:flex; align-items:center; justify-content:center;
+                  {% if n.notif_type == 'COUPON' %}background:#e0f2fe; color:#0284c7;
+                  {% elif n.notif_type == 'OFFER_EXPIRING' %}background:#fef3c7; color:#b45309;
+                  {% elif n.notif_type == 'REFUND' %}background:#dcfce7; color:#16a34a;
+                  {% else %}background:#f3f4f6; color:#6b7280;{% endif %}">
         {% if n.notif_type == 'COUPON' %}
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41L11 3.83V3H4v7h.83l9.58 9.58a2 2 0 002.83 0l3.35-3.35a2 2 0 000-2.82z"/><circle cx="7.5" cy="7.5" r="1.5" fill="currentColor"/></svg>
+        {% elif n.notif_type == 'OFFER_EXPIRING' %}
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+        {% elif n.notif_type == 'REFUND' %}
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8 12l2.5 2.5L16 9"/></svg>
         {% else %}
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
         {% endif %}
