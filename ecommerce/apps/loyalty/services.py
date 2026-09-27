@@ -60,6 +60,24 @@ class LoyaltyService:
         )
 
         return account
+    
+    @staticmethod
+    def get_shipping_fee(user):
+        """
+        Return the delivery fee based on the user's loyalty tier.
+        Gold and Platinum members get free shipping.
+        """
+        standard_shipping_fee = Decimal("150.00")
+
+        account = LoyaltyService.get_or_create_account(user)
+
+        if (
+            account.current_tier
+            and account.current_tier.free_shipping
+        ):
+            return Decimal("0.00")
+
+        return standard_shipping_fee
 
     @staticmethod
     def calculate_purchase_points(amount, tier):
@@ -574,7 +592,7 @@ class LoyaltyService:
             LoyaltyTransaction.objects
             .filter(
                 order=order,
-                transaction_type="PURCHASE",
+                transaction_type__in=["PURCHASE", "FIRST_PURCHASE"],
             )
             .first()
         )

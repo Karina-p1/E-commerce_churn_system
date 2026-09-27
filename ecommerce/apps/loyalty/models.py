@@ -145,6 +145,7 @@ class LoyaltyTransaction(models.Model):
         ("BONUS", "Bonus"),
         ("REDEMPTION", "Redemption"),
         ("REFUND_REVERSAL", "Refund Reversal"),
+        ("REDEMPTION_REVERSAL", "Redemption Reversal"),
         ("ADMIN_ADJUSTMENT", "Admin Adjustment"),
     ]
 

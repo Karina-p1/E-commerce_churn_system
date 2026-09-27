@@ -8,7 +8,7 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.conf import settings
 from django.db import transaction
 from django.db.models import F
-from django.http import JsonResponse
+from django.http import JsonResponse, request
 from django.urls import reverse
 from django.utils import timezone
 from django.shortcuts import render, redirect, get_object_or_404
@@ -84,10 +84,22 @@ def _get_session_coupon(request, cart):
 
 @login_required
 def cart_view(request):
-    cart, _ = Cart.objects.get_or_create(user=request.user)
+    cart, _ = Cart.objects.get_or_create(
+        user=request.user
+    )
+
+    shipping_fee = LoyaltyService.get_shipping_fee(
+        request.user
+    )
+
+    cart_total = Decimal(str(cart.total_price))
+
+    final_total = cart_total + shipping_fee
 
     return render(request, 'orders/cart.html', {
-        'cart': cart
+        'cart': cart,
+        'shipping_fee': shipping_fee,
+        'final_total': final_total,
     })
 
 
@@ -317,25 +329,15 @@ def checkout_view(request):
         user=request.user
     )
     
-    # ---------------------------------------------------------
-    # LOYALTY ACCOUNT
-    # ---------------------------------------------------------
+    # Get or create loyalty account
     loyalty_account = LoyaltyService.get_or_create_account(
         request.user
     )
 
-    # ---------------------------------------------------------
-    # SHIPPING FEE
-    # ---------------------------------------------------------
-    # Standard shipping fee for customers without free shipping.
-    shipping_fee = Decimal("150.00")
-
-    # Gold and Platinum tiers have free shipping.
-    if (
-        loyalty_account.current_tier
-        and loyalty_account.current_tier.free_shipping
-    ):
-        shipping_fee = Decimal("0.00")
+    # Calculate shipping fee based on loyalty tier
+    shipping_fee = LoyaltyService.get_shipping_fee(
+        request.user
+    )
 
     addresses = Address.objects.filter(
         user=request.user
