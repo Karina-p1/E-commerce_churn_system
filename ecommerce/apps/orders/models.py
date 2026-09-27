@@ -647,11 +647,17 @@ class Order(models.Model):
         ]
     
     def set_status(self, new_status, note=None, changed_by=None):
+        old_status = self.status
+        old_payment_status = self.payment_status
+
         self.status = new_status
+
         update_fields = ['status', 'updated_at']
+
         if new_status == 'cancelled':
             self.cancelled_at = timezone.now()
             update_fields.append('cancelled_at')
+
         self.save(update_fields=update_fields)
 
         self.status_history.create(
@@ -659,6 +665,21 @@ class Order(models.Model):
             note=note,
             changed_by=changed_by,
         )
+
+        # --------------------------------------------------
+        # LOYALTY / REVENUE: Paid order cancellation
+        # --------------------------------------------------
+        if (
+            new_status == 'cancelled'
+            and old_status != 'cancelled'
+            and old_payment_status == 'PAID'
+        ):
+            from django.db import transaction
+            from apps.analytics.tasks import paid_order_cancelled
+
+            transaction.on_commit(
+                lambda: paid_order_cancelled.delay(self.id)
+            )
 
     def __str__(self):
         return f"Order #{self.id} by {self.user.username}"

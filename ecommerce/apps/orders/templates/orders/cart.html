@@ -511,14 +511,19 @@
 
                     <div class="summary-row">
                         <span>Delivery</span>
-                        <span class="free-badge">✓ Free</span>
+
+                        {% if shipping_fee == 0 %}
+                            <span class="free-badge">✓ Free</span>
+                        {% else %}
+                            <strong>Rs. {{ shipping_fee }}</strong>
+                        {% endif %}
                     </div>
 
                     <hr class="summary-divider">
 
                     <div class="summary-total">
                         <span>Total</span>
-                        <strong>Rs. {{ cart.total_price }}</strong>
+                        <strong>Rs. {{ final_total }}</strong>
                     </div>
 
                     <a href="{% url 'checkout' %}" class="checkout-btn">
