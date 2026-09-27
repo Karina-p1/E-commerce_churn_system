@@ -38,6 +38,18 @@ def notify_users_of_new_coupon(sender, instance, created, **kwargs):
     if not created or not instance.is_active:
         return
 
+    # Private, targeted coupons (e.g. an automatic churn win-back offer
+    # created for one specific at-risk customer) must NEVER be
+    # broadcast here. That customer already gets their own personal
+    # Notification + email directly from wherever the coupon was
+    # created (see apps.churn.retention.trigger_winback). Without this
+    # check, EVERY coupon — public or private — triggered this signal
+    # and got announced to the entire customer base, which is exactly
+    # the bug that caused a targeted win-back coupon to show up as a
+    # site-wide "New Limited-Time Offer!" for every single customer.
+    if not instance.is_public:
+        return
+
     limited = instance.is_limited_time_offer
 
     title = (

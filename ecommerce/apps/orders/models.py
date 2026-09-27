@@ -119,6 +119,22 @@ class Coupon(models.Model):
 
     is_active = models.BooleanField(default=True)
 
+    # Distinguishes a promotional coupon meant for everyone from a
+    # private, targeted one (e.g. an automatic churn win-back offer
+    # created for exactly one at-risk customer). The broadcast
+    # notification/email signal only fires for is_public=True — a
+    # private coupon still works at checkout for whoever has the code,
+    # it just never gets announced to the whole customer base.
+    is_public = models.BooleanField(
+        default=True,
+        help_text=(
+            "True = broadcast to every customer as a promotion "
+            "(notification + email to everyone). False = a private, "
+            "targeted coupon — e.g. a churn win-back offer — that "
+            "should never be announced site-wide."
+        )
+    )
+
     valid_from = models.DateTimeField(
         null=True,
         blank=True

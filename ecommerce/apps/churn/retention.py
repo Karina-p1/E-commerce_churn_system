@@ -44,6 +44,9 @@ def trigger_winback(user):
             min_order_amount=0,
             max_uses=1,
             is_active=True,
+            is_public=False,  # private, targeted offer — must NOT be
+                               # broadcast to every customer (see the
+                               # is_public check in notifications/signals.py)
             valid_from=timezone.now(),
             valid_until=timezone.now() + timedelta(days=7),
         )
