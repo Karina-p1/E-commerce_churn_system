@@ -31,8 +31,17 @@ def paid_order_created(order_id):
 @shared_task
 def paid_order_cancelled(order_id):
     order = Order.objects.get(id=order_id)
+
     RevenueService.remove_paid_order(order)
-    print(f"Revenue removed for Order #{order.id}")
+
+    LoyaltyService.reverse_order_points(
+        order=order,
+        description=f"Loyalty points reversed for cancelled Order #{order.id}",
+    )
+
+    print(
+        f"Revenue & Loyalty removed for cancelled Order #{order.id}"
+    )
 
 
 @shared_task
