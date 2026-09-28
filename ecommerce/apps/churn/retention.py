@@ -9,6 +9,10 @@ from django.utils import timezone
 from apps.orders.models import Coupon
 from apps.notifications.models import Notification
 
+# A customer who already got a win-back offer within this many days
+# won't get another, even if their risk level flips low -> high again.
+WINBACK_COOLDOWN_DAYS = 30
+
 
 def _generate_coupon_code(user):
     """A short, unique code for this specific win-back offer."""
@@ -31,11 +35,22 @@ def trigger_winback(user):
     Good enough for a win-back nudge; a stranger who somehow saw the
     code could technically redeem it once instead of the customer.
 
-    Returns the created Coupon, or None if something went wrong
-    (never raises — a failed win-back attempt should never break the
-    scoring run itself).
+    Returns the created Coupon, or None if something went wrong OR the
+    customer already received a win-back offer recently (never raises —
+    a failed win-back attempt should never break the scoring run itself).
     """
     try:
+        # Cooldown: a customer whose risk bounces low -> high -> low ->
+        # high would otherwise get a brand-new coupon every time they
+        # cross back over the line. Skip if they already got a win-back
+        # offer in the last WINBACK_COOLDOWN_DAYS days.
+        already_offered = Coupon.objects.filter(
+            code__startswith=f"WEMISSYOU-{user.id}-",
+            created_at__gte=timezone.now() - timedelta(days=WINBACK_COOLDOWN_DAYS),
+        ).exists()
+        if already_offered:
+            return None
+
         coupon = Coupon.objects.create(
             code=_generate_coupon_code(user),
             coupon_type='STANDARD',
