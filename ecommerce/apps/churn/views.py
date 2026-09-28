@@ -5,7 +5,7 @@ from django.http import HttpResponse
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import get_user_model
-from django.db.models import Avg, OuterRef, Subquery
+from django.db.models import Avg, OuterRef, Subquery, Count, Q
 
 from .models import ChurnScore
 from .features import extract_features
@@ -38,9 +38,15 @@ def _latest_scores_queryset():
 @user_passes_test(is_admin)
 def churn_dashboard(request):
 
+    # order_total excludes cancelled orders, matching exactly what
+    # features.py feeds the model (so the dashboard and the model agree).
     scores = (
         _latest_scores_queryset()
         .select_related('customer')
+        .annotate(order_total=Count(
+            'customer__orders',
+            filter=~Q(customer__orders__status='cancelled'),
+        ))
         .order_by('-score')
     )
 
@@ -120,8 +126,16 @@ def churn_customer_detail(request, customer_id):
         .order_by('predicted_at')
     )
 
-    history_labels = [h.predicted_at.strftime('%b %d, %Y %H:%M') for h in history]
-    history_scores = [h.score for h in history]
+    # (x = epoch milliseconds) lets Chart.js draw a true time axis, so
+    # gaps between runs look like gaps instead of being evenly spaced.
+    history_points = [
+        {
+            'x': int(h.predicted_at.timestamp() * 1000),
+            'y': h.score,
+            'reason': h.override_reason or '',
+        }
+        for h in history
+    ]
 
     latest_saved = history.last()
 
@@ -130,8 +144,7 @@ def churn_customer_detail(request, customer_id):
         'features':        features,
         'result':          result,
         'history':         history,
-        'history_labels':  history_labels,
-        'history_scores':  history_scores,
+        'history_points':  history_points,
         'latest_saved':    latest_saved,
     }
     return render(request, 'churn/customer_detail.html', context)

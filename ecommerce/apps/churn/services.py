@@ -58,6 +58,12 @@ def score_all_customers(debug=False, log=None):
                 score=result['score'],
                 risk_level=result['risk_level'],
                 override_reason=result.get('override_reason'),
+                features=features,
+                model_score=result['model_score'],
+                top_factors={
+                    'raising':  result.get('top_factors'),
+                    'lowering': result.get('protective_factors'),
+                },
             )
 
             if result['risk_level'] == 'high':

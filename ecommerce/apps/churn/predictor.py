@@ -26,35 +26,83 @@ except ImportError:
     _SHAP_AVAILABLE = False
 
 
-def _top_factors(df: pd.DataFrame, n: int = 3) -> list:
-    """
-    Returns the top N features that pushed THIS prediction toward
-    churn, using SHAP values — i.e. not "what matters most across all
-    customers" (that's fixed, from training) but "what mattered most
-    for this specific person's number today."
+def _n(x):
+    """Show 2.0 as 2 and 1.69 as 1.69."""
+    x = float(x)
+    return int(x) if x.is_integer() else round(x, 2)
 
-    Returns [] if shap isn't installed, so this is always safe to call.
+
+def _plain_text(feature: str, value) -> str:
+    """One plain-English phrase describing a feature's value.
+    Whether it raises or lowers risk is shown by the section it appears
+    in on the page, so the wording here stays neutral."""
+    v = float(value)
+    if feature == 'Complain':
+        return 'Has a complaint on file' if v == 1 else 'No complaint on file'
+    if feature == 'MaritalStatus_encoded':
+        return {2: 'Is single', 1: 'Is married', 0: 'Is divorced'}.get(int(v), 'Marital status')
+    if feature == 'Gender_encoded':
+        return 'Is male' if int(v) == 1 else 'Is female'
+    if feature == 'Tenure':
+        return f'Customer for {_n(v)} month(s)'
+    if feature == 'HourSpendOnApp':
+        return f'Average app time of {_n(v)} hrs/day'
+    if feature == 'SatisfactionScore':
+        return f'Satisfaction rating of {_n(v)}'
+    if feature == 'NumberOfAddress':
+        return f'Has {_n(v)} saved address(es)'
+    if feature == 'CouponUsed':
+        return f'Used {_n(v)} coupon(s)'
+    if feature == 'OrderCount':
+        return f'Placed {_n(v)} order(s)'
+    if feature == 'DaySinceLastOrder':
+        return 'Ordered today' if v == 0 else f'Last order {_n(v)} day(s) ago'
+    if feature == 'CashbackAmount':
+        return f'Coupon savings of {_n(v)}'
+    return f'{feature} = {_n(v)}'
+
+
+def _strength(impact: float) -> str:
+    a = abs(impact)
+    if a >= 1.0:
+        return 'Strong'
+    if a >= 0.4:
+        return 'Moderate'
+    return 'Slight'
+
+
+def _factors(df: pd.DataFrame, n: int = 3, min_impact: float = 0.15):
+    """
+    Returns (raising, lowering): the top N features that pushed THIS
+    customer's score toward churn, and the top N that pushed it away.
+    Each item has plain-English 'text' and a 'strength' label; 'impact'
+    (log-odds) is kept for anyone who wants the raw number.
+    Tiny effects (< min_impact) are dropped as noise.
+
+    Returns ([], []) if shap isn't installed, so this is always safe.
     """
     if not _SHAP_AVAILABLE:
-        return []
+        return [], []
 
     shap_values = _explainer.shap_values(df)
-    # Binary XGBoost classifier: shap_values is a single 2D array,
-    # one row per sample, one column per feature, in _columns order.
     row_values = shap_values[0] if hasattr(shap_values, '__len__') else shap_values
 
-    contributions = list(zip(_columns, row_values, df.iloc[0].tolist()))
-    # Sort by how much each feature pushed TOWARD churn (positive SHAP
-    # value), largest first — negative/protective factors are excluded
-    # here since we're explaining "why is this risky", not the full
-    # picture both ways.
-    contributions.sort(key=lambda x: x[1], reverse=True)
+    items = []
+    for feat, shap_val, val in zip(_columns, row_values, df.iloc[0].tolist()):
+        shap_val = float(shap_val)
+        if abs(shap_val) < min_impact:
+            continue
+        items.append({
+            'feature':  feat,
+            'value':    val,
+            'impact':   round(shap_val, 3),
+            'text':     _plain_text(feat, val),
+            'strength': _strength(shap_val),
+        })
 
-    return [
-        {'feature': feat, 'value': val, 'impact': round(float(shap_val), 3)}
-        for feat, shap_val, val in contributions[:n]
-        if shap_val > 0
-    ]
+    raising  = sorted([i for i in items if i['impact'] > 0], key=lambda i: -i['impact'])[:n]
+    lowering = sorted([i for i in items if i['impact'] < 0], key=lambda i: i['impact'])[:n]
+    return raising, lowering
 
 
 def _apply_override_rules(feature_dict: dict, proba: float, risk: str) -> dict:
@@ -151,6 +199,7 @@ def predict_churn(feature_dict: dict) -> dict:
     model_risk = 'high' if proba >= 0.5 else 'low'
 
     override = _apply_override_rules(feature_dict, proba, model_risk)
+    raising, lowering = _factors(df)
 
     return {
         'score':            round(override['score'], 3),
@@ -159,6 +208,7 @@ def predict_churn(feature_dict: dict) -> dict:
         'model_score':      proba,          # raw model output, never adjusted
         'model_risk_level': model_risk,     # what the model alone would say
         'override_reason':  override['override_reason'],
-        'top_factors':      _top_factors(df),   # SHAP explanation, [] if shap not installed
+        'top_factors':      raising,     # SHAP: what pushed toward churn ([] if shap missing)
+        'protective_factors': lowering,  # SHAP: what pushed away from churn
         'debug':            {k: enc.get(k) for k in _columns},
     }
