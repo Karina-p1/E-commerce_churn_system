@@ -48,8 +48,12 @@ def extract_features(user) -> dict:
         )["total"] or 0
     )
 
-    # hours_on_app = round((total_active_seconds / 3600) / lookback_days, 2)
-    hours_on_app = round(total_active_seconds / 3600, 2)
+    # The training data's HourSpendOnApp is HOURS PER DAY on a 0-5 scale,
+    # so use the DAILY AVERAGE over the lookback window (not the 30-day
+    # total) and cap it at the range the model was trained on.
+    hours_on_app = round(
+        min((total_active_seconds / 3600) / lookback_days, 5.0), 2
+    )
 
     # Real coupon usage: count of this user's non-cancelled orders that
     # had a coupon attached at checkout.

@@ -109,6 +109,28 @@
   .history-table tbody tr { border-top: 0.5px solid #f5f5f4; }
   .history-table td { padding: 8px 0; font-size: 12px; }
 
+  .override-note {
+    font-size: 12px;
+    color: #b08b2a;
+    margin: 0 0 8px;
+  }
+
+  .why-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+  .why-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+  .why-up   { color: #A32D2D; }
+  .why-down { color: #2931a3; }
+  .why-item { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0;
+              font-size: 12px; border-top: 0.5px solid #f5f5f4; }
+  .why-tag  { font-size: 10px; color: #888; white-space: nowrap; }
+  .why-none { font-size: 12px; color: #aaa; padding: 7px 0; border-top: 0.5px solid #f5f5f4; }
+  @media (max-width: 640px) { .why-grid { grid-template-columns: 1fr; } }
+
+  .chart-legend-note {
+    font-size: 10.5px;
+    color: #888;
+    margin-top: 8px;
+  }
+
   .empty-state {
     padding: 24px 16px; text-align: center;
     color: #888; font-size: 12px;
@@ -153,14 +175,57 @@
     </div>
   </div>
 
+  <!-- Why this score -->
+  <div class="churn-card">
+    <h2>Why this score</h2>
+    {% if result.override_reason %}
+      <p class="override-note">
+        &#9888; Override applied: {{ result.override_reason }}
+        (raw model score {{ result.model_score|floatformat:2 }})
+      </p>
+    {% endif %}
+    {% if result.top_factors or result.protective_factors %}
+      <div class="why-grid">
+        <div>
+          <div class="why-title why-up">Raises risk</div>
+          {% for f in result.top_factors %}
+          <div class="why-item"><span>{{ f.text }}</span><span class="why-tag">{{ f.strength }}</span></div>
+          {% empty %}
+          <div class="why-none">Nothing significant</div>
+          {% endfor %}
+        </div>
+        <div>
+          <div class="why-title why-down">Lowers risk</div>
+          {% for f in result.protective_factors %}
+          <div class="why-item"><span>{{ f.text }}</span><span class="why-tag">{{ f.strength }}</span></div>
+          {% empty %}
+          <div class="why-none">Nothing significant</div>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="chart-legend-note">
+        Based on patterns the model learned from its training data, which don't always match
+        real-world logic. Explains the model's own score, before any override.
+      </div>
+    {% else %}
+      <div class="empty-state">
+        No factor breakdown available. Install <code>shap</code> (<code>pip install shap</code>)
+        to see what raised or lowered this score.
+      </div>
+    {% endif %}
+  </div>
+
   <!-- Score history chart -->
   <div class="churn-card">
     <h2>Score History</h2>
-    {% if history_scores|length > 1 %}
+    {% if history_points|length > 1 %}
     <canvas id="scoreHistoryChart" height="80"></canvas>
+    <div class="chart-legend-note">
+      Dashed line = 0.5 high-risk threshold. Gold points = an override rule forced the score (hover for the reason).
+    </div>
     {% else %}
     <div class="empty-state">
-      Only {{ history_scores|length }} saved score{{ history_scores|length|pluralize }} so far —
+      Only {{ history_points|length }} saved score{{ history_points|length|pluralize }} so far —
       run <code>python manage.py score_customers</code> a few more times over the coming
       days/weeks to build up a trend line here.
     </div>
@@ -192,7 +257,7 @@
     {% if history %}
     <table class="history-table">
       <thead>
-        <tr><th>Date</th><th>Score</th><th>Risk level</th></tr>
+        <tr><th>Date</th><th>Score</th><th>Risk level</th><th>Override</th></tr>
       </thead>
       <tbody>
         {% for h in history reversed %}
@@ -206,6 +271,7 @@
               <span class="risk-badge risk-low">Low</span>
             {% endif %}
           </td>
+          <td>{{ h.override_reason|default:"—" }}</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -217,31 +283,60 @@
 
 </div>
 
-{% if history_scores|length > 1 %}
+{% if history_points|length > 1 %}
+{{ history_points|json_script:"history-data" }}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script>
-  const ctx = document.getElementById('scoreHistoryChart');
-  new Chart(ctx, {
+  const pts = JSON.parse(document.getElementById('history-data').textContent);
+  const xMin = pts[0].x, xMax = pts[pts.length - 1].x;
+  const fmt = ms => new Date(ms).toLocaleDateString('en-US', {month: 'short', day: 'numeric'});
+
+  new Chart(document.getElementById('scoreHistoryChart'), {
     type: 'line',
     data: {
-      labels: {{ history_labels|safe }},
-      datasets: [{
-        label: 'Churn score',
-        data: {{ history_scores|safe }},
-        borderColor: '#2931a3',
-        backgroundColor: 'rgba(41, 49, 163, 0.08)',
-        tension: 0.25,
-        fill: true,
-        pointRadius: 4,
-        pointBackgroundColor: '#2931a3',
-      }]
+      datasets: [
+        {
+          label: 'Churn score',
+          data: pts,
+          borderColor: '#2931a3',
+          backgroundColor: 'rgba(41,49,163,0.08)',
+          fill: true,
+          stepped: 'after',      // a score holds until the next run
+          tension: 0,            // no misleading curve overshoot
+          pointRadius: 3,
+          pointBackgroundColor: pts.map(p => p.reason ? '#b08b2a' : '#2931a3'),
+        },
+        {
+          label: 'High-risk threshold (0.5)',
+          data: [{x: xMin, y: 0.5}, {x: xMax, y: 0.5}],
+          borderColor: '#A32D2D',
+          borderDash: [6, 4],
+          borderWidth: 1,
+          pointRadius: 0,
+          fill: false,
+        },
+      ],
     },
     options: {
+      parsing: false,
       scales: {
-        y: { min: 0, max: 1, title: { display: true, text: 'Churn score (0–1)' } }
+        x: {
+          type: 'linear',
+          min: xMin, max: xMax,
+          ticks: { maxTicksLimit: 8, callback: v => fmt(v) },
+        },
+        y: { min: 0, max: 1, title: { display: true, text: 'Churn score (0–1)' } },
       },
-      plugins: { legend: { display: false } }
-    }
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: items => new Date(items[0].raw.x).toLocaleString(),
+            afterLabel: ctx => ctx.raw.reason ? 'Override: ' + ctx.raw.reason : '',
+          },
+        },
+      },
+    },
   });
 </script>
 {% endif %}

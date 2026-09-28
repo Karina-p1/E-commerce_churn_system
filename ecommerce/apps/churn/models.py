@@ -22,6 +22,15 @@ class ChurnScore(models.Model):
     # already agrees with the final risk_level (no override needed).
     override_reason = models.CharField(max_length=255, blank=True, null=True)
 
+    # ── Audit trail (added) ─────────────────────────────────────────
+    # Stored with every score so the history chart is explainable later:
+    # you can see exactly which inputs produced each point, what the raw
+    # model said before any override, and which features drove it.
+    # Null on rows created before this migration.
+    features    = models.JSONField(null=True, blank=True)   # raw inputs used
+    model_score = models.FloatField(null=True, blank=True)  # un-overridden model output
+    top_factors = models.JSONField(null=True, blank=True)   # SHAP explanation
+
     class Meta:
         ordering = ['-predicted_at']
 

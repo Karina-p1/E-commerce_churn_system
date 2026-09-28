@@ -337,7 +337,8 @@
           </td>
 
           <td>{{ s.predicted_at|date:"M d, Y" }}</td>
-          <td>{{ s.customer.orders.count }}</td>
+          <!-- Non-cancelled orders only — same count the model uses -->
+          <td>{{ s.order_total }}</td>
           <td>
             <a href="{% url 'churn:customer_detail' s.customer.id %}" class="view-link" onclick="event.stopPropagation()">
               View &rarr;
