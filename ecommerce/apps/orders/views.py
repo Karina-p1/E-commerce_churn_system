@@ -1263,8 +1263,15 @@ def order_list_admin(request):
     status = request.GET.get('status', 'all')
 
     orders = Order.objects.select_related('user', 'coupon').prefetch_related('items')
-    if status != 'all':
-        orders = orders.filter(status=status)
+
+    if status == 'initiated':
+        # Separate place for unfinished payments
+        orders = orders.filter(payment_status='INITIATED')
+    else:
+        # All / Pending / Processing / ... never include unfinished payments
+        orders = orders.exclude(payment_status='INITIATED')
+        if status != 'all':
+            orders = orders.filter(status=status)
 
     if query:
         orders = orders.filter(
@@ -1273,6 +1280,8 @@ def order_list_admin(request):
             Q(user__email__icontains=query)
         )
 
+    initiated_count = Order.objects.filter(payment_status='INITIATED').count()
+
     paginator = Paginator(orders, 20)
     page_obj = paginator.get_page(request.GET.get('page'))
 
@@ -1280,6 +1289,7 @@ def order_list_admin(request):
         'page_obj': page_obj,
         'query': query,
         'status': status,
+        'initiated_count': initiated_count,
     })
 
 
