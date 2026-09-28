@@ -112,6 +112,7 @@
     <a href="?status=shipped{% if query %}&q={{ query }}{% endif %}" class="filter-btn {% if status == 'shipped' %}active{% endif %}">Shipped</a>
     <a href="?status=delivered{% if query %}&q={{ query }}{% endif %}" class="filter-btn {% if status == 'delivered' %}active{% endif %}">Delivered</a>
     <a href="?status=cancelled{% if query %}&q={{ query }}{% endif %}" class="filter-btn {% if status == 'cancelled' %}active{% endif %}">Cancelled</a>
+    <a href="?status=initiated{% if query %}&q={{ query }}{% endif %}" class="filter-btn {% if status == 'initiated' %}active{% endif %}">Payment Initiated{% if initiated_count %} ({{ initiated_count }}){% endif %}</a>
   </form>
 
   <div class="mgmt-table-card">
@@ -145,17 +146,21 @@
           </td>
           <td><span class="items-count">{{ order.items_count }} item{{ order.items_count|pluralize }}</span></td>
           <td>
+            <div class="user-email">Products: Rs. {{ order.items_subtotal }}</div>
+            <div class="user-email">+ Delivery: Rs. {{ order.shipping_fee }}</div>
             {% if order.discount_amount > 0 %}
-              <div class="user-email" style="text-decoration:line-through;">
-                Rs. {{ order.original_price }}
+              <div style="font-size:10.5px; color:#3a8c1c;">
+                − Coupon{% if order.coupon %} ({{ order.coupon.code }}){% endif %}: Rs. {{ order.discount_amount }}
               </div>
-              <div class="order-total">Rs. {{ order.total_price }}</div>
-              <div style="font-size:10.5px; color:#3a8c1c; margin-top:1px;">
-                {% if order.coupon %}{{ order.coupon.code }}: {% endif %}-Rs. {{ order.discount_amount }}
-              </div>
-            {% else %}
-              <span class="order-total">Rs. {{ order.total_price }}</span>
             {% endif %}
+            {% if order.loyalty_discount_amount > 0 %}
+              <div style="font-size:10.5px; color:#3a8c1c;">
+                − Loyalty points: Rs. {{ order.loyalty_discount_amount }}
+              </div>
+            {% endif %}
+            <div class="order-total" style="border-top:0.5px solid #eee; margin-top:3px; padding-top:3px;">
+              Rs. {{ order.payable_amount }}
+            </div>
           </td>
           <td>
 
@@ -180,7 +185,9 @@
 
           </td>
           <td>
-            {% if order.status == 'cancelled' or order.status == 'delivered' %}
+            {% if order.payment_status == 'INITIATED' %}
+              <span class="payment-pill payment-INITIATED">Awaiting payment</span>
+            {% elif order.status == 'cancelled' or order.status == 'delivered' %}
               <span class="status-pill status-{{ order.status }}">{{ order.get_status_display }}</span>
             {% else %}
               <form method="post" action="{% url 'order_update_status' order.pk %}" class="status-select-form">

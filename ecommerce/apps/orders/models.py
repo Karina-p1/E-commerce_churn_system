@@ -650,6 +650,25 @@ class Order(models.Model):
             "processing",
         ]
 
+    @property
+    def items_subtotal(self):
+        """Price of the products before delivery and discounts."""
+        return sum(
+            (i.price * i.quantity for i in self.items.all()),
+            Decimal("0")
+        )
+
+    @property
+    def payable_amount(self):
+        """Products + delivery - coupon - loyalty discount."""
+        amount = (
+            self.items_subtotal
+            + self.shipping_fee
+            - self.discount_amount
+            - self.loyalty_discount_amount
+        )
+        return max(amount, Decimal("0"))
+
     STATUS_FLOW = ['pending', 'processing', 'shipped', 'delivered']
 
     @property
@@ -666,6 +685,8 @@ class Order(models.Model):
         return self.total_price + self.discount_amount
     
     def set_status(self, new_status, note=None, changed_by=None):
+        from django.db import transaction
+
         old_status = self.status
         old_payment_status = self.payment_status
 
@@ -685,6 +706,16 @@ class Order(models.Model):
             changed_by=changed_by,
         )
 
+        # Notification + email for Processing / Shipped / Delivered
+        if new_status in self.STATUS_FLOW and new_status != old_status:
+            from apps.orders.task import send_order_status_update
+
+            transaction.on_commit(
+                lambda: send_order_status_update.delay(
+                    self.id, old_status, new_status
+                )
+            )
+
         # --------------------------------------------------
         # LOYALTY / REVENUE: Paid order cancellation
         # --------------------------------------------------
@@ -693,15 +724,11 @@ class Order(models.Model):
             and old_status != 'cancelled'
             and old_payment_status == 'PAID'
         ):
-            from django.db import transaction
             from apps.analytics.tasks import paid_order_cancelled
 
             transaction.on_commit(
                 lambda: paid_order_cancelled.delay(self.id)
             )
-
-    def __str__(self):
-        return f"Order #{self.id} by {self.user.username}"
 
 class OrderItem(models.Model):
     order = models.ForeignKey(
