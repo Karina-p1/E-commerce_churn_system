@@ -1059,12 +1059,41 @@ def payment_failed(request):
 def order_list(request):
     orders = Order.objects.filter(
         user=request.user,
-    ).order_by("-created_at")
+        is_hidden=False,
+    ).select_related("coupon").order_by("-created_at")
 
     return render(request, 'orders/order_list.html', {
         'orders': orders
     })
 
+@login_required
+def hide_order(request, order_id):
+    if request.method != "POST":
+        return redirect("order_list")
+
+    order = get_object_or_404(
+        Order,
+        id=order_id,
+        user=request.user
+    )
+
+    # Finished orders, or orders whose payment was started but never completed
+    is_finished = order.status in ["delivered", "cancelled"]
+    is_unfinished_payment = order.payment_status in ["INITIATED", "FAILED"]
+
+    can_hide = (
+        (is_finished or is_unfinished_payment)
+        and order.refund_status != "PENDING"
+    )
+
+    if can_hide:
+        order.is_hidden = True
+        order.save(update_fields=["is_hidden"])
+        messages.success(request, "Order removed from your list.")
+    else:
+        messages.error(request, "This order can't be removed right now.")
+
+    return redirect("order_list")
 
 @login_required
 def order_detail(request, order_id):
@@ -1233,8 +1262,7 @@ def order_list_admin(request):
     query = request.GET.get('q', '').strip()
     status = request.GET.get('status', 'all')
 
-    orders = Order.objects.select_related('user').prefetch_related('items')
-
+    orders = Order.objects.select_related('user', 'coupon').prefetch_related('items')
     if status != 'all':
         orders = orders.filter(status=status)
 
@@ -1281,6 +1309,19 @@ def order_update_status(request, pk):
         ]
 
         if new_status in valid_statuses:
+
+            flow = Order.STATUS_FLOW
+
+            # Only allow moving forward
+            if order.status not in flow or flow.index(new_status) <= flow.index(order.status):
+                messages.error(
+                    request,
+                    f"Order #{order.id} is already {order.get_status_display()}. "
+                    f"You can't change it back."
+                )
+                return redirect(
+                    request.META.get("HTTP_REFERER", "order_list_admin")
+                )
 
             order.set_status(
                 new_status,

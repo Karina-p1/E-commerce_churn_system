@@ -633,6 +633,10 @@ class Order(models.Model):
         blank=True
     )
 
+    # Hides the order from the customer's "My Orders" list.
+    # The order stays in the database for admin, refunds and reports.
+    is_hidden = models.BooleanField(default=False)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -645,6 +649,21 @@ class Order(models.Model):
             "pending",
             "processing",
         ]
+
+    STATUS_FLOW = ['pending', 'processing', 'shipped', 'delivered']
+
+    @property
+    def allowed_status_choices(self):
+        """Current status and the ones after it. Going back is not allowed."""
+        if self.status not in self.STATUS_FLOW:
+            return []
+        current = self.STATUS_FLOW.index(self.status)
+        allowed = self.STATUS_FLOW[current:]
+        return [(v, l) for v, l in self.STATUS_CHOICES if v in allowed]
+
+    @property
+    def original_price(self):
+        return self.total_price + self.discount_amount
     
     def set_status(self, new_status, note=None, changed_by=None):
         old_status = self.status
