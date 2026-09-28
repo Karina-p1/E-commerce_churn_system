@@ -1,4 +1,4 @@
-from time import timezone
+from django.utils import timezone
 from django.contrib.admin.views.decorators import staff_member_required
 from django.shortcuts import render
 from django.db.models import Q, Sum, Avg
@@ -10,6 +10,8 @@ from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.db.models import Count, Sum, Avg, F
 from django.db.models.functions import TruncDate
+from datetime import datetime
+from django.db.models import DecimalField, ExpressionWrapper
 
 def analytics_finance(request):
 
@@ -86,6 +88,12 @@ def get_best_selling_products(OrderItem, UserEvent):
         )
 
     return best_selling_products
+
+def _parse_date(value, default):
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").date()
+    except (TypeError, ValueError):
+        return default
 
 @staff_member_required
 def analytics_dashboard(request):
@@ -190,6 +198,78 @@ def analytics_dashboard(request):
 
     best_selling_products = get_best_selling_products(OrderItem, UserEvent)
 
+        # ---- Sales by date (defaults to today) ----
+    today = timezone.localdate()
+    start_date = _parse_date(request.GET.get("start"), today)
+    end_date = _parse_date(request.GET.get("end"), today)
+
+    if end_date < start_date:
+        start_date, end_date = end_date, start_date
+
+    # Paid orders only. Old COD orders have no paid_at, so use created_at for them.
+    sales_orders = Order.objects.filter(payment_status="PAID").filter(
+        Q(paid_at__date__range=(start_date, end_date)) |
+        Q(paid_at__isnull=True, created_at__date__range=(start_date, end_date))
+    )
+
+    sales_summary = sales_orders.aggregate(
+        revenue=Sum("total_price"),
+        order_count=Count("id"),
+    )
+
+    order_items = (
+        OrderItem.objects.filter(order__in=sales_orders)
+        .select_related("order")
+    )
+
+    sold_map = {}
+    for item in order_items:
+        order = item.order
+        original = item.price * item.quantity
+
+        # The order's price before the coupon was applied
+        order_subtotal = order.total_price + order.discount_amount
+
+        # This item's share of the coupon discount
+        if order.discount_amount > 0 and order_subtotal > 0:
+            discount = (original / order_subtotal) * order.discount_amount
+        else:
+            discount = Decimal("0")
+
+        key = item.product_id or item.product_name
+        row = sold_map.setdefault(key, {
+            "product_id": item.product_id,
+            "product_name": item.product_name,
+            "qty": 0,
+            "original": Decimal("0"),
+            "discount": Decimal("0"),
+        })
+        row["qty"] += item.quantity
+        row["original"] += original
+        row["discount"] += discount
+
+    sold_rows = sorted(sold_map.values(), key=lambda r: -r["qty"])
+
+    # Load the products so we can get each photo link
+    product_map = Product.objects.in_bulk(
+        {r["product_id"] for r in sold_rows if r["product_id"]}
+    )
+
+    sold_products = []
+    for r in sold_rows:
+        r["paid"] = r["original"] - r["discount"]
+        product = product_map.get(r["product_id"])
+        image_url = ""
+        if product and product.image:
+            try:
+                image_url = product.image.url
+            except Exception:
+                image_url = ""
+        r["image"] = image_url
+        sold_products.append(r)
+
+    items_sold = sum(p["qty"] for p in sold_products)
+
     context = {
         "total_orders": total_orders,
         "total_customers": total_customers,
@@ -211,6 +291,13 @@ def analytics_dashboard(request):
         "category_analysis": category_analysis,
         "brand_analysis": brand_analysis,
         "best_selling_products": best_selling_products,
+        "start_date": start_date,
+        "end_date": end_date,
+        "is_today": start_date == end_date == today,
+        "sales_revenue": sales_summary["revenue"] or 0,
+        "sales_order_count": sales_summary["order_count"],
+        "items_sold": items_sold,
+        "sold_products": sold_products,
     }
 
     return render(request, "analytics/dashboard.html", context)

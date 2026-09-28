@@ -42,8 +42,7 @@
   .status-pill::before { content: ""; width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
   .status-pending { background: #fef3c7; color: #92400e; }
   .status-processing { background: #e0eafd; color: #1d4ed8; }
-  .status-shipped { background: #e8eafd; color: #2931a3; }
-  .status-delivered { background: #e8f3e1; color: #3a8c1c; }
+  .status-shipped { background: #ede9fe; color: #6d28d9; }  .status-delivered { background: #e8f3e1; color: #3a8c1c; }
   .status-cancelled { background: #f8e3e3; color: #A32D2D; }
 
   .payment-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 20px; font-size: 10px; font-weight: 600; white-space: nowrap; }
@@ -53,6 +52,13 @@
   .payment-FAILED { background: #f8e3e3; color: #A32D2D; }
   .payment-REFUND_PENDING { background: #fdf0d9; color: #b45309; }
   .payment-REFUNDED { background: #e8eafd; color: #2931a3; }
+
+    /* Colored status dropdowns (placed after .status-select so they win) */
+  .status-select.status-pending    { background-color: #fef3c7; color: #92400e; border-color: #f6d77a; }
+  .status-select.status-processing { background-color: #dbeafe; color: #1d4ed8; border-color: #a9c6f5; }
+  .status-select.status-shipped    { background-color: #ede9fe; color: #6d28d9; border-color: #c9bdf3; }
+  .status-select.status-delivered  { background-color: #dcfce7; color: #15803d; border-color: #a3dfb5; }
+
 
   .row-actions { display: flex; gap: 6px; justify-content: flex-end; align-items: center; }
   .icon-btn { width: 28px; height: 28px; border-radius: 7px; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 13px; border: 0.5px solid #e5e5e5; background: #fff; color: #888; transition: 0.15s ease; cursor: pointer; }
@@ -115,7 +121,7 @@
           <th>Order</th>
           <th>Customer</th>
           <th>Items</th>
-          <th>Total</th>
+          <th>Price</th>
           <th>Payment</th>
           <th>Status</th>
           <th style="text-align:right">Actions</th>
@@ -138,7 +144,19 @@
             </div>
           </td>
           <td><span class="items-count">{{ order.items_count }} item{{ order.items_count|pluralize }}</span></td>
-          <td><span class="order-total">Rs. {{ order.total_price }}</span></td>
+          <td>
+            {% if order.discount_amount > 0 %}
+              <div class="user-email" style="text-decoration:line-through;">
+                Rs. {{ order.original_price }}
+              </div>
+              <div class="order-total">Rs. {{ order.total_price }}</div>
+              <div style="font-size:10.5px; color:#3a8c1c; margin-top:1px;">
+                {% if order.coupon %}{{ order.coupon.code }}: {% endif %}-Rs. {{ order.discount_amount }}
+              </div>
+            {% else %}
+              <span class="order-total">Rs. {{ order.total_price }}</span>
+            {% endif %}
+          </td>
           <td>
 
           {% if order.payment_status == "REFUND_PENDING" %}
@@ -162,16 +180,14 @@
 
           </td>
           <td>
-            {% if order.status == 'cancelled' %}
-              <span class="status-pill status-cancelled">Cancelled</span>
+            {% if order.status == 'cancelled' or order.status == 'delivered' %}
+              <span class="status-pill status-{{ order.status }}">{{ order.get_status_display }}</span>
             {% else %}
               <form method="post" action="{% url 'order_update_status' order.pk %}" class="status-select-form">
                 {% csrf_token %}
                 <select name="status" class="status-select status-{{ order.status }}" onchange="this.form.submit()">
-                  {% for value, label in order.STATUS_CHOICES %}
-                    {% if value != 'cancelled' %}
-                      <option value="{{ value }}" {% if order.status == value %}selected{% endif %}>{{ label }}</option>
-                    {% endif %}
+                  {% for value, label in order.allowed_status_choices %}
+                    <option value="{{ value }}" {% if order.status == value %}selected{% endif %}>{{ label }}</option>
                   {% endfor %}
                 </select>
               </form>

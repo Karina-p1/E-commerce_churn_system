@@ -95,8 +95,19 @@
                         <div class="mt-3">
                             <a href="{% url 'order_detail' order.id %}"
                             class="btn btn-outline-dark rounded">
-                                View Details
+                                Details
                             </a>
+                            {% if order.status == 'delivered' or order.status == 'cancelled' or order.payment_status == 'INITIATED' or order.payment_status == 'FAILED' %}
+                                {% if order.refund_status != 'PENDING' %}
+                                    <form action="{% url 'hide_order' order.id %}" method="post" class="d-inline"
+                                        onsubmit="return confirm('Remove this order from your list?');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-outline-danger rounded">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            {% endif %}
                         </div>
                     </div>
                 </div>
