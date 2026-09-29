@@ -3,6 +3,7 @@ from decimal import Decimal, ROUND_DOWN
 from django.db import transaction
 
 from apps.orders.models import Order
+from apps.notifications.models import Notification
 
 from .models import (
     LoyaltyAccount,
@@ -23,6 +24,16 @@ class LoyaltyService:
 
     BASE_AMOUNT_PER_POINT = Decimal("10")
     POINTS_PER_RUPEE_REWARD = Decimal("0.5")
+
+    @staticmethod
+    def _create_notification(user, notif_type, title, message):
+        """Create a customer notification for a completed loyalty event."""
+        return Notification.objects.create(
+            recipient=user,
+            notif_type=notif_type,
+            title=title,
+            message=message,
+        )
 
     @staticmethod
     def get_or_create_account(user):
@@ -331,6 +342,10 @@ class LoyaltyService:
             .get(user=user)
         )
 
+        # Remember the tier before this earning event so we can
+        # notify only when the customer actually moves up.
+        previous_tier = account.current_tier
+
         # Ensure the account has a tier.
         if not account.current_tier_id:
             tier = LoyaltyService.get_tier_for_points(
@@ -372,6 +387,33 @@ class LoyaltyService:
             description=description,
             order=order,
         )
+
+        order_text = f" from Order #{order.id}" if order else ""
+        LoyaltyService._create_notification(
+            user=user,
+            notif_type="POINTS_EARNED",
+            title=f"{points} loyalty points earned",
+            message=(
+                f"You earned {points} loyalty points{order_text}. "
+                f"Your new balance is {account.available_points} points."
+            ),
+        )
+
+        if (
+            new_tier
+            and previous_tier
+            and new_tier.id != previous_tier.id
+            and new_tier.minimum_points > previous_tier.minimum_points
+        ):
+            LoyaltyService._create_notification(
+                user=user,
+                notif_type="TIER_UPGRADE",
+                title=f"Welcome to {new_tier.name}!",
+                message=(
+                    f"You've reached the {new_tier.name} loyalty tier "
+                    f"and unlocked your new benefits."
+                ),
+            )
 
         return account
 
@@ -461,6 +503,19 @@ class LoyaltyService:
             balance_after=account.available_points,
             description=description,
             order=order,
+        )
+
+        reward_value = LoyaltyService.calculate_reward_value(points)
+        order_text = f" on Order #{order.id}" if order else ""
+        LoyaltyService._create_notification(
+            user=user,
+            notif_type="POINTS_REDEEMED",
+            title=f"{points} loyalty points redeemed",
+            message=(
+                f"{points} loyalty points were redeemed{order_text}, "
+                f"saving you Rs. {reward_value:.2f}. "
+                f"Your new balance is {account.available_points} points."
+            ),
         )
 
         return account
@@ -722,6 +777,17 @@ class LoyaltyService:
                     f"for Order #{order.id}"
                 ),
                 order=order,
+            )
+
+            LoyaltyService._create_notification(
+                user=order.user,
+                notif_type="POINTS_RESTORED",
+                title=f"{redeemed_points} loyalty points restored",
+                message=(
+                    f"{redeemed_points} redeemed loyalty points from "
+                    f"Order #{order.id} were restored. Your balance is "
+                    f"now {account.available_points} points."
+                ),
             )
 
         return account
