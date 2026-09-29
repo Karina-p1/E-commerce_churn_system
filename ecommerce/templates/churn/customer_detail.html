@@ -151,6 +151,35 @@
   .kv-table td:first-child { color: #888; }
   .kv-table td:last-child { text-align: right; font-weight: 500; }
 
+  .input-note-box {
+    margin-bottom: 12px;
+    padding: 10px 12px;
+    border: 0.5px solid #eadfb8;
+    border-radius: 8px;
+    background: #fffaf0;
+  }
+
+  .input-note-title {
+    margin-bottom: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    color: #8a6b00;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .input-note-item {
+    padding: 5px 0;
+    font-size: 10.5px;
+    color: #6f5b1b;
+    line-height: 1.45;
+    border-top: 0.5px solid rgba(138, 107, 0, 0.10);
+  }
+
+  .input-note-item:first-of-type {
+    border-top: 0;
+  }
+
   .history-table { width: 100%; border-collapse: collapse; }
   .history-table thead th {
     font-size: 10px;
@@ -326,6 +355,18 @@
   <div class="detail-grid">
     <div class="churn-card">
       <h2>Raw Feature Inputs</h2>
+
+      {% if feature_input_notes %}
+      <div class="input-note-box">
+        <div class="input-note-title">Model input notes</div>
+        {% for note in feature_input_notes %}
+          <div class="input-note-item">
+            <strong>{{ note.feature }}:</strong> {{ note.message }}
+          </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
       <table class="kv-table">
         {% for key, value in features.items %}
         <tr><td>{{ key }}</td><td>{{ value }}</td></tr>
