@@ -22,7 +22,15 @@
 
                     <p class="text-muted">
                         Are you sure you want to cancel
-                        <strong>Order #{{ order.id }}</strong>?
+                        {% with first_item=order.items.first %}
+                            <strong>
+                                {% if first_item %}
+                                    {{ first_item.product_name }}{% if order.items.count > 1 %} + {{ order.items.count|add:"-1" }} more{% endif %}
+                                {% else %}
+                                    this order
+                                {% endif %}
+                            </strong>?
+                        {% endwith %}
                     </p>
 
                 </div>

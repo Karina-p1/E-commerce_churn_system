@@ -1,12 +1,9 @@
 {% extends 'base.html' %} 
-{% block title %}Order #{{ order.id }}{% endblock %}
+{% block title %}{% with first_item=order.items.first %}{% if first_item %}{{ first_item.product_name }}{% else %}Order{% endif %}{% endwith %}{% endblock %}
 
 {% block extra_head %}
 
-<link
-  rel="stylesheet"
-  href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css"
-/>
+<link href="https://api.mapbox.com/mapbox-gl-js/v3.30.0/mapbox-gl.css" rel="stylesheet">
 
 <style>
   .info-card {
@@ -502,63 +499,41 @@
 </div>
 
 {% if order.delivery_latitude and order.delivery_longitude %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script src="https://api.mapbox.com/mapbox-gl-js/v3.30.0/mapbox-gl.js"></script>
 <script>
+  mapboxgl.accessToken = '{{ mapbox_access_token|escapejs }}';
+
   const lat = Number("{{ order.delivery_latitude }}");
   const lng = Number("{{ order.delivery_longitude }}");
   const mapElement = document.getElementById("map");
 
   if (mapElement && Number.isFinite(lat) && Number.isFinite(lng)) {
-    const map = L.map("map").setView([lat, lng], 16);
-
-    const esriTiles = L.tileLayer(
-      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
-      { attribution: "Tiles &copy; Esri", maxZoom: 19, crossOrigin: true }
-    );
-
-    const cartoTiles = L.tileLayer(
-      "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-      {
-        attribution: "&copy; OpenStreetMap contributors &copy; CARTO",
-        subdomains: "abcd",
-        maxZoom: 20,
-        crossOrigin: true
-      }
-    );
-
-    let fallbackActivated = false;
-    let tileErrors = 0;
-
-    esriTiles.on("tileerror", function () {
-      tileErrors += 1;
-      if (tileErrors >= 2 && !fallbackActivated) {
-        fallbackActivated = true;
-        map.removeLayer(esriTiles);
-        cartoTiles.addTo(map);
-      }
+    const map = new mapboxgl.Map({
+      container: "map",
+      style: "mapbox://styles/mapbox/streets-v12",
+      center: [lng, lat],
+      zoom: 16
     });
 
-    cartoTiles.on("tileerror", function () {
-      const box = document.getElementById("map-error");
-      if (box) box.style.display = "block";
-    });
+    map.addControl(new mapboxgl.NavigationControl(), "top-left");
 
-    esriTiles.addTo(map);
+    const popup = new mapboxgl.Popup({ offset: 25 })
+      .setText("Delivery Address");
 
-    const deliveryIcon = L.divIcon({
-      className: "",
-      html: '<div class="delivery-map-pin"></div>',
-      iconSize: [30, 42],
-      iconAnchor: [15, 38]
-    });
-
-    L.marker([lat, lng], { icon: deliveryIcon })
+    new mapboxgl.Marker({ color: "#0d6efd" })
+      .setLngLat([lng, lat])
+      .setPopup(popup)
       .addTo(map)
-      .bindPopup("Delivery Address")
-      .openPopup();
+      .togglePopup();
 
-    requestAnimationFrame(function () { map.invalidateSize(); });
-    setTimeout(function () { map.invalidateSize(); }, 250);
+    map.on("error", function (e) {
+      console.error("Mapbox map error:", e && e.error ? e.error : e);
+      const box = document.getElementById("map-error");
+      if (box) {
+        box.textContent = "Mapbox could not load the delivery map. The saved delivery coordinates are still preserved.";
+        box.style.display = "block";
+      }
+    });
   } else if (mapElement) {
     const box = document.getElementById("map-error");
     if (box) {

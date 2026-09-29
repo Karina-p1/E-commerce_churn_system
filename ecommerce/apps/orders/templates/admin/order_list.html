@@ -132,8 +132,18 @@
         {% for order in page_obj %}
         <tr>
           <td>
-            <div class="order-id"><a href="{% url 'order_detail_admin' order.pk %}">#{{ order.id }}</a></div>
-            <div class="user-email">{{ order.created_at|date:"M d, Y, g:i A" }}</div>
+            {% with first_item=order.items.first %}
+            <div class="order-id">
+              <a href="{% url 'order_detail_admin' order.pk %}">
+                {% if first_item %}
+                  {{ first_item.product_name }}{% if order.items.count > 1 %} + {{ order.items.count|add:"-1" }} more{% endif %}
+                {% else %}
+                  Order
+                {% endif %}
+              </a>
+            </div>
+            {% endwith %}
+            <div class="user-email">#{{ order.id }} &middot; {{ order.created_at|date:"M d, Y, g:i A" }}</div>
           </td>
           <td>
             <div class="user-cell">

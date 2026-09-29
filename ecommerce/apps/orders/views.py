@@ -1,3 +1,4 @@
+from django.conf import settings
 import base64
 import hashlib
 import hmac
@@ -1148,6 +1149,7 @@ def order_detail(request, order_id):
         'order': order,
         'timeline': timeline,
         'timeline_fill_percent': timeline_fill_percent,
+        'mapbox_access_token': settings.MAPBOX_ACCESS_TOKEN,
     })
 
 
