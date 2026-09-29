@@ -19,6 +19,7 @@ class Complaint(models.Model):
         ("LOW", "Low"),
         ("MEDIUM", "Medium"),
         ("HIGH", "High"),
+        ("URGENT", "Urgent"),
     ]
 
     STATUS_CHOICES = [
