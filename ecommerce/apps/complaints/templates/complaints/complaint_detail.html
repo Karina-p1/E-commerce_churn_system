@@ -99,7 +99,12 @@
       <div class="row mb-3">
         <div class="col-sm-4 text-muted">Related Order</div>
         <div class="col-sm-8">
-          <a href="{% url 'order_detail' complaint.order.id %}">#{{ complaint.order.id }}</a>
+          {% with first_item=complaint.order.items.first %}
+            <a href="{% url 'order_detail' complaint.order.id %}" class="text-decoration-none">
+              {% if first_item %}{{ first_item.product_name }}{% if complaint.order.items.count > 1 %} + {{ complaint.order.items.count|add:"-1" }} more{% endif %}{% else %}Order{% endif %}
+            </a>
+            <div class="small text-muted">Order #{{ complaint.order.id }}</div>
+          {% endwith %}
         </div>
       </div>
       {% endif %}
