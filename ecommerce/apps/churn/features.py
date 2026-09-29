@@ -82,14 +82,15 @@ def extract_features(user) -> dict:
         satisfaction_score = 3
 
     # Real complaint data from the complaints app, not a review-rating
-    # proxy. REJECTED complaints are excluded — those were reviewed by
-    # an admin and deemed invalid, so they shouldn't count as a real
-    # signal of a dissatisfied customer. PENDING / IN_PROGRESS / RESOLVED
-    # all count, since even a resolved complaint means something went
-    # wrong for this customer at some point.
+    # proxy. Only OPEN complaints (PENDING / IN_PROGRESS) count. Once a
+    # complaint is RESOLVED, or REJECTED after admin review found it
+    # invalid, the customer is no longer sitting on an unresolved
+    # problem, so the flag drops back to 0 and the churn score can
+    # come down the moment support closes the complaint.
     complain = 1 if Complaint.objects.filter(
-        user=user
-    ).exclude(status='REJECTED').exists() else 0
+        user=user,
+        status__in=['PENDING', 'IN_PROGRESS'],
+    ).exists() else 0
 
     # ── Addresses ─────────────────────────────────────
     number_of_addresses = Address.objects.filter(user=user).count()
