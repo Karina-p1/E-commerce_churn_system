@@ -8,7 +8,7 @@ from django.contrib.auth import get_user_model
 from django.db.models import Avg, OuterRef, Subquery, Count, Q
 
 from .models import ChurnScore
-from .features import extract_features
+from .features import extract_features, extract_features_with_metadata
 from .predictor import predict_churn
 from .services import score_all_customers
 
@@ -117,8 +117,12 @@ def churn_customer_detail(request, customer_id):
     """
     customer = get_object_or_404(User, id=customer_id, is_staff=False, is_superuser=False)
 
-    features = extract_features(customer)
-    result = predict_churn(features)
+    try:
+        features, feature_input_notes = extract_features_with_metadata(customer)
+        result = predict_churn(features)
+    except ValueError as exc:
+        messages.error(request, str(exc))
+        return redirect('churn:dashboard')
 
     history = (
         ChurnScore.objects
@@ -173,6 +177,7 @@ def churn_customer_detail(request, customer_id):
         'history':                 history,
         'history_points':          history_points,
         'latest_saved':            latest_saved,
+        'feature_input_notes':     feature_input_notes,
         'score_changed':           score_changed,
         'score_delta':             score_delta,
         'score_delta_abs':         score_delta_abs,
