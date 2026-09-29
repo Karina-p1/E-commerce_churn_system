@@ -10,7 +10,7 @@ from .models import Complaint
 from django.core.paginator import Paginator
 from django.contrib.admin.views.decorators import staff_member_required
 from django.utils import timezone
-from django.db.models import Q
+from django.db.models import Q, Case, When, Value, IntegerField
 
 
 @login_required
@@ -43,6 +43,38 @@ def complaint_create(request):
 
             complaint = form.save(commit=False)
             complaint.user = request.user
+
+            # --------------------------------------------------
+            # LOYALTY TIER SUPPORT PRIORITY
+            # --------------------------------------------------
+            # Customers do not choose complaint priority themselves.
+            # Their current loyalty tier determines the initial priority.
+            #
+            # Loyalty support priority -> Complaint priority:
+            # NORMAL -> MEDIUM
+            # HIGH   -> HIGH
+            # URGENT -> URGENT
+            loyalty_account = getattr(request.user, "loyalty_account", None)
+            current_tier = (
+                loyalty_account.current_tier
+                if loyalty_account
+                else None
+            )
+
+            if current_tier:
+                priority_map = {
+                    "NORMAL": "MEDIUM",
+                    "HIGH": "HIGH",
+                    "URGENT": "URGENT",
+                }
+
+                complaint.priority = priority_map.get(
+                    current_tier.support_priority,
+                    "MEDIUM",
+                )
+            else:
+                complaint.priority = "MEDIUM"
+
             complaint.save()
 
             messages.success(
@@ -217,7 +249,18 @@ def complaint_list_admin(request):
     if priority != 'all':
         complaints = complaints.filter(priority=priority.upper())
 
-    complaints = complaints.order_by('-created_at')
+    # Loyalty-backed support priority comes first in the staff queue.
+    # Newest complaints are shown first within the same priority.
+    complaints = complaints.annotate(
+        priority_rank=Case(
+            When(priority="URGENT", then=Value(4)),
+            When(priority="HIGH", then=Value(3)),
+            When(priority="MEDIUM", then=Value(2)),
+            When(priority="LOW", then=Value(1)),
+            default=Value(0),
+            output_field=IntegerField(),
+        )
+    ).order_by("-priority_rank", "-created_at")
 
     paginator = Paginator(complaints, 15)
     page_obj = paginator.get_page(request.GET.get('page'))
