@@ -5,39 +5,29 @@ from datetime import timedelta
 from .models import UserSession
 
 
+SESSION_INACTIVITY_TIMEOUT_MINUTES = 30
+
+
 @shared_task
 def close_inactive_sessions():
+    """
+    Close analytics sessions that have been inactive
+    for at least 30 minutes.
+    """
 
-    cutoff = timezone.now() - timedelta(minutes=30)
-
-    sessions = UserSession.objects.filter(
-        ended_at__isnull=True,
-        last_activity__lt=cutoff
+    cutoff = timezone.now() - timedelta(
+        minutes=SESSION_INACTIVITY_TIMEOUT_MINUTES
     )
 
-    for session in sessions:
-        session.ended_at = session.last_activity + timedelta(minutes=30)
-        session.save(update_fields=["ended_at"])
-
-
-@shared_task
-def close_inactive_sessions():
-    """
-    Close sessions that have been inactive for more than 30 minutes.
-    """
-
-    cutoff = timezone.now() - timedelta(minutes=30)
-
     sessions = UserSession.objects.filter(
         ended_at__isnull=True,
-        last_activity__lt=cutoff
+        last_activity__lte=cutoff,
     )
 
     updated = 0
 
     for session in sessions:
-        # End the session at the last time the user was active,
-        # not when Celery happened to run.
+        # End at the last time we actually observed activity.
         session.ended_at = session.last_activity
         session.save(update_fields=["ended_at"])
         updated += 1
