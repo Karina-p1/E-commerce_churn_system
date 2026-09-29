@@ -43,6 +43,61 @@
 
   .score-summary { text-align: right; }
 
+  .score-comparison {
+    display: flex;
+    justify-content: flex-end;
+    align-items: stretch;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .score-box {
+    min-width: 165px;
+    padding: 12px 14px;
+    background: #fff;
+    border: 0.5px solid #e5e5e5;
+    border-radius: 10px;
+    text-align: right;
+  }
+
+  .score-box.saved {
+    background: #fafafa;
+  }
+
+  .score-title {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 9.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #aaa;
+  }
+
+  .score-box .big-score {
+    font-size: 24px;
+    font-weight: 500;
+    margin-top: 4px;
+    letter-spacing: -0.5px;
+  }
+
+  .score-box .caption {
+    font-size: 10.5px;
+    color: #888;
+    margin-top: 2px;
+  }
+
+  .score-change-notice {
+    margin-top: 10px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: #fff7ed;
+    color: #9a3412;
+    font-size: 10.5px;
+    line-height: 1.4;
+    text-align: left;
+  }
+
   .risk-badge {
     display: inline-flex; align-items: center; gap: 4px;
     padding: 3px 9px; border-radius: 20px;
@@ -144,7 +199,9 @@
   @media (max-width: 640px) {
     .detail-grid { grid-template-columns: 1fr; }
     .detail-header { flex-direction: column; }
-    .score-summary { text-align: left; }
+    .score-summary { text-align: left; width: 100%; }
+    .score-comparison { justify-content: flex-start; }
+    .score-box { text-align: left; min-width: 0; flex: 1 1 150px; }
   }
 </style>
 
@@ -165,13 +222,47 @@
     </div>
 
     <div class="score-summary">
-      {% if result.risk_level == 'high' %}
-        <span class="risk-badge risk-high">High risk</span>
-      {% else %}
-        <span class="risk-badge risk-low">Low risk</span>
+      <div class="score-comparison">
+
+        <div class="score-box">
+          <span class="score-title">Live score</span>
+
+          {% if result.risk_level == 'high' %}
+            <span class="risk-badge risk-high">High risk</span>
+          {% else %}
+            <span class="risk-badge risk-low">Low risk</span>
+          {% endif %}
+
+          <div class="big-score">{{ result.score|floatformat:2 }}</div>
+          <div class="caption">Calculated from current customer data</div>
+        </div>
+
+        {% if latest_saved %}
+        <div class="score-box saved">
+          <span class="score-title">Saved score</span>
+
+          {% if latest_saved.risk_level == 'high' %}
+            <span class="risk-badge risk-high">High risk</span>
+          {% else %}
+            <span class="risk-badge risk-low">Low risk</span>
+          {% endif %}
+
+          <div class="big-score">{{ latest_saved.score|floatformat:2 }}</div>
+          <div class="caption">
+            Last scored {{ latest_saved.predicted_at|date:"M d, Y H:i" }}
+          </div>
+        </div>
+        {% endif %}
+
+      </div>
+
+      {% if latest_saved %}
+        {% if latest_saved.score != result.score %}
+          <div class="score-change-notice">
+            Customer data has changed since the last saved scoring run.
+          </div>
+        {% endif %}
       {% endif %}
-      <div class="big-score">{{ result.score|floatformat:2 }}</div>
-      <div class="caption">current live score (recomputed now)</div>
     </div>
   </div>
 
