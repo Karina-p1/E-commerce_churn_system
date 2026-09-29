@@ -4,10 +4,7 @@
 
 {% block extra_head %}
 
-<link
-  rel="stylesheet"
-  href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css"
-/>
+<link href="https://api.mapbox.com/mapbox-gl-js/v3.30.0/mapbox-gl.css" rel="stylesheet">
 
 <style>
   .address-card {
@@ -218,73 +215,31 @@
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script src="https://api.mapbox.com/mapbox-gl-js/v3.30.0/mapbox-gl.js"></script>
 
 <script>
+mapboxgl.accessToken = '{{ mapbox_access_token|escapejs }}';
 
 const savedLat = "{{ form.instance.latitude|default_if_none:'' }}";
 const savedLng = "{{ form.instance.longitude|default_if_none:'' }}";
-
 const defaultLat = savedLat ? Number(savedLat) : 28.2096;
 const defaultLng = savedLng ? Number(savedLng) : 83.9856;
 
-const map = L.map("map", {
-    zoomControl: true,
-    attributionControl: true
-}).setView([defaultLat, defaultLng], 16);
-
-// Primary tiles + automatic fallback. This avoids a blank map when one
-// public tile provider is blocked or temporarily unavailable.
-const esriTiles = L.tileLayer(
-    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
-    {
-        attribution: "Tiles &copy; Esri",
-        maxZoom: 19,
-        crossOrigin: true
-    }
-);
-
-const cartoTiles = L.tileLayer(
-    "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-    {
-        attribution: "&copy; OpenStreetMap contributors &copy; CARTO",
-        subdomains: "abcd",
-        maxZoom: 20,
-        crossOrigin: true
-    }
-);
-
-let fallbackActivated = false;
-let tileErrors = 0;
-
-esriTiles.on("tileerror", function () {
-    tileErrors += 1;
-    if (tileErrors >= 2 && !fallbackActivated) {
-        fallbackActivated = true;
-        map.removeLayer(esriTiles);
-        cartoTiles.addTo(map);
-    }
+const map = new mapboxgl.Map({
+    container: "map",
+    style: "mapbox://styles/mapbox/streets-v12",
+    center: [defaultLng, defaultLat],
+    zoom: 16
 });
 
-cartoTiles.on("tileerror", function () {
-    const box = document.getElementById("map-error");
-    if (box) box.style.display = "block";
-});
+map.addControl(new mapboxgl.NavigationControl(), "top-left");
 
-esriTiles.addTo(map);
-
-// CSS marker: no external Leaflet marker PNG dependency.
-const deliveryIcon = L.divIcon({
-    className: "",
-    html: '<div class="delivery-map-pin"></div>',
-    iconSize: [30, 42],
-    iconAnchor: [15, 38]
-});
-
-const marker = L.marker([defaultLat, defaultLng], {
-    icon: deliveryIcon,
+const marker = new mapboxgl.Marker({
+    color: "#111827",
     draggable: true
-}).addTo(map);
+})
+    .setLngLat([defaultLng, defaultLat])
+    .addTo(map);
 
 function updateCoordinates(lat, lng) {
     document.getElementById("id_latitude").value = lat.toFixed(6);
@@ -295,52 +250,70 @@ function updateCoordinates(lat, lng) {
 
 async function reverseGeocode(lat, lng) {
     const addressDisplay = document.getElementById("location-address");
+    const errorBox = document.getElementById("map-error");
 
     try {
         if (addressDisplay) addressDisplay.textContent = "Finding address…";
+        if (errorBox) errorBox.style.display = "none";
 
-        const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}`,
-            {
-                headers: { "Accept": "application/json" }
-            }
-        );
+        const url = new URL("https://api.mapbox.com/search/geocode/v6/reverse");
+        url.searchParams.set("longitude", lng);
+        url.searchParams.set("latitude", lat);
+        url.searchParams.set("access_token", mapboxgl.accessToken);
+        url.searchParams.set("language", "en");
+        url.searchParams.set("country", "np");
+        url.searchParams.set("limit", "1");
 
+        const response = await fetch(url);
         if (!response.ok) throw new Error(`Reverse geocoding failed: ${response.status}`);
 
         const data = await response.json();
-        const a = data.address || {};
+        const feature = data.features && data.features[0];
+        const props = feature ? (feature.properties || {}) : {};
+        const context = props.context || {};
 
         if (addressDisplay) {
-            addressDisplay.textContent = data.display_name || [
-                a.road,
-                a.suburb,
-                a.city || a.town || a.village,
-                a.state
-            ].filter(Boolean).join(", ") || "Selected location";
+            addressDisplay.textContent =
+                props.full_address ||
+                [props.name, props.place_formatted].filter(Boolean).join(", ") ||
+                "Selected location";
         }
 
-        // Only update fields when the geocoder actually returned a value.
-        if (a.state && document.getElementById("id_province"))
-            document.getElementById("id_province").value = a.state;
-        if (a.county && document.getElementById("id_district"))
-            document.getElementById("id_district").value = a.county;
-        if ((a.city || a.town || a.village) && document.getElementById("id_city"))
-            document.getElementById("id_city").value = a.city || a.town || a.village;
-        if (a.road && document.getElementById("id_street"))
-            document.getElementById("id_street").value = a.road;
+        const region = context.region && context.region.name;
+        const district = context.district && context.district.name;
+        const city =
+            (context.place && context.place.name) ||
+            (context.locality && context.locality.name) ||
+            (context.neighborhood && context.neighborhood.name);
+
+        let street = "";
+        if (props.feature_type === "street") street = props.name || "";
+        if (props.feature_type === "address") {
+            street = (context.street && context.street.name) || props.name || "";
+        }
+
+        if (region && document.getElementById("id_province"))
+            document.getElementById("id_province").value = region;
+        if (district && document.getElementById("id_district"))
+            document.getElementById("id_district").value = district;
+        if (city && document.getElementById("id_city"))
+            document.getElementById("id_city").value = city;
+        if (street && document.getElementById("id_street"))
+            document.getElementById("id_street").value = street;
 
     } catch (err) {
-        console.error("Reverse geocoding error:", err);
-        if (addressDisplay) {
-            addressDisplay.textContent = "Location selected — address lookup unavailable.";
+        console.error("Mapbox reverse geocoding error:", err);
+        if (addressDisplay) addressDisplay.textContent = "Location selected — address lookup unavailable.";
+        if (errorBox) {
+            errorBox.textContent = "The map is available, but the address lookup could not be completed.";
+            errorBox.style.display = "block";
         }
     }
 }
 
 function selectLocation(lat, lng, zoom = false) {
-    marker.setLatLng([lat, lng]);
-    if (zoom) map.setView([lat, lng], 17);
+    marker.setLngLat([lng, lat]);
+    if (zoom) map.flyTo({ center: [lng, lat], zoom: 17 });
     updateCoordinates(lat, lng);
     reverseGeocode(lat, lng);
 }
@@ -348,18 +321,17 @@ function selectLocation(lat, lng, zoom = false) {
 updateCoordinates(defaultLat, defaultLng);
 
 marker.on("dragend", function () {
-    const pos = marker.getLatLng();
+    const pos = marker.getLngLat();
     selectLocation(pos.lat, pos.lng);
 });
 
 map.on("click", function (e) {
-    selectLocation(e.latlng.lat, e.latlng.lng);
+    selectLocation(e.lngLat.lat, e.lngLat.lng);
 });
 
-// Leaflet can calculate the wrong tile size if its container is laid out
-// after map creation. Recalculate once the page has painted.
-requestAnimationFrame(function () { map.invalidateSize(); });
-setTimeout(function () { map.invalidateSize(); }, 250);
+map.on("error", function (e) {
+    console.error("Mapbox map error:", e && e.error ? e.error : e);
+});
 
 if (savedLat && savedLng) {
     reverseGeocode(defaultLat, defaultLng);
@@ -376,7 +348,6 @@ if (savedLat && savedLng) {
 } else {
     reverseGeocode(defaultLat, defaultLng);
 }
-
 </script>
 
 {% endblock %}

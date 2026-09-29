@@ -189,7 +189,7 @@ STORAGES = {
 
 # eSewa Payment Config
 ESEWA_PRODUCT_CODE = "EPAYTEST"
-ESEWA_SECRET_KEY = "8gBm/:&EnhH.1/q"
+ESEWA_SECRET_KEY = os.getenv("ESEWA_SECRET_KEY", "")
 ESEWA_PAYMENT_URL = "https://rc-epay.esewa.com.np/api/epay/main/v2/form"
 
 MEDIA_URL = "/media/"
@@ -236,6 +236,8 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": crontab(hour=2, minute=0),
     },
 }
+
+MAPBOX_ACCESS_TOKEN = os.getenv("MAPBOX_ACCESS_TOKEN", "")
 
 # Email
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
