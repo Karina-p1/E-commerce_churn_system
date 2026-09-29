@@ -9,6 +9,12 @@ class Notification(models.Model):
         ('OFFER_EXPIRING', 'Offer Expiring Soon'),
         ('REFUND', 'Refund Processed'),
         ('GENERAL', 'General'),
+
+        # Loyalty notifications
+        ('POINTS_EARNED', 'Points Earned'),
+        ('POINTS_REDEEMED', 'Points Redeemed'),
+        ('POINTS_RESTORED', 'Points Restored'),
+        ('TIER_UPGRADE', 'Tier Upgrade'),
     ]
 
     recipient = models.ForeignKey(
