@@ -234,10 +234,12 @@ class LoyaltyService:
         - Review reward can only be awarded once for the order.
         """
 
+        account = LoyaltyService.get_or_create_account(user)
+
         account = (
             LoyaltyAccount.objects
             .select_for_update()
-            .get(user=user)
+            .get(pk=account.pk)
         )
 
         # Prevent duplicate review rewards for the same order.
@@ -576,10 +578,16 @@ class LoyaltyService:
     @transaction.atomic
     def reverse_order_points(order, description=None):
         """
-        Reverse loyalty points earned from a specific order.
+        Reverse all loyalty effects associated with an order.
 
-        The original PURCHASE transaction is used to determine
-        exactly how many points were awarded.
+        Reverses:
+        - PURCHASE points
+        - FIRST_PURCHASE bonus
+        - Restores redeemed points
+
+        Review points are NOT reversed because the review is a
+        separate customer action and is not automatically invalidated
+        by an order refund/cancellation.
         """
 
         if not order:
@@ -587,40 +595,136 @@ class LoyaltyService:
                 "An order is required for point reversal."
             )
 
-        # Find the original purchase reward
-        purchase_transaction = (
+        account = (
+            LoyaltyAccount.objects
+            .select_for_update()
+            .get(user=order.user)
+        )
+
+        if description is None:
+            description = (
+                f"Loyalty points reversed for Order #{order.id}"
+            )
+
+        # ---------------------------------------------------------
+        # 1. REVERSE PURCHASE + FIRST PURCHASE POINTS
+        # ---------------------------------------------------------
+
+        earned_transactions = (
             LoyaltyTransaction.objects
             .filter(
+                account=account,
                 order=order,
-                transaction_type__in=["PURCHASE", "FIRST_PURCHASE"],
+                transaction_type__in=[
+                    "PURCHASE",
+                    "FIRST_PURCHASE",
+                ],
+                points__gt=0,
+            )
+        )
+
+        total_points_earned = sum(
+            transaction.points
+            for transaction in earned_transactions
+        )
+
+        # Check whether the earned points have already been reversed.
+        reversal_exists = LoyaltyTransaction.objects.filter(
+            account=account,
+            order=order,
+            transaction_type="REFUND_REVERSAL",
+        ).exists()
+
+        if total_points_earned > 0 and not reversal_exists:
+
+            points_to_remove = min(
+                total_points_earned,
+                account.available_points,
+            )
+
+            account.available_points -= points_to_remove
+
+            account.lifetime_points_earned = max(
+                0,
+                account.lifetime_points_earned
+                - total_points_earned,
+            )
+
+            # Recalculate tier after removing earned points.
+            new_tier = LoyaltyService.get_tier_for_points(
+                account.lifetime_points_earned
+            )
+
+            if new_tier:
+                account.current_tier = new_tier
+
+            account.save(
+                update_fields=[
+                    "available_points",
+                    "lifetime_points_earned",
+                    "current_tier",
+                    "updated_at",
+                ]
+            )
+
+            LoyaltyTransaction.objects.create(
+                account=account,
+                transaction_type="REFUND_REVERSAL",
+                points=-total_points_earned,
+                balance_after=account.available_points,
+                description=description,
+                order=order,
+            )
+
+        # ---------------------------------------------------------
+        # 2. RESTORE REDEEMED POINTS
+        # ---------------------------------------------------------
+
+        redemption = (
+            LoyaltyTransaction.objects
+            .filter(
+                account=account,
+                order=order,
+                transaction_type="REDEMPTION",
+                points__lt=0,
             )
             .first()
         )
 
-        # This order never earned purchase points.
-        if not purchase_transaction:
-            return LoyaltyService.get_or_create_account(
-                order.user
-            )
-
-        points_earned = purchase_transaction.points
-
-        if points_earned <= 0:
-            return LoyaltyService.get_or_create_account(
-                order.user
-            )
-
-        if description is None:
-            description = (
-                f"Points reversed for Order #{order.id}"
-            )
-
-        return LoyaltyService.reverse_points(
-            user=order.user,
-            points=points_earned,
-            description=description,
+        redemption_reversal_exists = LoyaltyTransaction.objects.filter(
+            account=account,
             order=order,
-        )
+            transaction_type="REDEMPTION_REVERSAL",
+        ).exists()
+
+        if (
+            redemption
+            and not redemption_reversal_exists
+        ):
+            redeemed_points = abs(redemption.points)
+
+            account.available_points += redeemed_points
+
+            account.save(
+                update_fields=[
+                    "available_points",
+                    "updated_at",
+                ]
+            )
+
+            LoyaltyTransaction.objects.create(
+                account=account,
+                transaction_type="REDEMPTION_REVERSAL",
+                points=redeemed_points,
+                balance_after=account.available_points,
+                description=(
+                    f"Redeemed loyalty points restored "
+                    f"for Order #{order.id}"
+                ),
+                order=order,
+            )
+
+        return account
 
     @staticmethod
     def calculate_reward_value(points):
