@@ -28,6 +28,14 @@ def login_log(sender, request, user, **kwargs):
 
 @receiver(user_logged_out)
 def close_session(sender, request, user, **kwargs):
+    # Keep logout itself safe even if Django supplies user=None.
+    if user is None:
+        return
+
+    UserEvent.objects.create(
+        user=user,
+        event_type="LOGOUT"
+    )
 
     session = (
         UserSession.objects.filter(
@@ -39,5 +47,4 @@ def close_session(sender, request, user, **kwargs):
     )
 
     if session:
-        session.ended_at = timezone.now()
-        session.save(update_fields=["ended_at"])
+        session.close()

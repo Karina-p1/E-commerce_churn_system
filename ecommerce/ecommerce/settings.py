@@ -209,6 +209,8 @@ LOGIN_REDIRECT_URL = "/"
 REDIS_HOST = "127.0.0.1"
 REDIS_PORT = 6379
 
+
+# Celery configuration
 CELERY_BROKER_URL = "redis://127.0.0.1:6379/0"
 
 CELERY_RESULT_BACKEND = "redis://127.0.0.1:6379/0"
@@ -226,11 +228,12 @@ from celery.schedules import crontab
 CELERY_BEAT_SCHEDULE = {
     "close-inactive-sessions": {
         "task": "apps.activity.tasks.close_inactive_sessions",
-        "schedule": 300,   # every 5 minutes
+        "schedule": 300,  # check every 5 minutes
     },
+
     "score-customer-churn-daily": {
         "task": "apps.churn.tasks.score_all_customers_task",
-        "schedule": crontab(hour=2, minute=0),   # every day at 2:00 AM
+        "schedule": crontab(hour=2, minute=0),
     },
 }
 

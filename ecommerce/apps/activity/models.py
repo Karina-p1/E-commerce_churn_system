@@ -100,5 +100,22 @@ class UserSession(models.Model):
     # def active_hours(self):
     #     return round(self.active_seconds / 3600, 2)
 
+    @property
+    def is_open(self):
+        """True when this analytics session has not been explicitly closed."""
+        return self.ended_at is None
+
+    def is_stale(self, timeout_seconds=120):
+        """True when an open session has exceeded the inactivity window."""
+        if self.ended_at is not None:
+            return False
+        return (timezone.now() - self.last_activity).total_seconds() >= timeout_seconds
+
+    def close(self, ended_at=None):
+        """Close this analytics session once without altering active_seconds."""
+        if self.ended_at is None:
+            self.ended_at = ended_at or timezone.now()
+            self.save(update_fields=["ended_at"])
+
     def __str__(self):
         return f"{self.user.username} - {self.started_at}"

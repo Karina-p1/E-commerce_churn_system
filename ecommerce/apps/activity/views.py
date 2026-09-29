@@ -50,25 +50,36 @@ def activity_ping(request):
         .first()
     )
 
-    # No active session? Create one.
-    if session is None:
-        session = UserSession.objects.create(
-            user=request.user
-        )
+    now = timezone.now()
 
+    # No open analytics session? Start one.
+    if session is None:
+        UserSession.objects.create(
+            user=request.user,
+            last_activity=now,
+        )
         return JsonResponse({"success": True})
 
-    elapsed = (
-        timezone.now() -
-        session.last_activity
-    ).total_seconds()
+    elapsed = (now - session.last_activity).total_seconds()
 
+    # base.html stops sending pings after 2 minutes of browser inactivity.
+    # If activity later resumes, close the old stale session at its last
+    # known activity and begin a new analytics session.
+    if elapsed >= 1800:
+        session.close(ended_at=session.last_activity)
+
+        UserSession.objects.create(
+            user=request.user,
+            last_activity=now,
+        )
+        return JsonResponse({"success": True})
+
+    # A normal ping contributes at most one minute of active time.
     session.active_seconds += min(
-        int(elapsed),
+        max(int(elapsed), 0),
         60
     )
-
-    session.last_activity = timezone.now()
+    session.last_activity = now
 
     session.save(
         update_fields=[

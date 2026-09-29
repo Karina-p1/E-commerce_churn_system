@@ -5,7 +5,7 @@
 
 <link
   rel="stylesheet"
-  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css"
 />
 
 <style>
@@ -28,6 +28,9 @@
   #map {
     height: 320px;
     border-radius: 14px;
+    overflow: hidden;
+    background: #eef2f7;
+    z-index: 1;
   }
 
   .table td,
@@ -176,6 +179,32 @@
     .timeline-dot { width: 34px; height: 34px; }
     .timeline-track, .timeline-track-fill { top: 17px; }
     .order-timeline { padding-left: 17px; padding-right: 17px; }
+  }
+  .delivery-map-pin {
+    position: relative;
+    width: 30px; height: 30px;
+    border-radius: 50% 50% 50% 0;
+    background: #0d6efd;
+    border: 3px solid #fff;
+    box-shadow: 0 4px 12px rgba(0,0,0,.28);
+    transform: rotate(-45deg);
+  }
+  .delivery-map-pin::after {
+    content: "";
+    position: absolute;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #fff;
+    left: 8px; top: 8px;
+  }
+  .map-error {
+    display: none;
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: #fff7ed;
+    color: #9a3412;
+    font-size: 13px;
   }
 </style>
 
@@ -440,6 +469,7 @@
     <div class="card-body">
       <h5 class="fw-bold mb-3">🗺 Delivery Location</h5>
       <div id="map"></div>
+      <div id="map-error" class="map-error">Map tiles could not be loaded. The saved delivery coordinates are still preserved.</div>
     </div>
   </div>
   {% endif %}
@@ -472,17 +502,70 @@
 </div>
 
 {% if order.delivery_latitude and order.delivery_longitude %}
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <script>
-  const lat = parseFloat("{{ order.delivery_latitude }}");
-  const lng = parseFloat("{{ order.delivery_longitude }}");
-  const map = L.map("map").setView([lat, lng], 16);
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-    attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-    subdomains: "abcd",
-    maxZoom: 20,
-  }).addTo(map);
-  L.marker([lat, lng]).addTo(map).bindPopup("Delivery Address").openPopup();
+  const lat = Number("{{ order.delivery_latitude }}");
+  const lng = Number("{{ order.delivery_longitude }}");
+  const mapElement = document.getElementById("map");
+
+  if (mapElement && Number.isFinite(lat) && Number.isFinite(lng)) {
+    const map = L.map("map").setView([lat, lng], 16);
+
+    const esriTiles = L.tileLayer(
+      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+      { attribution: "Tiles &copy; Esri", maxZoom: 19, crossOrigin: true }
+    );
+
+    const cartoTiles = L.tileLayer(
+      "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+      {
+        attribution: "&copy; OpenStreetMap contributors &copy; CARTO",
+        subdomains: "abcd",
+        maxZoom: 20,
+        crossOrigin: true
+      }
+    );
+
+    let fallbackActivated = false;
+    let tileErrors = 0;
+
+    esriTiles.on("tileerror", function () {
+      tileErrors += 1;
+      if (tileErrors >= 2 && !fallbackActivated) {
+        fallbackActivated = true;
+        map.removeLayer(esriTiles);
+        cartoTiles.addTo(map);
+      }
+    });
+
+    cartoTiles.on("tileerror", function () {
+      const box = document.getElementById("map-error");
+      if (box) box.style.display = "block";
+    });
+
+    esriTiles.addTo(map);
+
+    const deliveryIcon = L.divIcon({
+      className: "",
+      html: '<div class="delivery-map-pin"></div>',
+      iconSize: [30, 42],
+      iconAnchor: [15, 38]
+    });
+
+    L.marker([lat, lng], { icon: deliveryIcon })
+      .addTo(map)
+      .bindPopup("Delivery Address")
+      .openPopup();
+
+    requestAnimationFrame(function () { map.invalidateSize(); });
+    setTimeout(function () { map.invalidateSize(); }, 250);
+  } else if (mapElement) {
+    const box = document.getElementById("map-error");
+    if (box) {
+      box.textContent = "This order does not contain valid delivery coordinates.";
+      box.style.display = "block";
+    }
+  }
 </script>
 {% endif %}
 
