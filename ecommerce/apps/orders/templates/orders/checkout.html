@@ -237,32 +237,88 @@
 
             <hr />
 
-            <div class="loyalty-section">
-                <h5>Loyalty Points</h5>
-
-                <p>
-                    Available points:
-                    <strong>{{ loyalty_account.available_points }}</strong>
-                </p>
-
-                <p>
+            <div
+              class="loyalty-section"
+              id="loyalty-section"
+              data-available-points="{{ loyalty_account.available_points }}"
+              data-amount-after-coupon="{{ cart_total|default:cart.total_price }}"
+              data-coupon-discount="{{ discount_amount|default:'0' }}"
+              data-shipping-fee="{{ shipping_fee|default:'0' }}"
+            >
+              <div class="d-flex justify-content-between align-items-start gap-3 mb-2">
+                <div>
+                  <h5 class="fw-bold mb-1">⭐ Loyalty Points</h5>
+                  <p class="text-muted small mb-0">
                     100 points = Rs. 50 discount
-                </p>
+                  </p>
+                </div>
+                <span class="loyalty-balance">
+                  <strong>{{ loyalty_account.available_points }}</strong> available
+                </span>
+              </div>
 
-                <input
+              <div class="loyalty-redeemer mt-3">
+                <button
+                  type="button"
+                  class="loyalty-step-btn"
+                  id="loyalty-minus"
+                  aria-label="Remove 100 loyalty points"
+                >−</button>
+
+                <div class="loyalty-value-wrap">
+                  <input
                     type="number"
+                    id="loyalty-points-input"
                     name="loyalty_points"
                     min="0"
                     step="100"
                     max="{{ loyalty_account.available_points }}"
                     value="0"
+                    inputmode="numeric"
+                  >
+                  <span>points</span>
+                </div>
+
+                <button
+                  type="button"
+                  class="loyalty-step-btn"
+                  id="loyalty-plus"
+                  aria-label="Add 100 loyalty points"
+                >+</button>
+              </div>
+
+              <div class="d-flex justify-content-between align-items-center mt-3 gap-3">
+                <div class="small text-success fw-semibold" id="loyalty-saving">
+                  No loyalty discount applied
+                </div>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-dark"
+                  id="loyalty-max-btn"
                 >
+                  Use maximum
+                </button>
+              </div>
+
+              <div class="small text-muted mt-2" id="loyalty-limit-message"></div>
             </div>
 
-            <div class="d-flex justify-content-between">
-              <h5>Total</h5>
+            <div
+              class="checkout-summary-row d-flex justify-content-between mt-3 d-none"
+              id="loyalty-discount-row"
+            >
+              <span>Loyalty reward</span>
+              <span class="text-success fw-semibold" id="loyalty-discount-display">
+                − Rs. 0.00
+              </span>
+            </div>
 
-              <h4 class="text-primary">
+            <hr />
+
+            <div class="d-flex justify-content-between align-items-center">
+              <h5 class="mb-0">Total</h5>
+
+              <h4 class="text-primary mb-0" id="checkout-final-total">
                 Rs. {{ final_total|default:cart.total_price }}
               </h4>
             </div>
@@ -351,6 +407,92 @@
     .payment-option input[type=radio]{
     transform:scale(1.2);
     }
+
+  .loyalty-section {
+    margin: 18px 0;
+    padding: 18px;
+    border: 1px solid #e7e7e7;
+    border-radius: 16px;
+    background: #fafafa;
+  }
+
+  .loyalty-balance {
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: #fff;
+    border: 1px solid #e2e2e2;
+    font-size: 0.82rem;
+    white-space: nowrap;
+  }
+
+  .loyalty-redeemer {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+    gap: 10px;
+    align-items: stretch;
+  }
+
+  .loyalty-step-btn {
+    min-height: 44px;
+    border: 1px solid #d8d8d8;
+    border-radius: 10px;
+    background: #fff;
+    font-size: 1.35rem;
+    line-height: 1;
+    font-weight: 700;
+    transition: 0.2s;
+  }
+
+  .loyalty-step-btn:hover:not(:disabled) {
+    border-color: #212529;
+    transform: translateY(-1px);
+  }
+
+  .loyalty-step-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .loyalty-value-wrap {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 12px;
+    border: 1px solid #d8d8d8;
+    border-radius: 10px;
+    background: #fff;
+  }
+
+  .loyalty-value-wrap input {
+    width: 90px;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    text-align: right;
+    font-weight: 700;
+    appearance: textfield;
+    -moz-appearance: textfield;
+  }
+
+  .loyalty-value-wrap input::-webkit-inner-spin-button,
+  .loyalty-value-wrap input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  @media (max-width: 575.98px) {
+    .loyalty-section {
+      padding: 15px;
+    }
+
+    .loyalty-balance {
+      white-space: normal;
+      text-align: right;
+    }
+  }
+
 </style>
 
 <script>
@@ -395,6 +537,83 @@
         messageEl.textContent = "Something went wrong. Please try again.";
       });
   }
+
+
+  document.addEventListener("DOMContentLoaded", function () {
+    const section = document.getElementById("loyalty-section");
+    const input = document.getElementById("loyalty-points-input");
+
+    if (!section || !input) return;
+
+    const minusBtn = document.getElementById("loyalty-minus");
+    const plusBtn = document.getElementById("loyalty-plus");
+    const maxBtn = document.getElementById("loyalty-max-btn");
+    const savingEl = document.getElementById("loyalty-saving");
+    const limitEl = document.getElementById("loyalty-limit-message");
+    const discountRow = document.getElementById("loyalty-discount-row");
+    const discountDisplay = document.getElementById("loyalty-discount-display");
+    const totalDisplay = document.getElementById("checkout-final-total");
+
+    const availablePoints = Math.max(0, parseInt(section.dataset.availablePoints || "0", 10));
+    const cartTotal = Number.parseFloat(section.dataset.amountAfterCoupon || "0") || 0;
+    const couponDiscount = Number.parseFloat(section.dataset.couponDiscount || "0") || 0;
+    const shippingFee = Number.parseFloat(section.dataset.shippingFee || "0") || 0;
+    const amountAfterCoupon = Math.max(0, cartTotal - couponDiscount);
+
+    // Backend rule: 1 point = Rs. 0.50, redemption only in 100-point blocks.
+    const maxPointsByOrder = Math.floor((amountAfterCoupon / 0.5) / 100) * 100;
+    const maxRedeemablePoints = Math.max(0, Math.min(availablePoints, maxPointsByOrder));
+
+    const money = (value) => Number(value).toFixed(2);
+
+    function normalizePoints(rawValue) {
+      let points = Number.parseInt(rawValue || "0", 10);
+      if (!Number.isFinite(points) || points < 0) points = 0;
+
+      // Keep the UI aligned with the server's 100-point redemption rule.
+      points = Math.floor(points / 100) * 100;
+      return Math.min(points, maxRedeemablePoints);
+    }
+
+    function render(points) {
+      points = normalizePoints(points);
+      input.value = points;
+
+      const loyaltyDiscount = points * 0.5;
+      const finalTotal = Math.max(0, amountAfterCoupon - loyaltyDiscount + shippingFee);
+
+      if (points > 0) {
+        savingEl.textContent = `You're saving Rs. ${money(loyaltyDiscount)}`;
+        discountDisplay.textContent = `− Rs. ${money(loyaltyDiscount)}`;
+        discountRow.classList.remove("d-none");
+      } else {
+        savingEl.textContent = "No loyalty discount applied";
+        discountDisplay.textContent = "− Rs. 0.00";
+        discountRow.classList.add("d-none");
+      }
+
+      totalDisplay.textContent = `Rs. ${money(finalTotal)}`;
+      minusBtn.disabled = points <= 0;
+      plusBtn.disabled = points >= maxRedeemablePoints;
+      maxBtn.disabled = maxRedeemablePoints <= 0 || points >= maxRedeemablePoints;
+    }
+
+    if (availablePoints < 100) {
+      limitEl.textContent = "You need at least 100 points to redeem a reward.";
+    } else if (maxRedeemablePoints < availablePoints) {
+      limitEl.textContent = `Up to ${maxRedeemablePoints} points can be used on this order.`;
+    } else {
+      limitEl.textContent = `You can use up to ${maxRedeemablePoints} points.`;
+    }
+
+    minusBtn.addEventListener("click", () => render(Number(input.value) - 100));
+    plusBtn.addEventListener("click", () => render(Number(input.value) + 100));
+    maxBtn.addEventListener("click", () => render(maxRedeemablePoints));
+    input.addEventListener("change", () => render(input.value));
+    input.addEventListener("blur", () => render(input.value));
+
+    render(0);
+  });
 </script>
 
 {% endblock %}

@@ -275,10 +275,10 @@ def post_review(request, slug):
                     'Your review has been posted and you earned 50 loyalty points!'
                 )
 
-            except ValueError:
-                messages.success(
+            except ValueError as e:
+                messages.warning(
                     request,
-                    'Your review has been posted.'
+                    f'Your review has been posted, but loyalty points were not awarded: {e}'
                 )
         else:
             messages.success(
