@@ -1,3 +1,5 @@
+import logging
+
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from django.template.loader import render_to_string
@@ -7,6 +9,8 @@ from django.conf import settings
 
 from .models import Complaint
 from apps.notifications.models import Notification
+
+logger = logging.getLogger(__name__)
 
 _previous_status = {}
 
@@ -21,6 +25,29 @@ def store_previous_status(sender, instance, **kwargs):
             pass
 
 
+def _rescore_customer(user):
+    """
+    Re-score one customer right away after their complaint changed
+    status, so the churn dashboard reflects it immediately instead of
+    waiting for the next scheduled run. Never raises — a scoring
+    problem must not break saving the complaint or notifying the user.
+    """
+    if user.is_staff or user.is_superuser or not user.is_active:
+        return  # the churn run only scores active, non-staff customers
+
+    try:
+        # Imported here (not at the top) so the ML model is only
+        # loaded when it's actually needed, and to avoid a circular
+        # import between the complaints and churn apps.
+        from apps.churn.services import score_customer
+        score_customer(user)
+    except Exception:
+        logger.exception(
+            "Could not re-score customer %s after a complaint update.",
+            user.pk,
+        )
+
+
 @receiver(post_save, sender=Complaint)
 def complaint_updated(sender, instance, created, **kwargs):
 
@@ -33,6 +60,11 @@ def complaint_updated(sender, instance, created, **kwargs):
     # it was already in that state (avoids re-sending on every save).
     if previous_status == instance.status:
         return
+
+    # The complaint's status changed, which changes the customer's
+    # "open complaint" flag used by the churn model — re-score them now.
+    # (Runs for every status change, including a reopen back to PENDING.)
+    _rescore_customer(instance.user)
 
     if instance.status not in ("IN_PROGRESS", "RESOLVED", "REJECTED"):
         return
