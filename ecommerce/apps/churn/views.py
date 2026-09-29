@@ -139,13 +139,46 @@ def churn_customer_detail(request, customer_id):
 
     latest_saved = history.last()
 
+    # Compare the freshly computed live score with the latest saved score.
+    # These values are prepared here so the template stays simple and does
+    # not need to perform arithmetic.
+    score_changed = False
+    score_delta = 0
+    score_delta_abs = 0
+    score_direction = 'same'
+
+    if latest_saved is not None:
+        score_delta = round(result['score'] - latest_saved.score, 2)
+        score_delta_abs = abs(score_delta)
+        score_changed = score_delta != 0
+
+        if score_delta > 0:
+            score_direction = 'increased'
+        elif score_delta < 0:
+            score_direction = 'decreased'
+
+    # _factors() already returns strongest factors first, so index 0 is
+    # the main risk driver / main protective factor when one exists.
+    main_risk_driver = result.get('top_factors', [])[0] if result.get('top_factors') else None
+    main_protective_factor = (
+        result.get('protective_factors', [])[0]
+        if result.get('protective_factors')
+        else None
+    )
+
     context = {
-        'customer':        customer,
-        'features':        features,
-        'result':          result,
-        'history':         history,
-        'history_points':  history_points,
-        'latest_saved':    latest_saved,
+        'customer':                customer,
+        'features':                features,
+        'result':                  result,
+        'history':                 history,
+        'history_points':          history_points,
+        'latest_saved':            latest_saved,
+        'score_changed':           score_changed,
+        'score_delta':             score_delta,
+        'score_delta_abs':         score_delta_abs,
+        'score_direction':         score_direction,
+        'main_risk_driver':        main_risk_driver,
+        'main_protective_factor':  main_protective_factor,
     }
     return render(request, 'churn/customer_detail.html', context)
 
