@@ -40,6 +40,29 @@
     font-size: 14px;
   }
 
+  .loyalty-row td {
+    color: #7c3aed;
+    font-size: 14px;
+  }
+
+  .shipping-row td {
+    color: #374151;
+    font-size: 14px;
+  }
+
+  .free-shipping-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 7px;
+    padding: 2px 7px;
+    border-radius: 6px;
+    background: #dcfce7;
+    color: #15803d;
+    font-size: 10px;
+    font-weight: 700;
+  }
+
   .coupon-tag {
     display: inline-flex;
     align-items: center;
@@ -272,34 +295,66 @@
             <td>{{ item.product_name }}</td>
             <td class="text-center">{{ item.quantity }}</td>
             <td class="text-end">Rs. {{ item.price }}</td>
-            <td class="text-end fw-semibold">Rs. {{ item.subtotal }}</td>
+            <td class="text-end fw-semibold item-subtotal" data-subtotal="{{ item.subtotal }}">Rs. {{ item.subtotal }}</td>
           </tr>
           {% endfor %}
         </tbody>
 
         <tfoot>
-          <!-- Subtotal row -->
+          <!-- Merchandise subtotal: sum of the stored order-item subtotals -->
           <tr class="text-muted">
             <td colspan="3" class="text-end">Subtotal</td>
-            <td class="text-end">Rs. {{ order.total_price|add:order.discount_amount }}</td>
+            <td class="text-end" id="order-subtotal">Rs. 0.00</td>
           </tr>
 
-          <!-- Coupon discount row — only shown if a coupon was applied -->
-          {% if order.coupon and order.discount_amount %}
+          <!-- Coupon discount -->
+          {% if order.discount_amount and order.discount_amount > 0 %}
           <tr class="coupon-row">
             <td colspan="3" class="text-end">
               Coupon Discount
-              <span class="coupon-tag">🎟 {{ order.coupon.code }}</span>
+              {% if order.coupon %}
+                <span class="coupon-tag">🎟 {{ order.coupon.code }}</span>
+              {% endif %}
             </td>
-            <td class="text-end fw-semibold">− Rs. {{ order.discount_amount }}</td>
+            <td class="text-end fw-semibold">− Rs. {{ order.discount_amount|floatformat:2 }}</td>
           </tr>
           {% endif %}
 
-          <!-- Grand Total row -->
+          <!-- Loyalty redemption -->
+          {% if order.loyalty_points_redeemed and order.loyalty_points_redeemed > 0 %}
+          <tr class="loyalty-row">
+            <td colspan="3" class="text-end">
+              Loyalty Reward
+              <small>({{ order.loyalty_points_redeemed }} points)</small>
+            </td>
+            <td class="text-end fw-semibold">
+              − Rs. {{ order.loyalty_discount_amount|floatformat:2 }}
+            </td>
+          </tr>
+          {% endif %}
+
+          <!-- Shipping -->
+          <tr class="shipping-row">
+            <td colspan="3" class="text-end">
+              Shipping
+              {% if order.shipping_fee == 0 %}
+                <span class="free-shipping-tag">✓ FREE</span>
+              {% endif %}
+            </td>
+            <td class="text-end fw-semibold">
+              {% if order.shipping_fee == 0 %}
+                Rs. 0.00
+              {% else %}
+                Rs. {{ order.shipping_fee|floatformat:2 }}
+              {% endif %}
+            </td>
+          </tr>
+
+          <!-- Grand Total -->
           <tr>
             <td colspan="3" class="text-end fw-bold">Grand Total</td>
             <td class="text-end fw-bold text-primary fs-5">
-              Rs. {{ order.total_price }}
+              Rs. {{ order.total_price|floatformat:2 }}
             </td>
           </tr>
         </tfoot>
@@ -422,11 +477,31 @@
   const lat = parseFloat("{{ order.delivery_latitude }}");
   const lng = parseFloat("{{ order.delivery_longitude }}");
   const map = L.map("map").setView([lat, lng], 16);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    attribution: "© OpenStreetMap contributors",
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+    attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+    subdomains: "abcd",
+    maxZoom: 20,
   }).addTo(map);
   L.marker([lat, lng]).addTo(map).bindPopup("Delivery Address").openPopup();
 </script>
 {% endif %}
+
+
+<script>
+  // The merchandise subtotal is the sum of the immutable OrderItem subtotals.
+  // This avoids reconstructing it from grand total, discounts and shipping.
+  (function () {
+    const subtotalCell = document.getElementById("order-subtotal");
+    if (!subtotalCell) return;
+
+    let subtotal = 0;
+    document.querySelectorAll(".item-subtotal").forEach(function (cell) {
+      const value = parseFloat(cell.dataset.subtotal);
+      if (!Number.isNaN(value)) subtotal += value;
+    });
+
+    subtotalCell.textContent = "Rs. " + subtotal.toFixed(2);
+  })();
+</script>
 
 {% endblock %}
