@@ -455,14 +455,195 @@
     .shop-layout { grid-template-columns: 1fr; }
     .filter-sidebar { position: static; }
   }
+
+  /* ── HOMEPAGE ENHANCEMENTS ─────────────────────────── */
+  .home-shell { padding-top: 6px; }
+
+  .offer-slider {
+    isolation: isolate;
+    background: #0e3a5c;
+  }
+  .offer-slider .carousel-item {
+    transition: transform .72s cubic-bezier(.22,.61,.36,1), opacity .45s ease;
+  }
+  .offer-slider .carousel-indicators {
+    margin-bottom: 12px;
+    gap: 6px;
+  }
+  .offer-slider .carousel-indicators [data-bs-target] {
+    width: 7px; height: 7px; border: 0; border-radius: 99px;
+    opacity: .45; transition: width .25s ease, opacity .25s ease;
+  }
+  .offer-slider .carousel-indicators .active { width: 26px; opacity: 1; }
+  .offer-slider .carousel-control-prev,
+  .offer-slider .carousel-control-next {
+    width: 42px; height: 42px; top: 50%; transform: translateY(-50%);
+    border-radius: 50%; background: rgba(255,255,255,.14);
+    backdrop-filter: blur(10px); opacity: 0; transition: opacity .2s, background .2s;
+  }
+  .offer-slider .carousel-control-prev { left: 14px; }
+  .offer-slider .carousel-control-next { right: 14px; }
+  .offer-slider:hover .carousel-control-prev,
+  .offer-slider:hover .carousel-control-next { opacity: 1; }
+  .offer-slider .carousel-control-prev:hover,
+  .offer-slider .carousel-control-next:hover { background: rgba(255,255,255,.24); }
+
+  /* Continuous popular-products marquee */
+  .popular-carousel {
+    overflow: hidden;
+    padding: 8px 0 18px;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 3%, #000 97%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 3%, #000 97%, transparent);
+  }
+  .popular-track {
+    display: flex;
+    width: max-content;
+    gap: 16px;
+    animation: popular-marquee 34s linear infinite;
+    will-change: transform;
+  }
+  .popular-carousel:hover .popular-track { animation-play-state: paused; }
+  .popular-track .product-card-wrapper {
+    width: 245px;
+    flex: 0 0 245px;
+    height: 390px;
+  }
+
+  .popular-track .product-card {
+    height: 100%;
+    min-height: 390px;
+  }
+
+  .popular-track .product-img-wrap {
+    height: 210px;
+    min-height: 210px;
+    flex: 0 0 210px;
+  }
+
+  .popular-track .product-info {
+    min-height: 108px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .popular-track .product-name {
+    min-height: 38px;
+  }
+
+  .popular-track .product-rating {
+    margin-top: auto;
+  }
+
+  .popular-track .cart-form {
+    margin-top: auto;
+  }
+  @keyframes popular-marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(calc(-50% - 8px)); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .popular-track { animation: none; }
+  }
+
+  .section-heading-wrap { display: flex; flex-direction: column; gap: 3px; }
+  .section-eyebrow {
+    color: #0ea5e9; font-size: 10px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: .09em;
+  }
+
+  .quick-filters {
+    display: flex; gap: 9px; flex-wrap: wrap; margin: 0 0 22px;
+    padding: 4px 0;
+  }
+  .quick-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    border: 1px solid #e5e7eb; background: #fff; color: #475569;
+    border-radius: 999px; padding: 8px 13px; font-size: 12px;
+    font-weight: 700; text-decoration: none; transition: .18s ease;
+  }
+  .quick-chip:hover, .quick-chip.active {
+    border-color: #7dd3fc; background: #f0f9ff; color: #0284c7;
+    transform: translateY(-1px);
+  }
+
+  .filter-select {
+    width: 100%; padding: 8px 9px; border: 1px solid #e5e7eb;
+    border-radius: 8px; background: #fff; color: #374151; font-size: 12.5px;
+  }
+  .filter-select:focus {
+    outline: none; border-color: #0ea5e9;
+    box-shadow: 0 0 0 3px rgba(14,165,233,.12);
+  }
+  .filter-check {
+    display: flex; align-items: center; gap: 8px; padding: 6px 0;
+    color: #374151; font-size: 13px; cursor: pointer;
+  }
+  .filter-check input { accent-color: #0ea5e9; }
+
+  .results-actions {
+    display: flex; align-items: center; gap: 9px; flex-wrap: wrap;
+  }
+  .sort-select {
+    border: 1px solid #e5e7eb; background: #fff; border-radius: 8px;
+    padding: 7px 30px 7px 10px; color: #475569; font-size: 12px;
+    font-weight: 600;
+  }
+
+  .product-card { position: relative; }
+  .product-card::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    border-radius: inherit; box-shadow: inset 0 0 0 1px transparent;
+    transition: box-shadow .18s ease;
+  }
+  .product-card:hover::after { box-shadow: inset 0 0 0 1px rgba(14,165,233,.18); }
+  .product-name a { color: inherit; text-decoration: none; }
+  .product-name a:hover { color: #0ea5e9; }
+
+  .mobile-filter-toggle {
+    display: none; width: 100%; margin-bottom: 12px; border: 1px solid #dbeafe;
+    background: #f8fbff; color: #0e3a5c; border-radius: 10px; padding: 10px 12px;
+    font-size: 13px; font-weight: 800; text-align: left;
+  }
+
+  @media (max-width: 900px) {
+    .mobile-filter-toggle { display: flex; align-items: center; justify-content: space-between; }
+    .filter-sidebar { display: none; }
+    .filter-sidebar.is-open { display: block; margin-bottom: 16px; }
+  }
+  @media (max-width: 600px) {
+    .offer-slider { border-radius: 14px; }
+    .offer-slide { padding: 24px 20px 30px; }
+    .offer-slider .carousel-control-prev,
+    .offer-slider .carousel-control-next { display: none; }
+    .popular-track .product-card-wrapper { width: 205px; flex-basis: 205px; }
+    .popular-track { animation-duration: 27s; }
+    .section-header { align-items: flex-end; gap: 12px; }
+    .section-sub { text-align: right; }
+    .results-bar { align-items: flex-start; gap: 12px; flex-direction: column; }
+    .results-actions { width: 100%; justify-content: space-between; }
+    .sort-select { flex: 1; }
+  }
+
 </style>
 {% endblock %}
 
 {% block start %}
+<div class="home-shell">
 
 <!-- ── SPECIAL OFFERS ── -->
 {% if special_offers %}
-<div id="specialOfferCarousel" class="carousel slide offer-slider" data-bs-ride="carousel">
+<div id="specialOfferCarousel" class="carousel slide offer-slider" data-bs-ride="carousel" data-bs-interval="5200" data-bs-pause="hover" data-bs-touch="true">
+  {% if special_offers|length > 1 %}
+  <div class="carousel-indicators">
+    {% for p in special_offers %}
+      <button type="button"
+              data-bs-target="#specialOfferCarousel"
+              data-bs-slide-to="{{ forloop.counter0 }}"
+              {% if forloop.first %}class="active" aria-current="true"{% endif %}
+              aria-label="Offer {{ forloop.counter }}"></button>
+    {% endfor %}
+  </div>
+  {% endif %}
   <div class="carousel-inner">
     {% for p in special_offers %}
     <div class="carousel-item {% if forloop.first %}active{% endif %}">
@@ -488,7 +669,7 @@
         </div>
         <div class="offer-image-wrap">
           {% if p.image %}
-            <img src="{{ p.image.url }}" alt="{{ p.name }}">
+            <img src="{{ p.image.url }}" alt="{{ p.name }}" loading="lazy">
           {% else %}
             <div style="font-size:52px;">📦</div>
           {% endif %}
@@ -512,57 +693,64 @@
 {% if top_products %}
 <div class="popular-section">
   <div class="section-header">
-    <h3>🔥 Top Popular Products</h3>
-    <span class="section-sub">Most loved by our customers</span>
+    <div class="section-heading-wrap">
+      <span class="section-eyebrow">Trending now</span>
+      <h3>🔥 Top Popular Products</h3>
+    </div>
+    <span class="section-sub">Hover to pause · Most loved by our customers</span>
   </div>
 
-  <div id="popularCarousel" class="carousel slide popular-carousel"
-       data-bs-ride="carousel" data-bs-interval="3500" data-bs-pause="hover">
-    <div class="carousel-inner">
-      {% for chunk in top_products|slice_chunks:4 %}
-      <div class="carousel-item {% if forloop.first %}active{% endif %}">
-        <div class="popular-grid">
-          {% for p in chunk %}
-          <div class="product-card-wrapper">
-            <div class="product-card">
-              <div class="product-img-wrap">
-                {% if p.product_image %}
-                  <img src="{{ p.product_image }}" alt="{{ p.product_name }}">
-                {% else %}
-                  <span class="product-img-placeholder">No Image</span>
-                {% endif %}
-                <span class="badge-stock" style="background:#fef3c7;color:#92400e;">🔥 Popular</span>
-              </div>
-              <div class="product-info">
-                <p class="product-brand">{{ p.product_category }}</p>
-                <p class="product-name">{{ p.product_name }}</p>
-                <p class="product-rating">
-                  <span>👁 {{ p.views }}</span>
-                  <span>·</span>
-                  <span>♥ {{ p.wishlist }}</span>
-                  <span>·</span>
-                  <span>🛒 {{ p.orders }}</span>
-                </p>
-              </div>
-              <div class="cart-form">
-                <a href="{% url 'products:product_detail' p.product_slug %}" class="btn-cart">View Product</a>
-              </div>
+  <div class="popular-carousel" aria-label="Popular products">
+    <div class="popular-track">
+      {% for pass in "12" %}
+        {% for p in top_products %}
+        <div class="product-card-wrapper" {% if pass == "2" %}aria-hidden="true"{% endif %}>
+          <div class="product-card">
+            <div class="product-img-wrap">
+              {% if p.product_image %}
+                <img src="{{ p.product_image }}" alt="{{ p.product_name }}" loading="lazy">
+              {% else %}
+                <span class="product-img-placeholder">No Image</span>
+              {% endif %}
+              <span class="badge-stock" style="background:#fef3c7;color:#92400e;">🔥 Popular</span>
+            </div>
+            <div class="product-info">
+              <p class="product-brand">{{ p.product_category }}</p>
+              <p class="product-name">
+                <a href="{% url 'products:product_detail' p.product_slug %}">{{ p.product_name }}</a>
+              </p>
+              <p class="product-rating">
+                <span>👁 {{ p.views }}</span><span>·</span>
+                <span>♥ {{ p.wishlist }}</span><span>·</span>
+                <span>🛒 {{ p.orders }}</span>
+              </p>
+            </div>
+            <div class="cart-form">
+              <a href="{% url 'products:product_detail' p.product_slug %}" class="btn-cart">View Product</a>
             </div>
           </div>
-          {% endfor %}
         </div>
-      </div>
+        {% endfor %}
       {% endfor %}
     </div>
-    <button class="carousel-control-prev" type="button" data-bs-target="#popularCarousel" data-bs-slide="prev">
-      <span class="carousel-control-prev-icon"></span>
-    </button>
-    <button class="carousel-control-next" type="button" data-bs-target="#popularCarousel" data-bs-slide="next">
-      <span class="carousel-control-next-icon"></span>
-    </button>
   </div>
 </div>
 {% endif %}
+
+<div class="quick-filters" aria-label="Quick product filters">
+  <a class="quick-chip {% if not request.GET.stock and not request.GET.discounted %}active{% endif %}"
+     href="{% url 'products:view_products' %}">✦ All products</a>
+  <a class="quick-chip {% if request.GET.stock == 'in' %}active{% endif %}"
+     href="?stock=in">✓ In stock</a>
+  <a class="quick-chip {% if request.GET.discounted == '1' %}active{% endif %}"
+     href="?discounted=1">🏷 On sale</a>
+  <a class="quick-chip {% if request.GET.min_rating == '4' %}active{% endif %}"
+     href="?min_rating=4">★ 4+ rated</a>
+</div>
+
+<button class="mobile-filter-toggle" type="button" id="mobileFilterToggle" aria-expanded="false">
+  <span>☰ Filters & sorting</span><span>＋</span>
+</button>
 
 <div class="shop-layout">
 
@@ -599,10 +787,33 @@
         </label>
       </div>
 
+      <div class="filter-group">
+        <label class="filter-group-label">Availability</label>
+        <label class="filter-check">
+          <input type="checkbox" name="stock" value="in" {% if request.GET.stock == 'in' %}checked{% endif %}>
+          <span>In-stock products only</span>
+        </label>
+        <label class="filter-check">
+          <input type="checkbox" name="discounted" value="1" {% if request.GET.discounted == '1' %}checked{% endif %}>
+          <span>Deals & discounted products</span>
+        </label>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-group-label" for="sidebar-sort">Sort products</label>
+        <select class="filter-select" id="sidebar-sort" name="sort">
+          <option value="" {% if not request.GET.sort %}selected{% endif %}>Recommended</option>
+          <option value="price_low" {% if request.GET.sort == 'price_low' %}selected{% endif %}>Price: low to high</option>
+          <option value="price_high" {% if request.GET.sort == 'price_high' %}selected{% endif %}>Price: high to low</option>
+          <option value="rating" {% if request.GET.sort == 'rating' %}selected{% endif %}>Best rated</option>
+          <option value="newest" {% if request.GET.sort == 'newest' %}selected{% endif %}>Newest first</option>
+        </select>
+      </div>
+
       <button type="submit" class="filter-apply-btn">Apply filters</button>
     </form>
-    {% if min_price or max_price or min_rating %}
-    <a href="{% url 'products:view_products' %}{% if request.GET.q %}?q={{ request.GET.q }}{% endif %}" class="filter-clear-link">Clear price/rating filters</a>
+    {% if min_price or max_price or min_rating or request.GET.stock or request.GET.discounted or request.GET.sort %}
+    <a href="{% url 'products:view_products' %}{% if request.GET.q %}?q={{ request.GET.q }}{% endif %}" class="filter-clear-link">Clear product filters</a>
     {% endif %}
   </aside>
 
@@ -622,7 +833,7 @@
         {% endif %}
       </h4>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-        {% if request.GET.brand or request.GET.category or request.GET.q or min_price or max_price or min_rating %}
+        {% if request.GET.brand or request.GET.category or request.GET.q or min_price or max_price or min_rating or request.GET.stock or request.GET.discounted or request.GET.sort %}
         <span class="active-filter">
           {% if request.GET.brand %}Brand: {{ active_brand }}{% endif %}
           {% if request.GET.category %}Category: {{ active_category }}{% endif %}
@@ -630,10 +841,22 @@
           {% if min_price %}Min Rs.{{ min_price }}{% endif %}
           {% if max_price %}Max Rs.{{ max_price }}{% endif %}
           {% if min_rating %}{{ min_rating }}★+{% endif %}
+          {% if request.GET.stock == 'in' %}In stock{% endif %}
+          {% if request.GET.discounted == '1' %}On sale{% endif %}
+          {% if request.GET.sort %}Sorted: {{ request.GET.sort }}{% endif %}
           <a href="{% url 'products:view_products' %}" title="Clear all filters">×</a>
         </span>
         {% endif %}
-        <span class="results-count">{{ products|length }} item{{ products|length|pluralize }}</span>
+        <div class="results-actions">
+          <span class="results-count">{{ products|length }} item{{ products|length|pluralize }}</span>
+          <select class="sort-select" id="resultsSort" aria-label="Sort products">
+            <option value="" {% if not request.GET.sort %}selected{% endif %}>Recommended</option>
+            <option value="price_low" {% if request.GET.sort == 'price_low' %}selected{% endif %}>Price ↑</option>
+            <option value="price_high" {% if request.GET.sort == 'price_high' %}selected{% endif %}>Price ↓</option>
+            <option value="rating" {% if request.GET.sort == 'rating' %}selected{% endif %}>Top rated</option>
+            <option value="newest" {% if request.GET.sort == 'newest' %}selected{% endif %}>Newest</option>
+          </select>
+        </div>
       </div>
     </div>
 
@@ -644,7 +867,7 @@
     <div class="product-card">
       <div class="product-img-wrap">
         {% if p.image %}
-          <img src="{{ p.image.url }}" alt="{{ p.name }}">
+          <img src="{{ p.image.url }}" alt="{{ p.name }}" loading="lazy">
         {% else %}
           <div class="product-img-placeholder">No Image</div>
         {% endif %}
@@ -672,7 +895,7 @@
 
       <div class="product-info">
         <p class="product-brand">{{ p.brand.name|default:"" }}</p>
-        <p class="product-name">{{ p.name }}</p>
+        <p class="product-name"><a href="{% url 'products:product_detail' p.slug %}">{{ p.name }}</a></p>
         <p class="product-rating">
           ⭐ {{ p.rating }} <span style="color:#e5e7eb;">|</span> {{ p.review_count }} review{{ p.review_count|pluralize }}
         </p>
@@ -721,6 +944,8 @@
 </div>
 <!-- /shop-layout -->
 
+</div>
+
 <script>
   document.querySelectorAll(".offer-kicker").forEach(function(badge){
       if(!badge.dataset.end) return;
@@ -750,6 +975,27 @@
       update();
       setInterval(update,1000);
   });
+  const mobileFilterToggle = document.getElementById("mobileFilterToggle");
+  const filterSidebar = document.querySelector(".filter-sidebar");
+  if (mobileFilterToggle && filterSidebar) {
+    mobileFilterToggle.addEventListener("click", function () {
+      const open = filterSidebar.classList.toggle("is-open");
+      mobileFilterToggle.setAttribute("aria-expanded", open ? "true" : "false");
+      const marker = mobileFilterToggle.querySelector("span:last-child");
+      if (marker) marker.textContent = open ? "−" : "＋";
+    });
+  }
+
+  const resultsSort = document.getElementById("resultsSort");
+  if (resultsSort) {
+    resultsSort.addEventListener("change", function () {
+      const url = new URL(window.location.href);
+      if (this.value) url.searchParams.set("sort", this.value);
+      else url.searchParams.delete("sort");
+      window.location.href = url.toString();
+    });
+  }
+
 </script>
 
 {% endblock %}
