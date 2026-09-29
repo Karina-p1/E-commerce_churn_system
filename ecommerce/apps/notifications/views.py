@@ -2,6 +2,11 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from .models import Notification
+from django.urls import reverse
+from django.views.decorators.http import require_POST
+from django.contrib import messages
+import logging
+from django.db import transaction
 
 
 @login_required
@@ -69,3 +74,49 @@ def poll_notifications(request):
         'unread_count': unread_count,
         'latest': latest,
     })
+
+logger = logging.getLogger(__name__)
+
+
+@login_required
+@require_POST
+def delete_notification(request, pk):
+    try:
+        with transaction.atomic():
+            notification = Notification.objects.get(
+                pk=pk,
+                recipient=request.user,
+            )
+            deleted_count, _ = notification.delete()
+
+    except Notification.DoesNotExist:
+        messages.error(
+            request,
+            "This notification is unavailable or has already been deleted.",
+        )
+
+    except Exception:
+        logger.exception("Failed to delete notification.")
+        messages.error(
+            request,
+            "Could not delete the notification. Please try again.",
+        )
+
+    else:
+        if deleted_count:
+            messages.success(
+                request,
+                "Notification successfully deleted.",
+            )
+        else:
+            messages.error(
+                request,
+                "This notification has already been deleted.",
+            )
+
+    url = reverse("notifications:list")
+
+    if request.POST.get("filter") == "unread":
+        url += "?filter=unread"
+
+    return redirect(url)
