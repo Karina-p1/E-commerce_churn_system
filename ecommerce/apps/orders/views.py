@@ -1111,6 +1111,7 @@ def order_detail(request, order_id):
     # flow entirely, so it gets its own separate alert block instead
     # (already in the template) rather than being forced into this.
     timeline = None
+    timeline_fill_percent = 0
     if order.status != 'cancelled':
         history_by_status = {
             h.status: h for h in order.status_history.all()
@@ -1133,9 +1134,20 @@ def order_detail(request, order_id):
                 'timestamp': entry.created_at if entry else None,
             })
 
+        # How far along the green fill line should reach, as a percent
+        # of the space between dot centers — e.g. 3 of 4 steps in =
+        # 2/3 of the way along (dot-to-dot, not dot count), so the fill
+        # visually stops exactly at the current step's dot.
+        steps_count = len(ORDER_STATUS_SEQUENCE)
+        timeline_fill_percent = (
+            round((current_index / (steps_count - 1)) * 100)
+            if steps_count > 1 else 100
+        )
+
     return render(request, 'orders/order_detail.html', {
         'order': order,
         'timeline': timeline,
+        'timeline_fill_percent': timeline_fill_percent,
     })
 
 

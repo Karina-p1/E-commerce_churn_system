@@ -58,62 +58,101 @@
   .order-timeline {
     display: flex;
     align-items: flex-start;
-    padding: 8px 4px 4px;
+    padding: 20px 21px 4px;
+    position: relative;
   }
   .timeline-step {
     flex: 1;
     text-align: center;
     position: relative;
   }
+
+  /* Track behind the dots — the grey base line */
+  .timeline-track {
+    position: absolute;
+    top: 21px;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: #eceef1;
+    z-index: 0;
+    border-radius: 4px;
+  }
+  /* The colored fill on top of the track, width set inline via style="" */
+  .timeline-track-fill {
+    position: absolute;
+    top: 21px;
+    left: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #16a34a, #22c55e);
+    z-index: 1;
+    border-radius: 4px;
+    transition: width 0.4s ease;
+  }
+
+  .timeline-dot-wrap {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    justify-content: center;
+  }
   .timeline-dot {
-    width: 30px;
-    height: 30px;
+    width: 42px;
+    height: 42px;
     border-radius: 50%;
-    background: #e5e7eb;
-    color: #9ca3af;
+    background: #fff;
+    border: 3px solid #e5e7eb;
+    color: #b0b4ba;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 14px;
-    font-weight: 700;
-    margin: 0 auto 8px;
-    position: relative;
-    z-index: 2;
-    transition: all 0.2s ease;
+    margin: 0 auto 10px;
+    transition: all 0.25s ease;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
   }
+  .timeline-dot svg { width: 18px; height: 18px; }
+
   .timeline-step.done .timeline-dot {
     background: #16a34a;
+    border-color: #16a34a;
     color: #fff;
   }
   .timeline-step.current .timeline-dot {
     background: #0d6efd;
+    border-color: #0d6efd;
     color: #fff;
-    box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.15);
+    box-shadow: 0 0 0 6px rgba(13, 110, 253, 0.15);
+    animation: pulse-ring 1.8s ease-in-out infinite;
   }
-  .timeline-line {
-    position: absolute;
-    top: 15px;
-    left: -50%;
-    width: 100%;
-    height: 3px;
-    background: #e5e7eb;
-    z-index: 1;
+  @keyframes pulse-ring {
+    0%, 100% { box-shadow: 0 0 0 6px rgba(13, 110, 253, 0.15); }
+    50%      { box-shadow: 0 0 0 10px rgba(13, 110, 253, 0.08); }
   }
-  .timeline-step:first-child .timeline-line { display: none; }
-  .timeline-step.done .timeline-line { background: #16a34a; }
+
   .timeline-label {
-    font-size: 12.5px;
+    font-size: 13px;
     font-weight: 600;
-    color: #6b7280;
+    color: #9ca3af;
+    transition: color 0.25s ease;
   }
   .timeline-step.done .timeline-label,
   .timeline-step.current .timeline-label {
     color: #1f2937;
   }
+  .timeline-step.current .timeline-label {
+    color: #0d6efd;
+  }
   .timeline-timestamp {
-    font-size: 10.5px;
+    font-size: 11px;
     color: #9ca3af;
-    margin-top: 2px;
+    margin-top: 3px;
+  }
+
+  @media (max-width: 576px) {
+    .timeline-label { font-size: 11px; }
+    .timeline-dot { width: 34px; height: 34px; }
+    .timeline-track, .timeline-track-fill { top: 17px; }
+    .order-timeline { padding-left: 17px; padding-right: 17px; }
   }
 </style>
 
@@ -178,11 +217,23 @@
     <div class="card-body">
       <h5 class="fw-bold mb-3">📦 Order Progress</h5>
       <div class="order-timeline">
+        <div class="timeline-track"></div>
+        <div class="timeline-track-fill" style="width: {{ timeline_fill_percent }}%;"></div>
+
         {% for step in timeline %}
         <div class="timeline-step {% if step.done %}done{% endif %} {% if step.current %}current{% endif %}">
-          <div class="timeline-dot">
-            <div class="timeline-line"></div>
-            {% if step.done and not step.current %}✓{% else %}{{ forloop.counter }}{% endif %}
+          <div class="timeline-dot-wrap">
+            <div class="timeline-dot">
+              {% if step.status == 'pending' %}
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+              {% elif step.status == 'processing' %}
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.24 12.24a6 6 0 10-8.49 8.49L15 24l3.24-3.27a6 6 0 002-8.49z"/><path d="M14 8V4h-4"/><path d="M4 4l5.5 5.5"/></svg>
+              {% elif step.status == 'shipped' %}
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="7" width="15" height="10" rx="1"/><path d="M16 10h4l3 3v4h-7z"/><circle cx="5.5" cy="19.5" r="1.5"/><circle cx="18.5" cy="19.5" r="1.5"/></svg>
+              {% else %}
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.3 2.3L16 10"/></svg>
+              {% endif %}
+            </div>
           </div>
           <div class="timeline-label">{{ step.label }}</div>
           {% if step.timestamp %}
