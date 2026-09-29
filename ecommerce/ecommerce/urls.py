@@ -30,10 +30,8 @@ urlpatterns = [
     path('churn/',  include('apps.churn.urls')),
     path("addresses/", include("apps.addresses.urls")),
     path('notifications/', include('apps.notifications.urls')),
-    path(
-        "complaints/",
-        include("apps.complaints.urls"),
-    ),
+    path("complaints/",include("apps.complaints.urls")),
+    path("loyalty/", include("apps.loyalty.urls")),
     path('', include(('apps.products.urls', 'products'), namespace='products')),
 ]
 
