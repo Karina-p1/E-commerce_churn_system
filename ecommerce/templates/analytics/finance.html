@@ -1,1066 +1,596 @@
 {% extends "admin_base.html" %}
+
 {% load humanize %}
 
-{% block title %}Analytics Dashboard{% endblock %}
+{% block title %}Financial & Sales Analytics{% endblock %}
 
 {% block start %}
 
 <div class="container-fluid py-4 analytics-dashboard">
 
-    <!-- HEADER -->
-    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
 
         <div>
-            <h2 class="fw-bold mb-1">Revenue Analytics</h2>
-            <p class="text-muted mb-0 small" id="lastUpdated">Loading latest data...</p>
+
+            <h2 class="fw-bold mb-1">Financial & Sales Analytics</h2>
+
+            <p class="text-muted mb-0 small" id="lastUpdated">Loading analytics...</p>
+
         </div>
 
-        <div class="d-flex gap-2">
-            <button class="btn btn-outline-primary" id="syncBtn" onclick="syncData()">
+        <div class="d-flex gap-2 flex-wrap">
+
+            <button class="btn btn-outline-primary" id="syncBtn" type="button">
+
                 <i class="bi bi-arrow-repeat"></i> <span id="syncBtnText">Sync Data</span>
+
             </button>
-            <a class="btn btn-danger" href="/analytics/api/report-pdf/">
+
+            <a class="btn btn-danger" id="reportBtn" href="/analytics/api/report-pdf/?period=today">
+
                 <i class="bi bi-file-earmark-pdf"></i> Download Report
+
             </a>
+
+        </div>
+
+    </div>
+
+    <!-- GLOBAL PERIOD FILTER -->
+
+    <div class="card border-0 shadow-sm filter-card mb-4">
+
+        <div class="card-body d-flex align-items-center justify-content-between flex-wrap gap-3">
+
+            <div>
+
+                <div class="fw-semibold">Analysis Period</div>
+
+                <small class="text-muted" id="periodDescription">Today</small>
+
+            </div>
+
+            <div class="d-flex align-items-center flex-wrap gap-2">
+
+                <div class="btn-group btn-group-sm period-buttons" id="periodButtons">
+
+                    <button class="btn btn-outline-success active" data-period="today">Today</button>
+
+                    <button class="btn btn-outline-success" data-period="daily">Daily</button>
+
+                    <button class="btn btn-outline-success" data-period="weekly">Weekly</button>
+
+                    <button class="btn btn-outline-success " data-period="monthly">Monthly</button>
+
+                    <button class="btn btn-outline-success" data-period="yearly">Yearly</button>
+
+                    <button class="btn btn-outline-success" data-period="custom">Custom</button>
+
+                </div>
+
+                <div class="custom-range d-none align-items-center gap-2" id="customRange">
+
+                    <input class="form-control form-control-sm" type="date" id="startDate">
+
+                    <span class="text-muted">to</span>
+
+                    <input class="form-control form-control-sm" type="date" id="endDate">
+
+                    <button class="btn btn-success btn-sm" id="applyCustom" type="button">Apply</button>
+
+                </div>
+
+            </div>
+
         </div>
 
     </div>
 
     <!-- SUMMARY CARDS -->
+
     <div class="row g-3 mb-4">
 
-        <div class="col-lg-3 col-md-6">
-            <div class="card stat-card border-0 shadow-sm">
-                <div class="card-body d-flex align-items-center gap-3">
-                    <div class="stat-icon bg-success-subtle text-success">
-                        <i class="bi bi-cash-stack"></i>
-                    </div>
-                    <div>
-                        <small class="text-muted d-block">Total Revenue</small>
-                        <h4 class="fw-bold text-success mb-0">
-                            Rs. {{ summary.total_revenue|floatformat:2|intcomma }}
-                        </h4>
-                    </div>
-                </div>
+        <div class="col-xl-2 col-md-4 col-sm-6"><div class="card stat-card border-0 shadow-sm h-100"><div class="card-body"><div class="stat-icon bg-success-subtle text-success"><i class="bi bi-cash-stack"></i></div><small class="text-muted d-block mt-3">Paid Revenue</small><h5 class="fw-bold mb-0 text-success" id="totalRevenue">--</h5></div></div></div>
+
+        <div class="col-xl-2 col-md-4 col-sm-6"><div class="card stat-card border-0 shadow-sm h-100"><div class="card-body"><div class="stat-icon bg-primary-subtle text-primary"><i class="bi bi-bag-check"></i></div><small class="text-muted d-block mt-3">Paid Orders</small><h5 class="fw-bold mb-0" id="totalOrders">--</h5></div></div></div>
+
+        <div class="col-xl-2 col-md-4 col-sm-6"><div class="card stat-card border-0 shadow-sm h-100"><div class="card-body"><div class="stat-icon bg-info-subtle text-info"><i class="bi bi-box-seam"></i></div><small class="text-muted d-block mt-3">Products Sold</small><h5 class="fw-bold mb-0" id="productsSold">--</h5></div></div></div>
+
+        <div class="col-xl-2 col-md-4 col-sm-6"><div class="card stat-card border-0 shadow-sm h-100"><div class="card-body"><div class="stat-icon bg-warning-subtle text-warning"><i class="bi bi-graph-up-arrow"></i></div><small class="text-muted d-block mt-3">Avg Order Value</small><h5 class="fw-bold mb-0" id="averageOrderValue">--</h5></div></div></div>
+
+        <div class="col-xl-2 col-md-4 col-sm-6"><div class="card stat-card border-0 shadow-sm h-100"><div class="card-body"><div class="stat-icon bg-secondary-subtle text-secondary"><i class="bi bi-ticket-perforated"></i></div><small class="text-muted d-block mt-3">Total Discounts</small><h5 class="fw-bold mb-0" id="totalDiscounts">--</h5></div></div></div>
+
+        <div class="col-xl-2 col-md-4 col-sm-6"><div class="card stat-card border-0 shadow-sm h-100"><div class="card-body"><div class="stat-icon bg-danger-subtle text-danger"><i class="bi bi-arrow-counterclockwise"></i></div><small class="text-muted d-block mt-3">Refunded</small><h5 class="fw-bold mb-0 text-danger" id="refundAmount">--</h5></div></div></div>
+
+    </div>
+
+    <!-- MAIN PERFORMANCE CHART -->
+
+    <div class="card chart-card border-0 shadow-sm mb-4">
+
+        <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
+
+            <div>
+
+                <h5 class="fw-bold mb-0">Sales & Revenue Performance</h5>
+
+                <small class="text-muted">Hover a point to see revenue, orders, products sold and average order value.</small>
+
             </div>
+
+            <div class="btn-group btn-group-sm" id="chartTypeButtons">
+
+                <button class="btn btn-outline-primary active" data-type="line"><i class="bi bi-graph-up"></i> Line</button>
+
+                <button class="btn btn-outline-primary" data-type="bar"><i class="bi bi-bar-chart"></i> Bar</button>
+
+            </div>
+
         </div>
 
-        <div class="col-lg-3 col-md-6">
-            <div class="card stat-card border-0 shadow-sm">
-                <div class="card-body d-flex align-items-center gap-3">
-                    <div class="stat-icon bg-primary-subtle text-primary">
-                        <i class="bi bi-bag-check"></i>
-                    </div>
-                    <div>
-                        <small class="text-muted d-block">Paid Orders</small>
-                        <h4 class="fw-bold mb-0">
-                            {{ summary.total_orders }}
-                        </h4>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <div class="card-body position-relative">
 
-        <div class="col-lg-3 col-md-6">
-            <div class="card stat-card border-0 shadow-sm">
-                <div class="card-body d-flex align-items-center gap-3">
-                    <div class="stat-icon bg-warning-subtle text-warning">
-                        <i class="bi bi-graph-up-arrow"></i>
-                    </div>
-                    <div>
-                        <small class="text-muted d-block">Avg Order Value</small>
-                        <h4 class="fw-bold mb-0">
-                            Rs. {{ summary.average_order_value|floatformat:2|intcomma }}
-                        </h4>
-                    </div>
-                </div>
-            </div>
-        </div>
+            <div class="chart-loading" id="performanceLoading"><div class="spinner-border spinner-border-sm text-success"></div></div>
 
-        <div class="col-lg-3 col-md-6">
-            <div class="card stat-card border-0 shadow-sm">
-                <div class="card-body d-flex align-items-center gap-3">
-                    <div class="stat-icon bg-info-subtle text-info">
-                        <i class="bi bi-calendar-day"></i>
-                    </div>
-                    <div>
-                        <small class="text-muted d-block">Today Revenue</small>
-                        <h4 id="todayRevenue" class="fw-bold text-primary mb-0">
-                            Loading...
-                        </h4>
-                    </div>
-                </div>
-            </div>
+            <div style="height:390px"><canvas id="performanceChart"></canvas></div>
+
         </div>
 
     </div>
 
-    <!-- CHARTS -->
-    <div class="row g-4">
+    <div class="row g-4 mb-4">
 
-        <!-- REVENUE -->
-        <div class="col-lg-8">
-            <div class="card chart-card shadow-sm border-0 h-100">
-                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <!-- FINANCIAL BREAKDOWN -->
 
-                    <h5 class="fw-bold mb-0" id="revenueTitle">
-                        Daily Revenue Trend
-                    </h5>
+        <div class="col-lg-5">
 
-                    <div class="d-flex align-items-center gap-3">
+            <div class="card chart-card border-0 shadow-sm h-100">
 
-                        <span
-                            class="badge rounded-pill text-bg-success-subtle text-success"
-                            id="revenueTotalBadge">
-                            --
-                        </span>
+                <div class="card-header bg-white"><h5 class="fw-bold mb-0">Financial Breakdown</h5></div>
 
-                        <div
-                            class="btn-group btn-group-sm"
-                            id="revenuePeriodGroup">
+                <div class="card-body">
 
-                            <button
-                                class="btn btn-outline-success active"
-                                data-period="daily">
-                                Daily
-                            </button>
+                    <div class="finance-row"><span>Gross Sales Before Discounts</span><strong id="grossSales">--</strong></div>
 
-                            <button
-                                class="btn btn-outline-success"
-                                data-period="weekly">
-                                Weekly
-                            </button>
+                    <div class="finance-row text-danger"><span>Coupon Discounts</span><strong id="couponDiscount">--</strong></div>
 
-                            <button
-                                class="btn btn-outline-success"
-                                data-period="monthly">
-                                Monthly
-                            </button>
+                    <div class="finance-row text-danger"><span>Loyalty Discounts</span><strong id="loyaltyDiscount">--</strong></div>
 
-                            <button
-                                class="btn btn-outline-success"
-                                data-period="yearly">
-                                Yearly
-                            </button>
-
-                        </div>
-
-                    </div>
+                    <div class="finance-row"><span>Net Revenue</span><strong id="paidRevenueBreakdown">--</strong></div>
 
                 </div>
-                <div class="card-body position-relative">
-                    <div class="chart-loading" id="revenueLoading">
-                        <div class="spinner-border spinner-border-sm text-success" role="status"></div>
-                    </div>
-                    <div style="height:350px">
-                        <canvas id="revenueChart"></canvas>
-                    </div>
-                </div>
+
             </div>
+
         </div>
 
         <!-- PAYMENT -->
-        <div class="col-lg-4">
-            <div class="card chart-card shadow-sm border-0 h-100">
-                <div class="card-header bg-white">
-                    <h5 class="fw-bold mb-0">Payment Breakdown</h5>
-                </div>
-                <div class="card-body position-relative d-flex flex-column justify-content-center">
-                    <div class="chart-loading" id="paymentLoading">
-                        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                    </div>
-                    <div style="height:300px">
-                        <canvas id="paymentChart"></canvas>
-                    </div>
-                    <div id="paymentEmpty" class="text-center text-muted small d-none">
-                        No payment data available yet.
-                    </div>
-                </div>
-            </div>
-        </div>
 
-        <!-- ORDERS -->
-        <div class="col-12">
-            <div class="card chart-card shadow-sm border-0">
-                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <div class="col-lg-7">
 
-                    <h5 class="fw-bold mb-0" id="ordersTitle">
-                        Daily Orders Trend
-                    </h5>
+            <div class="card chart-card border-0 shadow-sm h-100">
 
-                    <div class="d-flex align-items-center gap-3">
+                <div class="card-header bg-white"><h5 class="fw-bold mb-0">Payment Method Performance</h5></div>
 
-                        <span
-                            class="badge rounded-pill text-bg-primary-subtle text-primary"
-                            id="ordersTotalBadge">
-                            --
-                        </span>
-
-                        <div
-                            class="btn-group btn-group-sm"
-                            id="ordersPeriodGroup">
-
-                            <button
-                                class="btn btn-outline-primary active"
-                                data-period="daily">
-                                Daily
-                            </button>
-
-                            <button
-                                class="btn btn-outline-primary"
-                                data-period="weekly">
-                                Weekly
-                            </button>
-
-                            <button
-                                class="btn btn-outline-primary"
-                                data-period="monthly">
-                                Monthly
-                            </button>
-
-                            <button
-                                class="btn btn-outline-primary"
-                                data-period="yearly">
-                                Yearly
-                            </button>
-
-                        </div>
-
-                    </div>
-
-                </div>
                 <div class="card-body position-relative">
-                    <div class="chart-loading" id="ordersLoading">
-                        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                    </div>
-                    <div style="height:320px">
-                        <canvas id="ordersChart"></canvas>
-                    </div>
+
+                    <div class="chart-loading" id="paymentLoading"><div class="spinner-border spinner-border-sm text-primary"></div></div>
+
+                    <div style="height:280px"><canvas id="paymentChart"></canvas></div>
+
+                    <div id="paymentEmpty" class="text-center text-muted small d-none">No payment data for this period.</div>
+
                 </div>
+
             </div>
+
         </div>
 
-        <!-- CATEGORY SALES -->
-        <div class="col-12">
-            <div class="card chart-card shadow-sm border-0">
-                <div class="card-header bg-white">
-                    <h5 class="fw-bold mb-0">Products Sold by Category</h5>
-                    <small class="text-muted">Click a bar to see the products in that category</small>
-                </div>
-                <div class="card-body position-relative">
-                    <div class="chart-loading" id="categoryLoading">
-                        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                    </div>
+    </div>
 
-                    <div class="row g-4">
-                        <div class="col-lg-7">
-                            <div style="height:320px">
-                                <canvas id="categoryChart"></canvas>
-                            </div>
-                        </div>
+    <!-- COUPONS -->
 
-                        <div class="col-lg-5">
-                            <h6 class="fw-bold mb-2" id="categoryProductsTitle">Products</h6>
-                            <div style="max-height:290px; overflow-y:auto;">
-                                <table class="table table-sm align-middle mb-0">
-                                    <thead>
-                                        <tr>
-                                            <th style="width:60px;">Image</th>
-                                            <th>Product</th>
-                                            <th class="text-end">Qty Sold</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="categoryProductsBody">
-                                        <tr><td colspan="3" class="text-center text-muted">Loading...</td></tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <div class="card chart-card border-0 shadow-sm mb-4">
+
+        <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
+
+            <div><h5 class="fw-bold mb-0">Coupon Performance</h5><small class="text-muted">See how much revenue each coupon generates compared with the discount given.</small></div>
+
+            <div class="d-flex gap-3"><div><small class="text-muted d-block">Discount Given</small><strong class="text-danger" id="couponTotalDiscount">--</strong></div><div><small class="text-muted d-block">Usage Rate</small><strong id="couponUsageRate">--</strong></div></div>
+
         </div>
-        <!-- COUPON & REFUND ANALYTICS -->
-        <div class="col-12">
+
+        <div class="card-body position-relative">
+
+            <div class="chart-loading" id="couponLoading"><div class="spinner-border spinner-border-sm text-success"></div></div>
+
+            <div class="table-responsive">
+
+                <table class="table table-hover align-middle mb-0">
+
+                    <thead><tr><th>Coupon</th><th>Type</th><th class="text-end">Uses / Orders</th><th class="text-end">Revenue Generated</th><th class="text-end">Discount Given</th><th class="text-end">Avg Order</th></tr></thead>
+
+                    <tbody id="couponBody"><tr><td colspan="6" class="text-center text-muted">Loading...</td></tr></tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- REFUNDS -->
+
+    <div class="card chart-card border-0 shadow-sm mb-4">
+
+        <div class="card-header bg-white">
+
+            <h5 class="fw-bold mb-0">Refund Analysis</h5>
+
+            <small class="text-muted">
+
+                Refunds are order-level in the current system.
+
+            </small>
+
+        </div>
+
+        <div class="card-body position-relative">
+
+            <div class="chart-loading" id="refundLoading">
+
+                <div class="spinner-border spinner-border-sm text-danger"></div>
+
+            </div>
+
+            <!-- Refund Summary -->
+
+            <div class="row g-3 mb-4">
+
+                <div class="col-lg-2 col-md-4 col-6">
+
+                    <small class="text-muted">Completed Amount</small>
+
+                    <h6 class="fw-bold text-danger" id="totalRefundedAmount">--</h6>
+
+                </div>
+
+                <div class="col-lg-2 col-md-4 col-6">
+
+                    <small class="text-muted">Refunded Orders</small>
+
+                    <h6 class="fw-bold" id="totalRefundedOrders">--</h6>
+
+                </div>
+
+                <div class="col-lg-2 col-md-4 col-6">
+
+                    <small class="text-muted">Product Units</small>
+
+                    <h6 class="fw-bold" id="totalProductsRefunded">--</h6>
+
+                </div>
+
+                <div class="col-lg-2 col-md-4 col-6">
+
+                    <small class="text-muted">Refund Rate</small>
+
+                    <h6 class="fw-bold" id="refundRate">--</h6>
+
+                </div>
+
+            </div>
+
             <div class="row g-4">
 
-                <!-- COUPON SUMMARY -->
-                <div class="col-lg-6">
-                    <div class="card chart-card shadow-sm border-0 h-100">
-                        <div class="card-header bg-white">
-                            <h5 class="fw-bold mb-0">Coupon Usage</h5>
-                        </div>
-                        <div class="card-body position-relative">
-                            <div class="chart-loading" id="couponLoading">
-                                <div class="spinner-border spinner-border-sm text-success" role="status"></div>
-                            </div>
+                <!-- Refund Status Chart -->
 
-                            <div class="row g-3 mb-3">
-                                <div class="col-6">
-                                    <small class="text-muted d-block">Total Discount Given</small>
-                                    <h5 class="fw-bold text-success mb-0" id="totalDiscountGiven">--</h5>
-                                </div>
-                                <div class="col-6">
-                                    <small class="text-muted d-block">Coupon Usage Rate</small>
-                                    <h5 class="fw-bold mb-0" id="couponUsageRate">--</h5>
-                                </div>
-                            </div>
+                <!-- <div class="col-lg-5">
 
-                            <table class="table table-sm align-middle mb-0">
-                                <thead>
-                                    <tr>
-                                        <th>Code</th>
-                                        <th>Type</th>
-                                        <th class="text-end">Used</th>
-                                        <th class="text-end">Discount Given</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="topCouponsBody">
-                                    <tr><td colspan="4" class="text-center text-muted">Loading...</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
+                    <div style="height:260px">
+
+                        <canvas id="refundStatusChart"></canvas>
+
                     </div>
-                </div>
 
-                <!-- REFUND SUMMARY -->
-                <div class="col-lg-6">
-                    <div class="card chart-card shadow-sm border-0 h-100">
-                        <div class="card-header bg-white">
-                            <h5 class="fw-bold mb-0">Refunds</h5>
-                        </div>
-                        <div class="card-body position-relative">
-                            <div class="chart-loading" id="refundLoading">
-                                <div class="spinner-border spinner-border-sm text-danger" role="status"></div>
-                            </div>
-                            <div class="row g-3 mb-3">
-                                <div class="col-6">
-                                    <small class="text-muted d-block">Total Refunded</small>
-                                    <h5 class="fw-bold text-danger mb-0" id="totalRefundedAmount">--</h5>
-                                </div>
-                                <div class="col-6">
-                                    <small class="text-muted d-block">Pending Refund Amount</small>
-                                    <h5 class="fw-bold text-warning mb-0" id="pendingRefundAmount">--</h5>
-                                </div>
-                                <div class="col-6">
-                                    <small class="text-muted d-block">Orders Refunded</small>
-                                    <h5 class="fw-bold mb-0" id="totalRefundedOrders">--</h5>
-                                </div>
-                                <div class="col-6">
-                                    <small class="text-muted d-block">Products Refunded</small>
-                                    <h5 class="fw-bold mb-0" id="totalProductsRefunded">--</h5>
-                                </div>
-                            </div>
-                            <div style="height:180px">
-                                <canvas id="refundStatusChart"></canvas>
-                            </div>
-                        </div>
+                </div> -->
+
+                <!-- Most Refunded Products -->
+
+                <div class="col-lg-7">
+
+                    <h6 class="fw-bold">
+
+                        Most Refunded Products
+
+                    </h6>
+
+                    <div class="table-responsive refund-table-wrap">
+
+                        <table class="table table-sm table-hover align-middle mb-0">
+
+                            <thead>
+
+                                <tr>
+
+                                    <th>Product</th>
+
+                                    <th class="text-end">
+
+                                        Qty
+
+                                    </th>
+
+                                    <th class="text-end">
+
+                                        Amount Paid
+
+                                    </th>
+
+                                    <th>
+
+                                        Main Reason
+
+                                    </th>
+
+                                </tr>
+
+                            </thead>
+
+                            <tbody id="refundProductsBody"></tbody>
+
+                        </table>
+
                     </div>
+
                 </div>
 
             </div>
+
         </div>
+
+    </div>
+
+    <!-- CATEGORY + PRODUCT -->
+
+    <div class="card chart-card border-0 shadow-sm mb-4">
+
+        <div class="card-header bg-white"><h5 class="fw-bold mb-0">Category & Product Performance</h5><small class="text-muted">Click a category bar to inspect the products sold inside it.</small></div>
+
+        <div class="card-body position-relative">
+
+            <div class="chart-loading" id="categoryLoading"><div class="spinner-border spinner-border-sm text-primary"></div></div>
+
+            <div class="row g-4">
+
+                <div class="col-lg-7"><div style="height:350px"><canvas id="categoryChart"></canvas></div></div>
+
+                <div class="col-lg-5">
+
+                    <h6 class="fw-bold" id="categoryProductsTitle">Products</h6>
+
+                    <div class="table-responsive category-products-wrap"><table class="table table-sm align-middle mb-0"><thead><tr><th>Product</th><th class="text-end">Sold</th><th class="text-end">Revenue</th><th class="text-end">Refunded</th></tr></thead><tbody id="categoryProductsBody"></tbody></table></div>
+
+                </div>
+
+            </div>
+
+        </div>
+
     </div>
 
 </div>
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
 
-<style>
-.analytics-dashboard {
-    --brand-green: #198754;
-    --brand-blue: #0d6efd;
-}
-
-.analytics-dashboard .card {
-    border-radius: 16px;
-    transition: box-shadow .2s ease, transform .2s ease;
-}
-
-.stat-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 .75rem 1.5rem rgba(0,0,0,.08) !important;
-}
-
-.stat-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.25rem;
-    flex-shrink: 0;
-}
-
-.chart-card .card-header {
-    border-bottom: 1px solid rgba(0,0,0,.06);
-    border-radius: 16px 16px 0 0 !important;
-}
-
-.period-group {
-    background: #fff;
-    border-radius: 10px;
-    padding: 4px;
-}
-
-.period-group .btn {
-    border: none;
-    border-radius: 8px !important;
-    margin: 0 2px;
-    padding: 6px 16px;
-    font-weight: 500;
-    font-size: .875rem;
-    color: #6c757d;
-    background: transparent;
-    transition: all .15s ease;
-}
-
-.period-group .btn:hover {
-    background: rgba(13,110,253,.08);
-    color: var(--brand-blue);
-}
-
-.period-group .btn.active {
-    background: var(--brand-blue);
-    color: #fff;
-    box-shadow: 0 2px 6px rgba(13,110,253,.35);
-}
-
-.btn-icon-refresh {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    border: none;
-    background: #fff;
-    color: #6c757d;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all .2s ease;
-}
-
-.btn-icon-refresh:hover {
-    color: var(--brand-blue);
-}
-
-.btn-icon-refresh.spinning i {
-    animation: spin .7s linear infinite;
-}
-
-@keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
-
-.chart-loading {
-    position: absolute;
-    inset: 0;
-    background: rgba(255,255,255,.7);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 5;
-    border-radius: 16px;
-}
-
-.chart-loading.active {
-    display: flex;
-}
-</style>
-
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+
+.analytics-dashboard{--green:#198754;--blue:#0d6efd;--red:#dc3545;background:#f8f9fa;min-height:100vh}.filter-card,.chart-card,.stat-card{border-radius:16px}.stat-card{transition:transform .2s ease,box-shadow .2s ease}.stat-card:hover{transform:translateY(-3px)}.stat-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.2rem}.chart-card .card-header{border-bottom:1px solid #edf0f2;padding:1rem 1.25rem;border-radius:16px 16px 0 0}.chart-loading{position:absolute;inset:0;background:rgba(255,255,255,.72);display:none;align-items:center;justify-content:center;z-index:5;border-radius:0 0 16px 16px}.chart-loading.active{display:flex}.finance-row{display:flex;justify-content:space-between;gap:1rem;padding:.85rem 0;border-bottom:1px solid #eee}.finance-total{font-size:1.08rem;border-top:2px solid #212529;border-bottom:0;margin-top:.35rem;padding-top:1rem}.refund-table-wrap,.category-products-wrap{max-height:310px;overflow:auto}.period-buttons .btn{white-space:nowrap}@media(max-width:767px){.period-buttons{display:flex;flex-wrap:wrap}.period-buttons>.btn{border-radius:.375rem!important;margin:2px}.custom-range{width:100%;flex-wrap:wrap}.custom-range input{max-width:150px}.analytics-dashboard h2{font-size:1.5rem}}
+
+</style>
 
 <script>
 
-let revenueChart, ordersChart, paymentChart;
-let revenuePeriod = "daily";
-let ordersPeriod = "daily";
+let currentPeriod="today";
 
-// Titles for the Orders chart (kept separate from revenue's own title map below)
-const ordersTitles = {
-    daily: "Daily Orders Trend",
-    weekly: "Weekly Orders Trend",
-    monthly: "Monthly Orders Trend",
-    yearly: "Yearly Orders Trend"
-};
+let currentStart="";
 
-const nprFormatter = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 });
+let currentEnd="";
 
-function toggleLoading(id, show) {
-    document.getElementById(id).classList.toggle("active", show);
+let chartType="line";
+
+let performanceChart=null,paymentChart=null,categoryChart=null;
+
+let categoryData=null;
+
+const money=new Intl.NumberFormat("en-IN",{maximumFractionDigits:2});
+
+const integer=new Intl.NumberFormat("en-IN",{maximumFractionDigits:0});
+
+const $=id=>document.getElementById(id);
+
+const rs=v=>"Rs. "+money.format(Number(v||0));
+
+const esc=s=>String(s??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
+
+function loading(id,on){const el=$(id);if(el)el.classList.toggle("active",on)}
+
+function query(){const p=new URLSearchParams({period:currentPeriod});if(currentPeriod==="custom"){if(currentStart)p.set("start",currentStart);if(currentEnd)p.set("end",currentEnd)}return p.toString()}
+
+function endpoint(path){return `${path}?${query()}`}
+
+function setReportUrl(){$("reportBtn").href=endpoint("/analytics/api/report-pdf/")}
+
+function setPeriodDescription(data){const labels={today:"Today",daily:"Last 30 days",weekly:"Last 12 weeks",monthly:"Last 12 months",yearly:"Last 5 years",custom:"Custom range"};$("periodDescription").textContent=`${labels[currentPeriod]||currentPeriod}: ${data.start} to ${data.end}`}
+
+async function getJSON(url){const r=await fetch(url);if(!r.ok)throw new Error(`${url} -> ${r.status}`);return r.json()}
+
+async function loadSummary(){
+    const d = await getJSON(endpoint("/analytics/api/dashboard-summary/"));
+
+    const setText = (id, value) => {
+        const el = $(id);
+        if (el) el.textContent = value;
+    };
+
+    setText("totalRevenue", rs(d.total_revenue));
+    setText("totalOrders", integer.format(d.total_orders || 0));
+    setText("productsSold", integer.format(d.products_sold || 0));
+    setText("averageOrderValue", rs(d.average_order_value));
+    setText("totalDiscounts", rs(d.total_discounts));
+    setText("refundAmount", rs(d.refund_amount));
+
+    setText("grossSales", rs(d.gross_sales));
+    setText("couponDiscount", "- " + rs(d.coupon_discount));
+    setText("loyaltyDiscount", "- " + rs(d.loyalty_discount));
+    setText("paidRevenueBreakdown", rs(d.total_revenue));
+
+    // Completed refunds are already reflected by the Celery revenue workflow.
+    setPeriodDescription(d);
 }
 
-async function syncData() {
-    const btn = document.getElementById("syncBtn");
-    const text = document.getElementById("syncBtnText");
+async function loadPerformance(){loading("performanceLoading",true);try{const d=await getJSON(endpoint("/analytics/api/sales-performance/"));if(performanceChart)performanceChart.destroy();performanceChart=new Chart($("performanceChart"),{type:chartType,data:{labels:d.labels,datasets:[{label:"Revenue (Rs.)",data:d.revenue,borderColor:"#198754",backgroundColor:chartType==="line"?"rgba(25,135,84,.12)":"rgba(25,135,84,.70)",fill:chartType==="line",borderWidth:3,tension:.3,borderRadius:chartType==="bar"?6:0,pointRadius:chartType==="line"?4:0}]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:"index",intersect:false},plugins:{legend:{display:true,position:"top",align:"end"},tooltip:{callbacks:{title:i=>i[0]?.label||"",label:ctx=>{const i=ctx.dataIndex;return [`Revenue: ${rs(d.revenue[i])}`,`Orders: ${integer.format(d.orders[i]||0)}`,`Products Sold: ${integer.format(d.products_sold[i]||0)}`,`Average Order: ${rs(d.average_order_value[i])}`]}}}},scales:{y:{beginAtZero:true,ticks:{callback:v=>"Rs. "+integer.format(v)},title:{display:true,text:"Revenue (Rs.)"}},x:{title:{display:true,text:"Timeline"}}}}})}finally{loading("performanceLoading",false)}}
 
-    btn.disabled = true;
-    text.textContent = "Syncing...";
+async function loadPayment(){loading("paymentLoading",true);try{const d=await getJSON(endpoint("/analytics/api/payment-method-chart/"));const has=(d.values||[]).some(v=>Number(v)>0);$("paymentEmpty").classList.toggle("d-none",has);if(paymentChart)paymentChart.destroy();if(!has)return;paymentChart=new Chart($("paymentChart"),{type:"doughnut",data:{labels:d.labels,datasets:[{data:d.values,backgroundColor:["#0d6efd","#fd7e14","#6f42c1","#20c997"],borderColor:"#fff",borderWidth:2,hoverOffset:8}]},options:{responsive:true,maintainAspectRatio:false,cutout:"62%",plugins:{legend:{position:"bottom"},tooltip:{callbacks:{label:ctx=>{const i=ctx.dataIndex;return `${ctx.label}: ${rs(ctx.parsed)} | ${d.orders[i]||0} orders`}}}}}})}finally{loading("paymentLoading",false)}}
+
+async function loadCoupons(){loading("couponLoading",true);try{const d=await getJSON(endpoint("/analytics/api/coupon-summary/"));$("couponTotalDiscount").textContent=rs(d.total_discount_given);$("couponUsageRate").textContent=`${d.coupon_usage_rate||0}%`;const body=$("couponBody");body.innerHTML="";if(!d.top_coupons.length){body.innerHTML='<tr><td colspan="6" class="text-center text-muted">No coupon usage in this period.</td></tr>';return}d.top_coupons.forEach(c=>{body.insertAdjacentHTML("beforeend",`<tr><td class="fw-semibold">${esc(c.code)}</td><td><span class="badge text-bg-light">${esc(c.type)}</span></td><td class="text-end">${c.times_used}</td><td class="text-end fw-semibold text-success">${rs(c.revenue_generated)}</td><td class="text-end text-danger">${rs(c.discount_given)}</td><td class="text-end">${rs(c.average_order_value)}</td></tr>`)})}finally{loading("couponLoading",false)}}
+
+function reasonLabel(v) {
+
+    return String(v || "OTHER")
+
+        .replaceAll("_", " ")
+
+        .toLowerCase()
+
+        .replace(/\b\w/g, c => c.toUpperCase());
+
+}
+
+async function loadRefunds() {
+
+    loading("refundLoading", true);
 
     try {
-        const res = await fetch("/analytics/api/sync/", {
-            method: "POST",
-            headers: { "X-CSRFToken": "{{ csrf_token }}" }
-        });
-        if (!res.ok) throw new Error("Sync failed: " + res.status);
 
-        // Reload so the top cards and all charts show the new numbers
-        window.location.reload();
-    } catch (err) {
-        console.error(err);
-        text.textContent = "Sync failed - try again";
-        btn.disabled = false;
-    }
-}
+        const d = await getJSON(
 
-// ----------------------
-// TODAY REVENUE / SUMMARY
-// ----------------------
-async function loadDashboard() {
-    try {
-        const res = await fetch("/analytics/api/dashboard-summary/");
-        const data = await res.json();
+            endpoint("/analytics/api/refund-summary/")
 
-        document.getElementById("todayRevenue").innerText =
-            "Rs. " + nprFormatter.format(Number(data.today_revenue || 0));
+        );
 
-        document.getElementById("lastUpdated").innerText =
-            "Last updated " + new Date().toLocaleTimeString();
-    } catch (err) {
-        document.getElementById("todayRevenue").innerText = "Rs. 0";
-        console.error("Failed to load dashboard summary", err);
-    }
-}
+        // Refund summary
 
-// ----------------------
-// REVENUE CHART
-// Daily = smooth filled area.
-// Weekly / Monthly / Yearly = clean straight-line trend, larger points,
-// no fill - matching the reference screenshot for all non-daily periods.
-// ----------------------
-async function loadRevenueChart(period = "daily") {
-    toggleLoading("revenueLoading", true);
-    try {
-        const res = await fetch(`/analytics/api/revenue-chart/?period=${period}`);
-        const data = await res.json();
+        $("totalRefundedAmount").textContent =
 
-        const revenueTitles = {
-            daily: "Daily Revenue Trend",
-            weekly: "Weekly Revenue Trend",
-            monthly: "Monthly Revenue Trend",
-            yearly: "Yearly Revenue Trend"
-        };
+            rs(d.total_refunded_amount);
 
-        document.getElementById("revenueTitle").innerText = revenueTitles[period];
+        $("totalRefundedOrders").textContent =
 
-        const total = (data.revenue || []).reduce((a, b) => a + b, 0);
-        document.getElementById("revenueTotalBadge").innerHTML =
-            "Total: Rs. " + nprFormatter.format(total);
+            integer.format(d.total_refunded_orders || 0);
 
-        if (revenueChart) revenueChart.destroy();
+        $("totalProductsRefunded").textContent =
 
-        const isDaily = period === "daily";
+            integer.format(d.total_products_refunded || 0);
 
-        const xAxisLabel =
-            period === "daily" ? "Date" :
-            period === "weekly" ? "Week" :
-            period === "monthly" ? "Month" : "Year";
+        $("refundRate").textContent =
 
-        revenueChart = new Chart(document.getElementById("revenueChart"), {
-            type: "line",
-            data: {
-                labels: data.labels,
-                datasets: [{
-                    label: "Revenue (Rs.)",
-                    data: data.revenue,
-                    borderColor: "#0d6efd",
-                    backgroundColor: isDaily ? "rgba(13,110,253,.12)" : "transparent",
-                    fill: isDaily,
-                    borderWidth: 3,
-                    pointRadius: isDaily ? 4 : 6,
-                    pointHoverRadius: 8,
-                    pointBackgroundColor: "#0d6efd",
-                    pointBorderColor: "#ffffff",
-                    pointBorderWidth: 2,
-                    tension: isDaily ? 0.35 : 0
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                interaction: { mode: "index", intersect: false },
-                plugins: {
-                    legend: { display: true, position: "top", align: "end" },
-                    tooltip: {
-                        callbacks: {
-                            label: (ctx) => `Revenue: Rs. ${nprFormatter.format(ctx.parsed.y)}`
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        title: { display: true, text: xAxisLabel },
-                        grid: { display: true }
-                    },
-                    y: {
-                        beginAtZero: false,
-                        title: { display: true, text: "Revenue (Rs.)" },
-                        ticks: {
-                            callback: (val) => "Rs. " + nprFormatter.format(val)
-                        }
-                    }
-                }
-            }
-        });
-    } catch (err) {
-        console.error("Failed to load revenue chart", err);
-    } finally {
-        toggleLoading("revenueLoading", false);
-    }
-}
+            `${d.refund_rate || 0}%`;
 
-// ----------------------
-// ORDERS CHART (unchanged - bar chart for all periods)
-// ----------------------
-async function loadOrdersChart(period = "daily") {
-    toggleLoading("ordersLoading", true);
-    try {
-        const res = await fetch(`/analytics/api/orders-chart/?period=${period}`);
-        const data = await res.json();
+        // Most refunded products
 
-        document.getElementById("ordersTitle").innerText = ordersTitles[period];
+        const body = $("refundProductsBody");
 
-        const total = (data.orders || []).reduce((a, b) => a + b, 0);
-        document.getElementById("ordersTotalBadge").innerText = `${total} orders`;
+        body.innerHTML = "";
 
-        if (ordersChart) ordersChart.destroy();
+        if (!d.most_refunded_products?.length) {
 
-        ordersChart = new Chart(document.getElementById("ordersChart"), {
-            type: "bar",
-            data: {
-                labels: data.labels,
-                datasets: [{
-                    label: "Orders",
-                    data: data.orders,
-                    backgroundColor: "rgba(13,110,253,.65)",
-                    hoverBackgroundColor: "rgba(13,110,253,.9)",
-                    borderRadius: 6,
-                    maxBarThickness: 42
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: true, position: "top", align: "end" },
-                    tooltip: {
-                        callbacks: {
-                            label: (ctx) => `Orders: ${ctx.parsed.y}`
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        title: { display: true, text: "Period" }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        title: { display: true, text: "Number of Orders" },
-                        ticks: { precision: 0 }
-                    }
-                }
-            }
-        });
-    } catch (err) {
-        console.error("Failed to load orders chart", err);
-    } finally {
-        toggleLoading("ordersLoading", false);
-    }
-}
+            body.innerHTML = `
 
-// ----------------------
-// PAYMENT BREAKDOWN CHART (unchanged)
-// ----------------------
-async function loadPaymentChart() {
-    toggleLoading("paymentLoading", true);
-    try {
-        const res = await fetch("/analytics/api/payment-method-chart/");
-        const data = await res.json();
+                <tr>
 
-        const hasData = (data.values || []).some(v => v > 0);
-        document.getElementById("paymentEmpty").classList.toggle("d-none", hasData);
+                    <td colspan="4" class="text-center text-muted">
 
-        if (paymentChart) paymentChart.destroy();
-        if (!hasData) return;
+                        No completed refunds in this period.
 
-        paymentChart = new Chart(document.getElementById("paymentChart"), {
-            type: "doughnut",
-            data: {
-                labels: data.labels,
-                datasets: [{
-                    label: "Payment Method",
-                    data: data.values,
-                    backgroundColor: ["#0d6efd", "#fd7e14"],
-                    hoverOffset: 8,
-                    borderWidth: 2,
-                    borderColor: "#fff"
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                cutout: "62%",
-                plugins: {
-                    legend: { display: true, position: "bottom" },
-                    tooltip: {
-                        callbacks: {
-                            label: (ctx) => {
-                                const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
-                                const pct = total ? ((ctx.parsed / total) * 100).toFixed(1) : 0;
-                                return `${ctx.label}: Rs. ${nprFormatter.format(ctx.parsed)} (${pct}%)`;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    } catch (err) {
-        console.error("Failed to load payment chart", err);
-    } finally {
-        toggleLoading("paymentLoading", false);
-    }
-}
+                    </td>
 
+                </tr>
 
-function loadRevenue(period){
+            `;
 
-    revenuePeriod = period;
-
-    document.querySelectorAll("#revenuePeriodGroup button")
-        .forEach(btn => {
-
-            btn.classList.toggle(
-                "active",
-                btn.dataset.period === period
-            );
-
-        });
-
-    loadRevenueChart(period);
-
-}
-
-function loadOrders(period){
-
-    ordersPeriod = period;
-
-    document.querySelectorAll("#ordersPeriodGroup button")
-        .forEach(btn => {
-
-            btn.classList.toggle(
-                "active",
-                btn.dataset.period === period
-            );
-
-        });
-
-    loadOrdersChart(period);
-
-}
-let categoryChart;
-let categoryData = null;
-
-function showCategoryProducts(category) {
-    const items = categoryData.products[category] || [];
-    const tbody = document.getElementById("categoryProductsBody");
-
-    document.getElementById("categoryProductsTitle").textContent =
-        "Products in " + category;
-
-    tbody.innerHTML = "";
-
-    if (!items.length) {
-        tbody.innerHTML = `<tr><td colspan="3" class="text-center text-muted">No products sold.</td></tr>`;
-        return;
-    }
-
-    items.forEach(p => {
-        const tr = document.createElement("tr");
-
-        // Image cell
-        const imgTd = document.createElement("td");
-        if (p.image) {
-            const img = document.createElement("img");
-            img.src = p.image;
-            img.alt = p.name;
-            img.style.cssText =
-                "width:48px;height:48px;object-fit:cover;border-radius:8px;";
-            img.onerror = () => {
-                imgTd.innerHTML = `<div class="bg-light text-muted d-flex align-items-center justify-content-center"
-                    style="width:48px;height:48px;border-radius:8px;"><i class="bi bi-image"></i></div>`;
-            };
-            imgTd.appendChild(img);
         } else {
-            imgTd.innerHTML = `<div class="bg-light text-muted d-flex align-items-center justify-content-center"
-                style="width:48px;height:48px;border-radius:8px;"><i class="bi bi-image"></i></div>`;
-        }
 
-        // Name cell
-        const nameTd = document.createElement("td");
-        nameTd.textContent = p.name;
+            d.most_refunded_products.forEach(p => {
 
-        // Quantity cell
-        const qtyTd = document.createElement("td");
-        qtyTd.className = "text-end fw-semibold";
-        qtyTd.textContent = p.quantity;
+                body.insertAdjacentHTML(
 
-        tr.appendChild(imgTd);
-        tr.appendChild(nameTd);
-        tr.appendChild(qtyTd);
-        tbody.appendChild(tr);
-    });
-}
-async function loadCategoryChart() {
-    toggleLoading("categoryLoading", true);
-    try {
-        const res = await fetch("/analytics/api/category-sales/");
-        if (!res.ok) throw new Error(`Category sales failed: ${res.status}`);
-        categoryData = await res.json();
+                    "beforeend",
 
-        if (categoryChart) categoryChart.destroy();
+                    `
 
-        categoryChart = new Chart(document.getElementById("categoryChart"), {
-            type: "bar",
-            data: {
-                labels: categoryData.labels,
-                datasets: [{
-                    label: "Products Sold",
-                    data: categoryData.quantities,
-                    backgroundColor: "#198754",
-                    hoverBackgroundColor: "#146c43",
-                    borderRadius: 6
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                indexAxis: "y",
-                onClick: (evt, elements) => {
-                    if (!elements.length) return;
-                    showCategoryProducts(categoryData.labels[elements[0].index]);
-                },
-                onHover: (evt, elements) => {
-                    evt.native.target.style.cursor = elements.length ? "pointer" : "default";
-                },
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: (ctx) => `Sold: ${ctx.parsed.x} items`
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        beginAtZero: true,
-                        ticks: { precision: 0 },
-                        title: { display: true, text: "Number of Products Sold" }
-                    },
-                    y: {
-                        title: { display: true, text: "Category" }
-                    }
-                }
-            }
-        });
+                    <tr>
 
-        // Show the top category by default
-        if (categoryData.labels.length) {
-            showCategoryProducts(categoryData.labels[0]);
-        } else {
-            document.getElementById("categoryProductsBody").innerHTML =
-                `<tr><td colspan="2" class="text-center text-muted">No sales yet.</td></tr>`;
-        }
-    } catch (err) {
-        console.error("Failed to load category sales", err);
-    } finally {
-        toggleLoading("categoryLoading", false);
-    }
-}
-loadCategoryChart();
-async function refreshEverything(){
+                        <td>${esc(p.product_name)}</td>
 
-    const btn =
-        document.getElementById("refreshBtn");
+                        <td class="text-end">
 
-    btn.classList.add("spinning");
+                            ${integer.format(p.quantity || 0)}
 
-    await Promise.all([
+                        </td>
 
-        loadDashboard(),
+                        <td class="text-end">
 
-        loadRevenueChart(revenuePeriod),
+                            ${rs(p.refund_amount)}
 
-        loadOrdersChart(ordersPeriod),
+                        </td>
 
-        loadPaymentChart()
+                        <td>
 
-    ]);
+                            ${esc(reasonLabel(p.main_reason))}
 
-    setTimeout(()=>{
+                        </td>
 
-        btn.classList.remove("spinning");
+                    </tr>
 
-    },400);
+                    `
 
-}
+                );
 
-// button events
-document.querySelectorAll(
-    "#revenuePeriodGroup button"
-).forEach(btn => {
-
-    btn.addEventListener("click", function(){
-
-        revenuePeriod = this.dataset.period;
-
-        document.querySelectorAll(
-            "#revenuePeriodGroup button"
-        ).forEach(b=>b.classList.remove("active"));
-
-        this.classList.add("active");
-
-        loadRevenueChart(revenuePeriod);
-
-    });
-
-});
-
-document.querySelectorAll(
-    "#ordersPeriodGroup button"
-).forEach(btn => {
-
-    btn.addEventListener("click", function(){
-
-        ordersPeriod = this.dataset.period;
-
-        document.querySelectorAll(
-            "#ordersPeriodGroup button"
-        ).forEach(b=>b.classList.remove("active"));
-
-        this.classList.add("active");
-
-        loadOrdersChart(ordersPeriod);
-
-    });
-
-});
-
-
-// init
-loadDashboard();
-loadRevenueChart("daily");
-loadOrdersChart("daily");
-loadPaymentChart();
-
-
-async function loadCouponSummary(){
-    toggleLoading("couponLoading", true);
-    try {
-        const res = await fetch("/analytics/api/coupon-summary/");
-        if (!res.ok) throw new Error(`Coupon summary failed: ${res.status}`);
-        const data = await res.json();
-
-        document.getElementById("totalDiscountGiven").innerText =
-            "Rs. " + nprFormatter.format(data.total_discount_given);
-
-        document.getElementById("couponUsageRate").innerText =
-            data.coupon_usage_rate + "%";
-
-        const tbody = document.getElementById("topCouponsBody");
-        tbody.innerHTML = "";
-
-        if (!data.top_coupons.length) {
-            tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">No coupon usage yet.</td></tr>`;
-        } else {
-            data.top_coupons.forEach(row => {
-                const tr = document.createElement("tr");
-                tr.innerHTML = `
-                    <td class="fw-semibold">${row.code}</td>
-                    <td><span class="badge text-bg-light">${row.type}</span></td>
-                    <td class="text-end">${row.times_used}</td>
-                    <td class="text-end">Rs. ${nprFormatter.format(row.discount_given)}</td>
-                `;
-                tbody.appendChild(tr);
             });
+
         }
-    } catch (err) {
-        console.error("Failed to load coupon summary", err);
+
+        // Refund status breakdown remains available from the API.
+        // The refund status chart is intentionally disabled in this template.
+
     } finally {
-        toggleLoading("couponLoading", false);
+
+        loading("refundLoading", false);
+
     }
+
 }
 
-let refundStatusChart;
+function showCategoryProducts(category){const items=(categoryData?.products||{})[category]||[];$("categoryProductsTitle").textContent=`Products in ${category}`;const body=$("categoryProductsBody");body.innerHTML="";if(!items.length){body.innerHTML='<tr><td colspan="4" class="text-center text-muted">No products.</td></tr>';return}items.sort((a,b)=>b.revenue-a.revenue).forEach(p=>body.insertAdjacentHTML("beforeend",`<tr><td><div class="d-flex align-items-center gap-2">${p.image?`<img src="${esc(p.image)}" alt="" style="width:38px;height:38px;object-fit:cover;border-radius:8px">`:""}<span>${esc(p.name)}</span></div></td><td class="text-end">${p.quantity}</td><td class="text-end">${rs(p.revenue)}</td><td class="text-end">${p.refunded_quantity||0}</td></tr>`))}
 
-async function loadRefundSummary(){
-    toggleLoading("refundLoading", true);
-    try {
-        const res = await fetch("/analytics/api/refund-summary/");
-        if (!res.ok) throw new Error(`Refund summary failed: ${res.status}`);
-        const data = await res.json();
+async function loadCategories(){loading("categoryLoading",true);try{categoryData=await getJSON(endpoint("/analytics/api/category-sales/"));if(categoryChart)categoryChart.destroy();categoryChart=new Chart($("categoryChart"),{type:"bar",data:{labels:categoryData.labels,datasets:[{label:"Revenue",data:categoryData.revenues,backgroundColor:"rgba(25,135,84,.75)",borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:"y",onClick:(e,els)=>{if(els.length)showCategoryProducts(categoryData.labels[els[0].index])},onHover:(e,els)=>e.native.target.style.cursor=els.length?"pointer":"default",plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{const i=ctx.dataIndex;return [`Revenue: ${rs(categoryData.revenues[i])}`,`Products Sold: ${categoryData.quantities[i]||0}`,`Refunded Units: ${categoryData.refund_quantities[i]||0}`]}}}},scales:{x:{beginAtZero:true,ticks:{callback:v=>"Rs. "+integer.format(v)}}}}});if(categoryData.labels.length)showCategoryProducts(categoryData.labels[0]);else $("categoryProductsBody").innerHTML='<tr><td colspan="4" class="text-center text-muted">No sales in this period.</td></tr>'}finally{loading("categoryLoading",false)}}
 
-        document.getElementById("totalRefundedAmount").innerText =
-            "Rs. " + nprFormatter.format(data.total_refunded_amount);
+async function refreshAll(){setReportUrl();try{await Promise.all([loadSummary(),loadPerformance(),loadPayment(),loadCoupons(),loadRefunds(),loadCategories()]);$("lastUpdated").textContent="Last updated "+new Date().toLocaleString()}catch(e){console.error(e);$("lastUpdated").textContent="Some analytics could not be loaded. Check the browser console/server log."}}
 
-        document.getElementById("pendingRefundAmount").innerText =
-            "Rs. " + nprFormatter.format(data.pending_refund_amount);
+$("periodButtons").querySelectorAll("button").forEach(btn=>btn.addEventListener("click",()=>{currentPeriod=btn.dataset.period;$("periodButtons").querySelectorAll("button").forEach(b=>b.classList.toggle("active",b===btn));$("customRange").classList.toggle("d-none",currentPeriod!=="custom");$("customRange").classList.toggle("d-flex",currentPeriod==="custom");if(currentPeriod!=="custom")refreshAll()}));
 
-        document.getElementById("totalRefundedOrders").innerText =
-            data.total_refunded_orders;
+$("applyCustom").addEventListener("click",()=>{currentStart=$("startDate").value;currentEnd=$("endDate").value;if(!currentStart||!currentEnd){alert("Choose both start and end dates.");return}refreshAll()});
 
-        document.getElementById("totalProductsRefunded").innerText =
-            data.total_products_refunded;
+$("chartTypeButtons").querySelectorAll("button").forEach(btn=>btn.addEventListener("click",()=>{chartType=btn.dataset.type;$("chartTypeButtons").querySelectorAll("button").forEach(b=>b.classList.toggle("active",b===btn));loadPerformance()}));
 
-        const statusLabels = Object.keys(data.refund_status_breakdown);
-        const statusValues = Object.values(data.refund_status_breakdown);
+$("syncBtn").addEventListener("click",async()=>{const btn=$("syncBtn"),txt=$("syncBtnText");btn.disabled=true;txt.textContent="Syncing...";try{const r=await fetch("/analytics/api/sync/",{method:"POST",headers:{"X-CSRFToken":"{{ csrf_token }}"}});if(!r.ok)throw new Error(`Sync failed: ${r.status}`);txt.textContent="Synced";await refreshAll()}catch(e){console.error(e);txt.textContent="Sync failed"}finally{setTimeout(()=>{btn.disabled=false;txt.textContent="Sync Data"},1000)}});
 
-        if (refundStatusChart) refundStatusChart.destroy();
+refreshAll();
 
-        refundStatusChart = new Chart(document.getElementById("refundStatusChart"), {
-            type: "doughnut",
-            data: {
-                labels: statusLabels,
-                datasets: [{
-                    data: statusValues,
-                    backgroundColor: ["#adb5bd", "#ffc107", "#198754", "#dc3545"],
-                    borderWidth: 2,
-                    borderColor: "#fff"
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                cutout: "55%",
-                plugins: {
-                    legend: { display: true, position: "bottom" }
-                }
-            }
-        });
-    } catch (err) {
-        console.error("Failed to load refund summary", err);
-        document.getElementById("totalRefundedAmount").innerText = "Error";
-        document.getElementById("pendingRefundAmount").innerText = "Error";
-        document.getElementById("totalRefundedOrders").innerText = "Error";
-        document.getElementById("totalProductsRefunded").innerText = "Error";
-    } finally {
-        toggleLoading("refundLoading", false);
-    }
-}
-
-// add to init
-loadCouponSummary();
-loadRefundSummary();
 </script>
 
 {% endblock %}
