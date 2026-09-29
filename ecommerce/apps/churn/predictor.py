@@ -185,13 +185,31 @@ def predict_churn(feature_dict: dict) -> dict:
     """
     enc = feature_dict.copy()
 
-    # Step 1: encode Gender and MaritalStatus → numeric
+    # Step 1: encode Gender and MaritalStatus → numeric.
+    # Never silently map an unknown value to 0, because 0 is a REAL category
+    # (Female / Divorced) in the training encoding.
     for col, mapping in _encoding_maps.items():
-        if col in enc:
-            enc[f'{col}_encoded'] = mapping.get(enc[col], 0)
+        if col not in enc:
+            raise ValueError(f"Missing required categorical feature: {col}")
 
-    # Step 2: build DataFrame in the exact 11-column order the model expects
-    row   = {col: enc.get(col, 0) for col in _columns}
+        raw_value = enc[col]
+        if raw_value not in mapping:
+            allowed = ', '.join(str(v) for v in mapping.keys())
+            raise ValueError(
+                f"Invalid {col} value {raw_value!r}. Expected one of: {allowed}."
+            )
+
+        enc[f'{col}_encoded'] = mapping[raw_value]
+
+    # Step 2: require every one of the exact 11 trained columns.
+    missing_columns = [col for col in _columns if col not in enc]
+    if missing_columns:
+        raise ValueError(
+            "Missing required churn model feature(s): "
+            + ', '.join(missing_columns)
+        )
+
+    row   = {col: enc[col] for col in _columns}
     df    = pd.DataFrame([row])[_columns]
     proba = float(_model.predict_proba(df)[0][1])
     proba = round(proba, 3)
