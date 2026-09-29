@@ -181,7 +181,14 @@
           <td>#{{ complaint.id }}</td>
           <td class="subject-cell">
             <span class="subj">{{ complaint.subject|truncatechars:40 }}</span>
-            <span class="cust">{{ complaint.user.username }}{% if complaint.order %} · Order #{{ complaint.order.id }}{% endif %}</span>
+            <span class="cust">
+              {{ complaint.user.username }}
+              {% if complaint.order %}
+                {% with first_item=complaint.order.items.first %}
+                  · {% if first_item %}{{ first_item.product_name }}{% if complaint.order.items.count > 1 %} + {{ complaint.order.items.count|add:"-1" }} more{% endif %} · Order #{{ complaint.order.id }}{% else %}Order #{{ complaint.order.id }}{% endif %}
+                {% endwith %}
+              {% endif %}
+            </span>
           </td>
           <td><span class="type-pill">{{ complaint.get_complaint_type_display }}</span></td>
           <td><span class="priority-pill priority-{{ complaint.priority }}">{{ complaint.get_priority_display }}</span></td>

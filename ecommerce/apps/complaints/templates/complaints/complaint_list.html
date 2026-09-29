@@ -53,7 +53,11 @@
         <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
           <span class="complaint-type-pill">{{ complaint.get_complaint_type_display }}</span>
           {% if complaint.order %}
-            <span class="text-muted small">Order #{{ complaint.order.id }}</span>
+            {% with first_item=complaint.order.items.first %}
+              <span class="text-muted small">
+                {% if first_item %}{{ first_item.product_name }}{% if complaint.order.items.count > 1 %} + {{ complaint.order.items.count|add:"-1" }} more{% endif %} · Order #{{ complaint.order.id }}{% else %}Order #{{ complaint.order.id }}{% endif %}
+              </span>
+            {% endwith %}
           {% endif %}
         </div>
 

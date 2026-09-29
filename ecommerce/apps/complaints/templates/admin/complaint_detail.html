@@ -168,7 +168,11 @@
         <div class="info-row">
           <span class="label">Order</span>
           <span class="value">
-            {% if complaint.order %}#{{ complaint.order.id }}{% else %}—{% endif %}
+            {% if complaint.order %}
+              {% with first_item=complaint.order.items.first %}
+                {% if first_item %}{{ first_item.product_name }}{% if complaint.order.items.count > 1 %} + {{ complaint.order.items.count|add:"-1" }} more{% endif %}<br><small style="color:#888;">Order #{{ complaint.order.id }}</small>{% else %}Order #{{ complaint.order.id }}{% endif %}
+              {% endwith %}
+            {% else %}—{% endif %}
           </span>
         </div>
         <div class="info-row">
