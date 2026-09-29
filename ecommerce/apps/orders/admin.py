@@ -47,6 +47,7 @@ class CouponAdmin(admin.ModelAdmin):
         'max_uses',
         'used_count',
         'minimum_loyalty_tier',
+        'assigned_user',
         'is_limited_time_offer',
         'is_active',
         'valid_from',
@@ -64,6 +65,12 @@ class CouponAdmin(admin.ModelAdmin):
 
     search_fields = [
         'code',
+        'assigned_user__username',
+        'assigned_user__email',
+    ]
+
+    raw_id_fields = [
+        'assigned_user',
     ]
 
     fieldsets = (
@@ -101,6 +108,19 @@ class CouponAdmin(admin.ModelAdmin):
                     'Leave blank for a coupon available to all loyalty tiers. '
                     'Otherwise, customers must have this tier or a higher tier '
                     'to use the coupon.',
+            },
+        ),
+
+        (
+            'Assigned Customer',
+            {
+                'fields': (
+                    'assigned_user',
+                ),
+                'description':
+                    'Leave blank for a coupon anyone can use. If set, ONLY '
+                    'this customer can redeem the coupon (used for private '
+                    'offers such as churn win-back coupons).',
             },
         ),
 

@@ -135,6 +135,25 @@ class Coupon(models.Model):
         )
     )
 
+    # Restricts a coupon to ONE specific customer. Leave blank for a
+    # normal coupon that anyone eligible can use. A targeted coupon
+    # (e.g. an automatic churn win-back offer) is set to the customer
+    # it was created for, so nobody else can redeem it even if they
+    # learn the code. CASCADE (not SET_NULL) on purpose: if the user
+    # is deleted, the coupon must go with them rather than silently
+    # turning into a public coupon.
+    assigned_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="private_coupons",
+        help_text=(
+            "If set, ONLY this customer can use the coupon. "
+            "Leave blank for a coupon anyone can use."
+        )
+    )
+
     valid_from = models.DateTimeField(
         null=True,
         blank=True
@@ -168,7 +187,8 @@ class Coupon(models.Model):
             and discount calculation.
 
         user:
-            Used for FIRST_ORDER and loyalty-tier eligibility.
+            Used for FIRST_ORDER, assigned-customer and
+            loyalty-tier eligibility.
 
         cart_quantity:
             Total item count in cart, required for
@@ -193,6 +213,21 @@ class Coupon(models.Model):
             and self.used_count >= self.max_uses
         ):
             return False, "This coupon has reached its usage limit."
+
+        # ── Assigned-customer restriction ─────────────────────────────
+        #
+        # A targeted coupon (e.g. a churn win-back offer) can only be
+        # used by the customer it was created for.
+
+        if self.assigned_user_id is not None:
+            if (
+                user is None
+                or not user.is_authenticated
+                or user.pk != self.assigned_user_id
+            ):
+                return False, (
+                    "This coupon isn't available for your account."
+                )
 
         # ── Minimum order amount ───────────────────────────────────────
 

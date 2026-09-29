@@ -28,12 +28,10 @@ def trigger_winback(user):
     SCORE into an actual retention ACTION instead of a number that
     just sits on a dashboard.
 
-    Note on scope: Coupon has no per-user restriction field in the
-    database, so this isn't cryptographically locked to one person —
-    it's a unique, single-use code (max_uses=1) that's only ever
-    shown to this one customer, via their notification (and email).
-    Good enough for a win-back nudge; a stranger who somehow saw the
-    code could technically redeem it once instead of the customer.
+    Note on scope: the coupon is locked to this one customer via
+    assigned_user, so nobody else can redeem it even if they learn the
+    code. It is also single-use (max_uses=1) and is only ever shown to
+    this customer, via their notification (and email).
 
     Returns the created Coupon, or None if something went wrong OR the
     customer already received a win-back offer recently (never raises —
@@ -59,6 +57,7 @@ def trigger_winback(user):
             min_order_amount=0,
             max_uses=1,
             is_active=True,
+            assigned_user=user,  # only this customer can redeem it
             is_public=False,  # private, targeted offer — must NOT be
                                # broadcast to every customer (see the
                                # is_public check in notifications/signals.py)
