@@ -30,6 +30,11 @@ def mark_notification_read(request, notification_id):
     notification.is_read = True
     notification.save(update_fields=['is_read'])
 
+    # If this is a churn win-back notification, "read" means the campaign
+    # has been viewed.
+    from apps.churn.retention import mark_campaign_viewed
+    mark_campaign_viewed(notification)
+
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         return JsonResponse({'success': True})
 
@@ -38,10 +43,21 @@ def mark_notification_read(request, notification_id):
 
 @login_required
 def mark_all_read(request):
-    Notification.objects.filter(
+    unread = Notification.objects.filter(
         recipient=request.user,
         is_read=False
-    ).update(is_read=True)
+    )
+
+    notification_ids = list(
+        unread.values_list('id', flat=True)
+    )
+
+    unread.update(is_read=True)
+
+    # Keep retention campaign history consistent with "Mark all read".
+    from apps.churn.retention import mark_campaigns_viewed
+    mark_campaigns_viewed(notification_ids)
+
     return redirect('notifications:list')
 
 

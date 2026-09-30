@@ -5,9 +5,9 @@ from django.http import HttpResponse
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import get_user_model
-from django.db.models import Avg, OuterRef, Subquery, Count, Q
+from django.db.models import Avg, OuterRef, Subquery, Count, Q, Sum
 
-from .models import ChurnScore
+from .models import ChurnScore, RetentionCampaign
 from .features import extract_features, extract_features_with_metadata
 from .predictor import predict_churn
 from .services import score_all_customers
@@ -143,6 +143,19 @@ def churn_customer_detail(request, customer_id):
 
     latest_saved = history.last()
 
+    retention_campaigns = (
+        RetentionCampaign.objects
+        .filter(customer=customer)
+        .select_related(
+            'coupon',
+            'notification',
+            'recovered_order',
+            'source_score',
+        )
+        .prefetch_related('recovered_order__items')
+        .order_by('-sent_at')
+    )
+
     # Compare the freshly computed live score with the latest saved score.
     # These values are prepared here so the template stays simple and does
     # not need to perform arithmetic.
@@ -178,6 +191,7 @@ def churn_customer_detail(request, customer_id):
         'history_points':          history_points,
         'latest_saved':            latest_saved,
         'feature_input_notes':     feature_input_notes,
+        'retention_campaigns':      retention_campaigns,
         'score_changed':           score_changed,
         'score_delta':             score_delta,
         'score_delta_abs':         score_delta_abs,
@@ -186,6 +200,98 @@ def churn_customer_detail(request, customer_id):
         'main_protective_factor':  main_protective_factor,
     }
     return render(request, 'churn/customer_detail.html', context)
+
+
+
+@login_required
+@user_passes_test(is_admin)
+def retention_dashboard(request):
+    """
+    Admin view for the full retention funnel:
+
+    campaign sent -> notification viewed -> coupon used -> customer returned
+    -> model re-score -> risk outcome.
+    """
+    from .retention import expire_retention_campaigns
+
+    # Keep the page truthful even if the daily Celery scoring task has not
+    # run yet today.
+    expire_retention_campaigns()
+
+    status_filter = request.GET.get('status', 'all')
+
+    campaigns = (
+        RetentionCampaign.objects
+        .select_related(
+            'customer',
+            'coupon',
+            'notification',
+            'source_score',
+            'recovered_order',
+        )
+        .prefetch_related('recovered_order__items')
+        .order_by('-sent_at')
+    )
+
+    valid_statuses = {'SENT', 'VIEWED', 'RECOVERED', 'EXPIRED'}
+    if status_filter in valid_statuses:
+        campaigns = campaigns.filter(status=status_filter)
+
+    all_campaigns = RetentionCampaign.objects.all()
+
+    total_campaigns = all_campaigns.count()
+    viewed_count = all_campaigns.filter(viewed_at__isnull=False).count()
+    redeemed_count = all_campaigns.filter(
+        used_campaign_coupon=True
+    ).count()
+    recovered_count = all_campaigns.filter(
+        recovered_order__isnull=False
+    ).count()
+    risk_reduced_count = all_campaigns.filter(
+        outcome='RISK_REDUCED'
+    ).count()
+
+    recovered_revenue = (
+        all_campaigns.aggregate(total=Sum('recovered_revenue'))['total']
+        or 0
+    )
+
+    coupon_revenue = (
+        all_campaigns
+        .filter(used_campaign_coupon=True)
+        .aggregate(total=Sum('recovered_revenue'))['total']
+        or 0
+    )
+
+    recovery_rate = round(
+        (recovered_count / total_campaigns) * 100,
+        1
+    ) if total_campaigns else 0
+
+    redemption_rate = round(
+        (redeemed_count / total_campaigns) * 100,
+        1
+    ) if total_campaigns else 0
+
+    viewed_rate = round(
+        (viewed_count / total_campaigns) * 100,
+        1
+    ) if total_campaigns else 0
+
+    return render(request, 'churn/retention_dashboard.html', {
+        'campaigns': campaigns,
+        'status_filter': status_filter,
+        'total_campaigns': total_campaigns,
+        'viewed_count': viewed_count,
+        'viewed_rate': viewed_rate,
+        'redeemed_count': redeemed_count,
+        'recovered_count': recovered_count,
+        'risk_reduced_count': risk_reduced_count,
+        'recovered_revenue': recovered_revenue,
+        'coupon_revenue': coupon_revenue,
+        'recovery_rate': recovery_rate,
+        'redemption_rate': redemption_rate,
+    })
 
 
 @login_required

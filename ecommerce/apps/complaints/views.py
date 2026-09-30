@@ -1,3 +1,4 @@
+import logging
 # adjust import path to match your project
 from apps.notifications.models import Notification
 from django.contrib import messages
@@ -11,6 +12,9 @@ from django.core.paginator import Paginator
 from django.contrib.admin.views.decorators import staff_member_required
 from django.utils import timezone
 from django.db.models import Q
+
+
+logger = logging.getLogger(__name__)
 
 
 @login_required
@@ -242,22 +246,85 @@ def complaint_detail_admin(request, pk):
     if request.method == 'POST':
         old_status = complaint.status
 
-        complaint.status = request.POST.get('status', complaint.status)
-        complaint.priority = request.POST.get('priority', complaint.priority)
+        complaint.status = request.POST.get(
+            'status',
+            complaint.status
+        )
+
+        complaint.priority = request.POST.get(
+            'priority',
+            complaint.priority
+        )
+
         complaint.admin_reply = request.POST.get(
-            'admin_reply', complaint.admin_reply).strip()
+            'admin_reply',
+            complaint.admin_reply
+        ).strip()
 
         if complaint.status == 'RESOLVED' and complaint.resolved_at is None:
             complaint.resolved_at = timezone.now()
 
         complaint.save()
 
+        # --------------------------------------------------
+        # IMMEDIATE CHURN RE-SCORE
+        # --------------------------------------------------
+        # Only re-score when the complaint status actually changed.
+        # This makes the churn dashboard reflect complaint changes
+        # immediately instead of waiting for the daily Celery run or
+        # the manual "Refresh scores" action.
+        if old_status != complaint.status:
+            try:
+                # Local import avoids an unnecessary import cycle while
+                # the complaints app is loading.
+                from apps.churn.services import score_customer
+
+                churn_outcome = score_customer(
+                    complaint.user,
+                    debug=False,
+                )
+
+                result = churn_outcome['result']
+
+                logger.info(
+                    "Complaint #%s changed %s -> %s. "
+                    "Customer %s re-scored: %s (%.3f)",
+                    complaint.id,
+                    old_status,
+                    complaint.status,
+                    complaint.user.username,
+                    result['risk_level'],
+                    result['score'],
+                )
+
+            except Exception:
+                # The complaint update should still succeed even if churn
+                # scoring temporarily fails. Log the traceback so the
+                # scoring problem can be diagnosed separately.
+                logger.exception(
+                    "Failed to re-score customer %s after "
+                    "complaint #%s status change.",
+                    complaint.user_id,
+                    complaint.id,
+                )
+
         messages.success(
-            request, f"Complaint #{complaint.id} updated successfully.")
-        return redirect('complaints:complaint_detail', pk=complaint.pk)
+            request,
+            f"Complaint #{complaint.id} updated successfully."
+        )
 
-    return render(request, 'admin/complaint_detail.html', {'complaint': complaint})
+        return redirect(
+            'complaints:complaint_detail',
+            pk=complaint.pk
+        )
 
+    return render(
+        request,
+        'admin/complaint_detail.html',
+        {
+            'complaint': complaint
+        }
+    )
 
 @staff_member_required
 def complaint_delete_confirm(request, pk):

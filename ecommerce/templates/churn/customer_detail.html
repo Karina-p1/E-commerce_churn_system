@@ -180,6 +180,56 @@
     border-top: 0;
   }
 
+  .retention-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .retention-event {
+    border-left: 3px solid #d9d9d9;
+    padding: 10px 12px;
+    background: #fafafa;
+    border-radius: 0 8px 8px 0;
+  }
+
+  .retention-event.recovered {
+    border-left-color: #267a43;
+    background: #f1faf4;
+  }
+
+  .retention-event.expired {
+    border-left-color: #A32D2D;
+    background: #fff6f6;
+  }
+
+  .retention-event-title {
+    font-size: 11.5px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .retention-event-meta {
+    font-size: 10.5px;
+    color: #777;
+    line-height: 1.55;
+  }
+
+  .retention-product {
+    color: #1a1a1a;
+    font-weight: 600;
+  }
+
+  .retention-score-down {
+    color: #267a43;
+    font-weight: 700;
+  }
+
+  .retention-score-up {
+    color: #A32D2D;
+    font-weight: 700;
+  }
+
   .history-table { width: 100%; border-collapse: collapse; }
   .history-table thead th {
     font-size: 10px;
@@ -334,6 +384,79 @@
       </div>
     {% endif %}
   </div>
+
+
+<!-- Retention campaign history -->
+<div class="churn-card">
+  <h2>Retention Activity</h2>
+
+  {% if retention_campaigns %}
+    <div class="retention-timeline">
+      {% for c in retention_campaigns %}
+        <div class="retention-event {% if c.status == 'RECOVERED' %}recovered{% elif c.status == 'EXPIRED' %}expired{% endif %}">
+          <div class="retention-event-title">
+            {{ c.get_status_display }} · {{ c.sent_at|date:"M d, Y H:i" }}
+          </div>
+
+          <div class="retention-event-meta">
+            Campaign started at
+            <strong>{{ c.before_score|floatformat:2 }}</strong>
+            {{ c.before_risk_level|title }} risk.
+
+            {% if c.coupon %}
+              Coupon <strong>{{ c.coupon.code }}</strong>.
+            {% endif %}
+
+            {% if c.viewed_at %}
+              Notification viewed {{ c.viewed_at|date:"M d, H:i" }}.
+            {% endif %}
+
+            {% if c.recovered_order %}
+              <br>
+              Customer returned and purchased
+              <span class="retention-product">{{ c.product_summary }}</span>.
+
+              {% if c.used_campaign_coupon %}
+                The win-back coupon was used.
+              {% else %}
+                The customer returned during the campaign window without using the win-back coupon.
+              {% endif %}
+
+              Return revenue:
+              <strong>Rs. {{ c.recovered_revenue|floatformat:2 }}</strong>.
+            {% endif %}
+
+            {% if c.after_score != None %}
+              <br>
+              Re-score:
+              <strong>{{ c.before_score|floatformat:2 }}</strong>
+              &rarr;
+              <strong>{{ c.after_score|floatformat:2 }}</strong>
+
+              {% if c.score_change < 0 %}
+                <span class="retention-score-down">
+                  ({{ c.score_change|floatformat:2 }})
+                </span>
+              {% elif c.score_change > 0 %}
+                <span class="retention-score-up">
+                  (+{{ c.score_change|floatformat:2 }})
+                </span>
+              {% else %}
+                (0.00)
+              {% endif %}
+
+              · {{ c.get_outcome_display }}
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      No retention campaign has been sent to this customer yet.
+    </div>
+  {% endif %}
+</div>
 
   <!-- Score history chart -->
   <div class="churn-card">
