@@ -1,0 +1,195 @@
+/* ==========================================
+   RESPONSIVE CUSTOM SELECT
+   Shared dropdown for the customer form
+   <select> elements. Same look as
+   complaint_form.html, but viewport aware so
+   the option list can never flood out of the
+   screen.
+
+   Pairs with responsive_select.js, which copies
+   the original select's class list onto the
+   wrapper and the trigger. That means the site's
+   existing styling (including media queries)
+   keeps applying, and only the parts that would
+   break are neutralised below.
+========================================== */
+
+/* ==========================================
+   WRAPPER
+========================================== */
+
+.rs-wrapper {
+    position: relative;
+
+    /* Keeps the layout rules from the original
+       select's classes, drops its own box. */
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+/* Hide the original select visually, but keep it
+   in the form so Django validation and POST work */
+.rs-wrapper > select.rs-native {
+    position: absolute !important;
+    top: 0;
+    left: 0;
+
+    width: 1px !important;
+    height: 1px !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+
+    opacity: 0 !important;
+    pointer-events: none !important;
+
+    appearance: none !important;
+    -webkit-appearance: none !important;
+}
+
+
+/* ==========================================
+   TRIGGER
+========================================== */
+
+.rs-trigger {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+
+    width: 100%;
+
+    text-align: left !important;
+    overflow: hidden;
+
+    cursor: pointer;
+
+    /* Drop the native chevron the classes draw */
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    background-image: none !important;
+}
+
+.rs-trigger:focus {
+    outline: 0;
+}
+
+.rs-label {
+    flex: 1 1 auto;
+    min-width: 0;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.rs-arrow {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+
+    transition: transform 0.2s ease;
+}
+
+.rs-arrow > svg {
+    display: block;
+}
+
+.rs-wrapper.open .rs-arrow {
+    transform: rotate(180deg);
+}
+
+.rs-wrapper.rs-invalid .rs-trigger {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.18);
+}
+
+
+/* ==========================================
+   DROPDOWN MENU
+========================================== */
+
+.rs-menu {
+    display: none;
+
+    position: absolute;
+    top: calc(100% + 5px);
+    left: 0;
+    right: 0;
+
+    width: 100%;
+    max-width: 100%;
+
+    /* Never taller than the viewport allows */
+    max-height: min(240px, 45vh);
+
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+
+    padding: 5px;
+
+    background: #fff;
+
+    color: #212529;
+
+    border: 1px solid #dee2e6;
+    border-radius: 7px;
+
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+
+    z-index: 1050;
+}
+
+.rs-wrapper.open .rs-menu {
+    display: block;
+}
+
+/* Flipped upwards when there is no room below */
+.rs-wrapper.open.rs-up .rs-menu {
+    top: auto;
+    bottom: calc(100% + 5px);
+}
+
+.rs-option {
+    display: block;
+
+    width: 100%;
+    padding: 9px 10px;
+
+    background: transparent;
+    border: 0;
+    border-radius: 5px;
+
+    color: inherit;
+    font: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    text-align: left;
+
+    cursor: pointer;
+
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.rs-option:hover {
+    background: #f1f5f9;
+}
+
+.rs-option.selected {
+    background: #e7f3ff;
+    color: #0d6efd;
+}
+
+.rs-option.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

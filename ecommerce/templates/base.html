@@ -241,31 +241,6 @@
           font-weight: 600;
       }
 
-      /* =====================================================
-        DROPDOWN VIEWPORT SAFETY
-        Prevent menus from leaving the screen
-      ===================================================== */
-
-      .dropdown-menu {
-          max-width: calc(100vw - 24px);
-      }
-
-      /* Notification dropdown */
-      .notif-dropdown-menu {
-          width: 340px;
-          max-width: calc(100vw - 24px);
-          max-height: 70vh;
-          overflow-y: auto;
-          overflow-x: hidden;
-      }
-
-      /* Long dropdown content must wrap */
-      .dropdown-menu .dropdown-item,
-      .notif-dropdown-menu .notif-item {
-          white-space: normal;
-          overflow-wrap: anywhere;
-      }
-
       .search-category select {
         border: none;
         background: transparent;
@@ -991,22 +966,6 @@
             width: 200px;
             max-width: calc(100vw - 24px);
             max-height: 240px;
-        }
-
-        /* Keep navbar dropdowns inside mobile viewport */
-        .nav-right .dropdown-menu {
-            max-width: calc(100vw - 20px);
-        }
-
-        /* Alert dropdown */
-        .nav-right .notif-dropdown-menu {
-            width: min(320px, calc(100vw - 20px));
-        }
-
-        /* Profile dropdown */
-        #accountDropdown + .dropdown-menu {
-            width: min(240px, calc(100vw - 20px));
-            min-width: 190px;
         }
 
         .search-category select {

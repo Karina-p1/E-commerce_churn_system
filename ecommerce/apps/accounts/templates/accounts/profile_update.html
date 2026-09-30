@@ -1,5 +1,12 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block title %}Update Profile{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/responsive_select.css' %}">
+<script src="{% static 'js/responsive_select.js' %}" defer></script>
+{% endblock %}
+
 {% block start %}
 
 <div class="row justify-content-center mt-4">
@@ -16,7 +23,7 @@
                     {% endfor %}
                 {% endif %}
 
-                <form method="post" enctype="multipart/form-data">
+                <form method="post" enctype="multipart/form-data" data-responsive-select>
                     {% csrf_token %}
                     {% for field in form %}
                     <div class="mb-3">
