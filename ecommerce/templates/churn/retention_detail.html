@@ -1,0 +1,478 @@
+{% extends 'admin_base.html' %}
+{% block title %}Retention Campaign — {{ campaign.customer.username }}{% endblock %}
+
+{% block start %}
+<style>
+  .retention-detail-page {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #f5f5f4;
+    padding: 20px;
+    border-radius: 12px;
+    color: #1a1a1a;
+  }
+
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 14px;
+    color: #777;
+    text-decoration: none;
+    font-size: 11.5px;
+  }
+
+  .back-link:hover { color: #1a1a1a; }
+
+  .detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+
+  .detail-header h1 {
+    margin: 0 0 4px;
+    font-size: 19px;
+    font-weight: 600;
+  }
+
+  .subtle {
+    color: #888;
+    font-size: 11px;
+    line-height: 1.5;
+  }
+
+  .status-badge,
+  .risk-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 9px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+  }
+
+  .status-SENT { background: #f0f0f0; color: #666; }
+  .status-VIEWED { background: #e6f1fb; color: #1a7ab5; }
+  .status-RECOVERED { background: #e7f5ec; color: #267a43; }
+  .status-EXPIRED { background: #f8e3e3; color: #A32D2D; }
+
+  .risk-high { background: #f8e3e3; color: #A32D2D; }
+  .risk-low { background: #e8eafd; color: #2931a3; }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .summary-card,
+  .detail-card {
+    background: #fff;
+    border: .5px solid #e5e5e5;
+    border-radius: 10px;
+    padding: 16px;
+  }
+
+  .summary-label {
+    color: #999;
+    font-size: 9.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    margin-bottom: 8px;
+  }
+
+  .summary-title {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+
+  .score-row {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    flex-wrap: wrap;
+  }
+
+  .big-score {
+    font-size: 27px;
+    font-weight: 600;
+    letter-spacing: -.5px;
+  }
+
+  .score-arrow {
+    color: #aaa;
+    font-size: 18px;
+  }
+
+  .score-down { color: #267a43; font-weight: 700; }
+  .score-up { color: #A32D2D; font-weight: 700; }
+
+  .detail-card {
+    margin-bottom: 14px;
+  }
+
+  .detail-card h2 {
+    margin: 0 0 12px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .campaign-meta {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .meta-item {
+    border: .5px solid #eee;
+    border-radius: 8px;
+    padding: 10px;
+    min-width: 0;
+  }
+
+  .meta-label {
+    color: #999;
+    font-size: 9px;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: .05em;
+    margin-bottom: 5px;
+  }
+
+  .meta-value {
+    font-size: 11.5px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+
+  .timeline {
+    position: relative;
+    margin-left: 6px;
+  }
+
+  .timeline::before {
+    content: "";
+    position: absolute;
+    left: 6px;
+    top: 5px;
+    bottom: 5px;
+    width: 1px;
+    background: #e1e1e1;
+  }
+
+  .timeline-event {
+    position: relative;
+    padding: 0 0 18px 30px;
+  }
+
+  .timeline-event:last-child { padding-bottom: 0; }
+
+  .timeline-dot {
+    position: absolute;
+    left: 0;
+    top: 3px;
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    background: #fff;
+    border: 3px solid #aaa;
+    z-index: 1;
+  }
+
+  .timeline-event.risk .timeline-dot { border-color: #A32D2D; }
+  .timeline-event.campaign .timeline-dot { border-color: #2931a3; }
+  .timeline-event.viewed .timeline-dot { border-color: #1a7ab5; }
+  .timeline-event.coupon .timeline-dot { border-color: #8a6b00; }
+  .timeline-event.return .timeline-dot { border-color: #267a43; }
+  .timeline-event.score .timeline-dot { border-color: #7b61a8; }
+  .timeline-event.complaint .timeline-dot { border-color: #c26d18; }
+  .timeline-event.current .timeline-dot { border-color: #111; }
+
+  .timeline-title {
+    font-size: 11.5px;
+    font-weight: 700;
+    margin-bottom: 2px;
+  }
+
+  .timeline-date {
+    color: #aaa;
+    font-size: 9.5px;
+    margin-bottom: 3px;
+  }
+
+  .timeline-detail {
+    color: #666;
+    font-size: 10.5px;
+    line-height: 1.45;
+  }
+
+  .changes-list {
+    display: grid;
+    gap: 8px;
+  }
+
+  .change-item {
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) auto;
+    gap: 14px;
+    align-items: center;
+    border: .5px solid #ededed;
+    border-radius: 9px;
+    padding: 11px 12px;
+  }
+
+  .change-title {
+    font-size: 11.5px;
+    font-weight: 700;
+    margin-bottom: 2px;
+  }
+
+  .change-explanation {
+    font-size: 10px;
+    color: #888;
+  }
+
+  .change-values {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  .value-pill {
+    padding: 4px 7px;
+    border-radius: 6px;
+    background: #f5f5f4;
+    font-weight: 600;
+  }
+
+  .complaint-callout {
+    margin-top: 12px;
+    border: .5px solid #ead7bd;
+    background: #fffaf4;
+    border-radius: 9px;
+    padding: 11px 12px;
+    font-size: 10.5px;
+    color: #795328;
+    line-height: 1.5;
+  }
+
+  .empty-state {
+    color: #999;
+    font-size: 11px;
+    padding: 8px 0;
+  }
+
+  .section-note {
+    margin-top: 9px;
+    font-size: 9.5px;
+    color: #aaa;
+    line-height: 1.45;
+  }
+
+  @media (max-width: 900px) {
+    .campaign-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
+  @media (max-width: 680px) {
+    .retention-detail-page { padding: 12px; }
+    .summary-grid { grid-template-columns: 1fr; }
+    .campaign-meta { grid-template-columns: 1fr 1fr; }
+    .change-item { grid-template-columns: 1fr; }
+    .change-values { white-space: normal; }
+  }
+
+  @media (max-width: 440px) {
+    .campaign-meta { grid-template-columns: 1fr; }
+  }
+</style>
+
+<div class="retention-detail-page">
+
+  <a href="{% url 'churn:retention_dashboard' %}" class="back-link">
+    <i class="ti ti-arrow-left"></i>
+    Back to Retention Campaigns
+  </a>
+
+  <div class="detail-header">
+    <div>
+      <h1>{{ campaign.customer.username }}</h1>
+      <div class="subtle">
+        {{ campaign.customer.email }} · Campaign #{{ campaign.id }} ·
+        Sent {{ campaign.sent_at|date:"M d, Y H:i" }}
+      </div>
+    </div>
+
+    <span class="status-badge status-{{ campaign.status }}">
+      {{ campaign.get_status_display }}
+    </span>
+  </div>
+
+  <div class="summary-grid">
+
+    <div class="summary-card">
+      <div class="summary-label">Campaign result</div>
+      <div class="summary-title">{{ campaign.get_outcome_display }}</div>
+
+      <div class="score-row">
+        <div>
+          <div class="subtle">Before</div>
+          <span class="big-score">{{ campaign.before_score|floatformat:2 }}</span>
+          <span class="risk-badge {% if campaign.before_risk_level == 'high' %}risk-high{% else %}risk-low{% endif %}">
+            {{ campaign.before_risk_level|title }}
+          </span>
+        </div>
+
+        {% if campaign.after_score != None %}
+          <span class="score-arrow">→</span>
+
+          <div>
+            <div class="subtle">Post-campaign</div>
+            <span class="big-score">{{ campaign.after_score|floatformat:2 }}</span>
+            <span class="risk-badge {% if campaign.after_risk_level == 'high' %}risk-high{% else %}risk-low{% endif %}">
+              {{ campaign.after_risk_level|title }}
+            </span>
+          </div>
+        {% endif %}
+      </div>
+
+      {% if campaign_score_change != None %}
+        <div class="subtle" style="margin-top:9px;">
+          Campaign score change:
+          {% if campaign_score_change < 0 %}
+            <span class="score-down">{{ campaign_score_change|floatformat:2 }}</span>
+          {% elif campaign_score_change > 0 %}
+            <span class="score-up">+{{ campaign_score_change|floatformat:2 }}</span>
+          {% else %}
+            0.00
+          {% endif %}
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="summary-card">
+      <div class="summary-label">Current customer state</div>
+
+      {% if latest_score %}
+        <div class="summary-title">Latest customer score</div>
+
+        <div class="score-row">
+          <span class="big-score">{{ latest_score.score|floatformat:2 }}</span>
+          <span class="risk-badge {% if latest_score.risk_level == 'high' %}risk-high{% else %}risk-low{% endif %}">
+            {{ latest_score.risk_level|title }} risk
+          </span>
+        </div>
+
+        <div class="subtle" style="margin-top:10px;">
+          Change from campaign start:
+          <strong>{{ campaign.before_score|floatformat:2 }}</strong>
+          →
+          <strong>{{ latest_score.score|floatformat:2 }}</strong>
+
+          {% if current_score_change != None %}
+            {% if current_score_change < 0 %}
+              <span class="score-down">({{ current_score_change|floatformat:2 }})</span>
+            {% elif current_score_change > 0 %}
+              <span class="score-up">(+{{ current_score_change|floatformat:2 }})</span>
+            {% else %}
+              (0.00)
+            {% endif %}
+          {% endif %}
+        </div>
+
+        {% if campaign.after_score != None %}
+          <div class="subtle" style="margin-top:6px;">
+            Campaign result:
+            <strong>{{ campaign.before_score|floatformat:2 }}</strong>
+            →
+            <strong>{{ campaign.after_score|floatformat:2 }}</strong>
+          </div>
+        {% endif %}
+
+        <div class="subtle" style="margin-top:8px;">
+          Last scored {{ latest_score.predicted_at|date:"M d, Y H:i" }}
+        </div>
+      {% else %}
+        <div class="empty-state">No current saved churn score is available.</div>
+      {% endif %}
+
+      <div class="section-note">
+        The campaign produced the post-campaign score shown on the left.
+        The latest score also includes customer activity and account changes that happened later.
+      </div>
+    </div>
+
+  </div>
+
+  <div class="detail-card">
+    <h2>Campaign details</h2>
+
+    <div class="campaign-meta">
+      <div class="meta-item">
+        <div class="meta-label">Coupon</div>
+        <div class="meta-value">
+          {% if campaign.coupon %}{{ campaign.coupon.code }}{% else %}—{% endif %}
+        </div>
+      </div>
+
+      <div class="meta-item">
+        <div class="meta-label">Coupon attribution</div>
+        <div class="meta-value">
+          {% if campaign.used_campaign_coupon %}
+            Used on return purchase
+          {% elif campaign.recovered_order %}
+            Returned without campaign coupon
+          {% else %}
+            Not redeemed
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="meta-item">
+        <div class="meta-label">Purchased product</div>
+        <div class="meta-value">{{ campaign.product_summary }}</div>
+      </div>
+
+      <div class="meta-item">
+        <div class="meta-label">Associated return revenue</div>
+        <div class="meta-value">
+          {% if campaign.recovered_order %}
+            Rs. {{ campaign.recovered_revenue|floatformat:2 }}
+          {% else %}
+            —
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="detail-card">
+    <h2>Campaign timeline</h2>
+
+    {% if timeline %}
+      <div class="timeline">
+        {% for event in timeline %}
+          <div class="timeline-event {{ event.type }}">
+            <span class="timeline-dot"></span>
+            <div class="timeline-title">{{ event.title }}</div>
+            <div class="timeline-date">{{ event.at|date:"M d, Y H:i" }}</div>
+            <div class="timeline-detail">{{ event.detail }}</div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state">No campaign events are available yet.</div>
+    {% endif %}
+  </div>
+
+
+
+</div>
+{% endblock %}

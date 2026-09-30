@@ -204,6 +204,26 @@
     max-width: 230px;
   }
 
+  .campaign-detail-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 9px;
+    border-radius: 7px;
+    border: .5px solid #d9d9d9;
+    background: #fff;
+    color: #2931a3;
+    text-decoration: none;
+    font-size: 10.5px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .campaign-detail-link:hover {
+    background: #f4f5ff;
+    border-color: #c8caf5;
+  }
+
   .empty-state {
     text-align: center;
     padding: 34px 16px !important;
@@ -332,6 +352,7 @@
           <th>Score change</th>
           <th>Revenue</th>
           <th>Outcome</th>
+          <th>Details</th>
         </tr>
       </thead>
 
@@ -417,11 +438,19 @@
             {{ c.get_outcome_display }}
           </td>
 
+          <td>
+            <a href="{% url 'churn:retention_detail' c.id %}"
+               class="campaign-detail-link">
+              View timeline
+              <i class="ti ti-arrow-right"></i>
+            </a>
+          </td>
+
         </tr>
 
         {% empty %}
         <tr>
-          <td colspan="9" class="empty-state">
+          <td colspan="10" class="empty-state">
             No retention campaigns yet. A campaign is created automatically
             when a customer newly crosses into High churn risk.
           </td>
