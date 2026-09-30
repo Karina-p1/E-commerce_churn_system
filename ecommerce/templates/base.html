@@ -136,6 +136,136 @@
         box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.12);
         background: #fff;
       }
+
+      /* ===============================
+        CUSTOM CATEGORY DROPDOWN
+      ================================ */
+
+      .custom-category {
+          position: relative;
+      }
+
+      .category-trigger {
+          width: 100%;
+          height: 100%;
+
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+
+          padding: 0 12px;
+
+          background: transparent;
+          border: none;
+          outline: none;
+
+          font: inherit;
+          font-size: 13px;
+          color: #111827;
+
+          cursor: pointer;
+      }
+
+      .category-trigger > span {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+      }
+
+      .category-trigger .category-arrow {
+          position: static;
+          flex-shrink: 0;
+          transition: transform 0.2s ease;
+      }
+
+      .custom-category.open .category-arrow {
+          transform: rotate(180deg);
+      }
+
+      .category-dropdown-menu {
+          display: none;
+
+          position: absolute;
+          top: calc(100% + 6px);
+          left: 0;
+
+          width: 220px;
+          max-width: calc(100vw - 24px);
+          max-height: 300px;
+
+          overflow-y: auto;
+          overflow-x: hidden;
+
+          padding: 6px;
+
+          background: #fff;
+
+          border: 1px solid #e5e7eb;
+          border-radius: 10px;
+
+          box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+
+          z-index: 5000;
+      }
+
+      .custom-category.open .category-dropdown-menu {
+          display: block;
+      }
+
+      .category-option {
+          display: block;
+
+          width: 100%;
+          padding: 9px 11px;
+
+          border: none;
+          border-radius: 7px;
+
+          background: transparent;
+
+          color: #111827;
+          font-size: 13px;
+          text-align: left;
+
+          cursor: pointer;
+      }
+
+      .category-option:hover {
+          background: #f3f4f6;
+      }
+
+      .category-option.active {
+          background: #e0f2fe;
+          color: #0284c7;
+          font-weight: 600;
+      }
+
+      /* =====================================================
+        DROPDOWN VIEWPORT SAFETY
+        Prevent menus from leaving the screen
+      ===================================================== */
+
+      .dropdown-menu {
+          max-width: calc(100vw - 24px);
+      }
+
+      /* Notification dropdown */
+      .notif-dropdown-menu {
+          width: 340px;
+          max-width: calc(100vw - 24px);
+          max-height: 70vh;
+          overflow-y: auto;
+          overflow-x: hidden;
+      }
+
+      /* Long dropdown content must wrap */
+      .dropdown-menu .dropdown-item,
+      .notif-dropdown-menu .notif-item {
+          white-space: normal;
+          overflow-wrap: anywhere;
+      }
+
       .search-category select {
         border: none;
         background: transparent;
@@ -762,12 +892,33 @@
             gap: 10px;
         }
 
-        .icon-btn {
-            padding: 6px;
+        /* Hide normal navbar text */
+        .icon-btn > span:not(.notif-badge):not(.cart-badge) {
+            display: none;
         }
 
-        .icon-btn span {
-            display: none;
+        /* Mobile: notification/cart indicator = dot only */
+        .icon-btn .notif-badge,
+        .icon-btn .cart-badge {
+            display: block;
+
+            position: absolute;
+            top: 1px;
+            right: 1px;
+
+            width: 7px;
+            height: 7px;
+            min-width: 7px;
+
+            padding: 0;
+            border-radius: 50%;
+
+            background: #0ea5e9;
+            border: 1.5px solid #fff;
+
+            /* Hide the actual number */
+            font-size: 0;
+            line-height: 0;
         }
 
         .icon-btn svg {
@@ -834,6 +985,28 @@
             height: 42px;
             font-size: 12px;
             padding: 0 10px;
+        }
+
+        .category-dropdown-menu {
+            width: 200px;
+            max-width: calc(100vw - 24px);
+            max-height: 240px;
+        }
+
+        /* Keep navbar dropdowns inside mobile viewport */
+        .nav-right .dropdown-menu {
+            max-width: calc(100vw - 20px);
+        }
+
+        /* Alert dropdown */
+        .nav-right .notif-dropdown-menu {
+            width: min(320px, calc(100vw - 20px));
+        }
+
+        /* Profile dropdown */
+        #accountDropdown + .dropdown-menu {
+            width: min(240px, calc(100vw - 20px));
+            min-width: 190px;
         }
 
         .search-category select {
@@ -903,26 +1076,74 @@
           autocomplete="off"
           style="position: relative"
         >
-          <div class="search-category">
-            <select name="category">
-              <option value="">All Categories</option>
+          <div class="search-category custom-category" id="categoryDropdown">
 
-              {% for cat in all_categories %}
+              <!-- Keep the actual form value here -->
+              <input
+                  type="hidden"
+                  name="category"
+                  id="categoryValue"
+                  value="{{ request.GET.category }}"
+              >
 
-              <option value="{{ cat.slug }}"{% if request.GET.category == cat.slug %} selected{% endif %}>
-                {{ cat.name }}
-              </option>
+              <button
+                  type="button"
+                  class="category-trigger"
+                  id="categoryTrigger"
+                  aria-expanded="false"
+              >
+                  <span id="categoryLabel">
+                      {% if request.GET.category %}
+                          {% for cat in all_categories %}
+                              {% if cat.slug == request.GET.category %}
+                                  {{ cat.name }}
+                              {% endif %}
+                          {% endfor %}
+                      {% else %}
+                          All Categories
+                      {% endif %}
+                  </span>
 
-              {% endfor %}
-            </select>
-            <svg class="category-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none">
-                <polyline
-                    points="6 9 12 15 18 9"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"/>
-            </svg>
+                  <svg
+                      class="category-arrow"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                  >
+                      <polyline
+                          points="6 9 12 15 18 9"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                      />
+                  </svg>
+              </button>
+
+              <div class="category-dropdown-menu" id="categoryMenu">
+
+                  <button
+                      type="button"
+                      class="category-option"
+                      data-value=""
+                      data-label="All Categories"
+                  >
+                      All Categories
+                  </button>
+
+                  {% for cat in all_categories %}
+                  <button
+                      type="button"
+                      class="category-option"
+                      data-value="{{ cat.slug }}"
+                      data-label="{{ cat.name }}"
+                  >
+                      {{ cat.name }}
+                  </button>
+                  {% endfor %}
+
+              </div>
           </div>
 
           <input
@@ -1848,6 +2069,76 @@
         setInterval(pollNotifications, 20000); // every 20 seconds
       })();
       {% endif %}
+
+      document.addEventListener("DOMContentLoaded", function () {
+      const dropdown = document.getElementById("categoryDropdown");
+      const trigger = document.getElementById("categoryTrigger");
+      const menu = document.getElementById("categoryMenu");
+      const valueInput = document.getElementById("categoryValue");
+      const label = document.getElementById("categoryLabel");
+
+      if (!dropdown || !trigger || !menu || !valueInput || !label) {
+          return;
+      }
+
+      const options = menu.querySelectorAll(".category-option");
+
+      // Open / close
+      trigger.addEventListener("click", function (event) {
+          event.stopPropagation();
+
+          const isOpen = dropdown.classList.toggle("open");
+
+          trigger.setAttribute(
+              "aria-expanded",
+              isOpen ? "true" : "false"
+          );
+      });
+
+      // Select category
+      options.forEach(function (option) {
+          option.addEventListener("click", function () {
+
+              const value = this.dataset.value;
+              const text = this.dataset.label;
+
+              valueInput.value = value;
+              label.textContent = text;
+
+              options.forEach(function (item) {
+                  item.classList.remove("active");
+              });
+
+              this.classList.add("active");
+
+              dropdown.classList.remove("open");
+              trigger.setAttribute("aria-expanded", "false");
+          });
+      });
+
+      // Highlight current category
+      options.forEach(function (option) {
+          if (option.dataset.value === valueInput.value) {
+              option.classList.add("active");
+          }
+      });
+
+      // Click outside → close
+      document.addEventListener("click", function (event) {
+          if (!dropdown.contains(event.target)) {
+              dropdown.classList.remove("open");
+              trigger.setAttribute("aria-expanded", "false");
+          }
+      });
+
+      // Escape → close
+      document.addEventListener("keydown", function (event) {
+          if (event.key === "Escape") {
+              dropdown.classList.remove("open");
+              trigger.setAttribute("aria-expanded", "false");
+          }
+      });
+  });
     </script>
 
     {% block extra_js %}{% endblock %}
