@@ -31,3 +31,15 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/myenv/
+<<<<<<< Updated upstream
+=======
+
+# SQLite
+db.sqlite3
+db.sqlite3-journal
+db.sqlite3-shm
+db.sqlite3-wal
+
+# Local database backups
+backups/
+>>>>>>> Stashed changes

@@ -6,11 +6,13 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import get_user_model
 from django.db.models import Avg, OuterRef, Subquery, Count, Q, Sum
+from django.utils import timezone
 
 from .models import ChurnScore, RetentionCampaign
 from .features import extract_features, extract_features_with_metadata
 from .predictor import predict_churn
 from .services import score_all_customers
+from apps.complaints.models import Complaint
 
 User = get_user_model()
 
@@ -292,6 +294,300 @@ def retention_dashboard(request):
         'recovery_rate': recovery_rate,
         'redemption_rate': redemption_rate,
     })
+
+
+# Human-facing labels for the 11 raw churn features.
+_RETENTION_FEATURE_LABELS = {
+    'Complain': 'Complaint status',
+    'DaySinceLastOrder': 'Days since last order',
+    'OrderCount': 'Order count',
+    'CouponUsed': 'Coupons used',
+    'SatisfactionScore': 'Satisfaction score',
+    'HourSpendOnApp': 'Average app time',
+    'NumberOfAddress': 'Saved addresses',
+    'CashbackAmount': 'Coupon savings',
+    'Tenure': 'Tenure',
+    'Gender': 'Gender',
+    'MaritalStatus': 'Marital status',
+}
+
+
+def _retention_feature_changes(before_features, current_features):
+    """
+    Compare the campaign-start feature snapshot with the latest saved
+    churn-score snapshot.
+
+    This explains what changed in the CUSTOMER DATA. It does not claim
+    that any one change caused the score movement.
+    """
+    before_features = before_features or {}
+    current_features = current_features or {}
+
+    preferred_order = [
+        'Complain',
+        'DaySinceLastOrder',
+        'OrderCount',
+        'CouponUsed',
+        'SatisfactionScore',
+        'HourSpendOnApp',
+        'NumberOfAddress',
+        'CashbackAmount',
+        'Tenure',
+        'Gender',
+        'MaritalStatus',
+    ]
+
+    changes = []
+
+    for feature in preferred_order:
+        if feature not in before_features or feature not in current_features:
+            continue
+
+        old = before_features.get(feature)
+        new = current_features.get(feature)
+
+        if old == new:
+            continue
+
+        title = f"{_RETENTION_FEATURE_LABELS.get(feature, feature)} changed"
+        explanation = "Customer data changed after the intervention."
+
+        if feature == 'Complain' and old == 1 and new == 0:
+            title = "Active complaint cleared"
+            explanation = (
+                "The churn input changed from an active complaint to no active complaint."
+            )
+        elif feature == 'DaySinceLastOrder':
+            if isinstance(old, (int, float)) and isinstance(new, (int, float)) and new < old:
+                title = "Customer returned more recently"
+                explanation = "Days since the last order decreased."
+        elif feature == 'OrderCount':
+            if isinstance(old, (int, float)) and isinstance(new, (int, float)) and new > old:
+                title = "Order history increased"
+                explanation = "The customer placed additional non-cancelled order(s)."
+        elif feature == 'CouponUsed':
+            if isinstance(old, (int, float)) and isinstance(new, (int, float)) and new > old:
+                title = "Coupon usage increased"
+                explanation = "The number of orders using a coupon increased."
+        elif feature == 'SatisfactionScore':
+            explanation = "The customer's review-based satisfaction input changed."
+        elif feature == 'HourSpendOnApp':
+            explanation = "Average recent app activity changed."
+
+        changes.append({
+            'feature': feature,
+            'label': _RETENTION_FEATURE_LABELS.get(feature, feature),
+            'before': old,
+            'after': new,
+            'title': title,
+            'explanation': explanation,
+        })
+
+    return changes
+
+
+def _retention_campaign_timeline(campaign, resolved_complaints, latest_score):
+    """
+    Build a truthful chronological timeline from persisted timestamps.
+    """
+    events = []
+
+    source_score = campaign.source_score
+    if source_score:
+        events.append({
+            'at': source_score.predicted_at,
+            'type': 'risk',
+            'title': 'High risk detected',
+            'detail': (
+                f"Saved churn score {source_score.score:.2f} "
+                f"({source_score.risk_level.title()} risk)."
+            ),
+        })
+
+    events.append({
+        'at': campaign.sent_at,
+        'type': 'campaign',
+        'title': 'Win-back campaign sent',
+        'detail': (
+            f"Coupon {campaign.coupon.code} created for this customer."
+            if campaign.coupon
+            else "Targeted retention campaign created."
+        ),
+    })
+
+    if campaign.viewed_at:
+        events.append({
+            'at': campaign.viewed_at,
+            'type': 'viewed',
+            'title': 'Notification viewed',
+            'detail': 'The customer opened/read the retention notification.',
+        })
+
+    if campaign.redeemed_at and campaign.used_campaign_coupon:
+        events.append({
+            'at': campaign.redeemed_at,
+            'type': 'coupon',
+            'title': 'Win-back coupon redeemed',
+            'detail': (
+                f"{campaign.coupon.code} was used on the return purchase."
+                if campaign.coupon
+                else "The campaign coupon was used on the return purchase."
+            ),
+        })
+
+    if campaign.returned_at and campaign.recovered_order:
+        events.append({
+            'at': campaign.returned_at,
+            'type': 'return',
+            'title': 'Customer returned and purchased',
+            'detail': (
+                f"{campaign.product_summary} · "
+                f"Rs. {campaign.recovered_revenue:.2f} associated return revenue."
+            ),
+        })
+
+    if campaign.rescored_at and campaign.after_score is not None:
+        events.append({
+            'at': campaign.rescored_at,
+            'type': 'score',
+            'title': 'Post-campaign re-score',
+            'detail': (
+                f"{campaign.before_score:.2f} → {campaign.after_score:.2f} · "
+                f"{campaign.get_outcome_display()}."
+            ),
+        })
+
+    for complaint in resolved_complaints:
+        events.append({
+            'at': complaint.resolved_at,
+            'type': 'complaint',
+            'title': 'Complaint resolved',
+            'detail': (
+                f"{complaint.subject}. The live churn feature treats resolved "
+                f"complaints as no active complaint."
+            ),
+        })
+
+    if (
+        latest_score
+        and (
+            campaign.rescored_at is None
+            or latest_score.predicted_at > campaign.rescored_at
+        )
+    ):
+        events.append({
+            'at': latest_score.predicted_at,
+            'type': 'current',
+            'title': 'Latest customer churn state',
+            'detail': (
+                f"Latest saved score {latest_score.score:.2f} "
+                f"({latest_score.risk_level.title()} risk)."
+            ),
+        })
+
+    # All timestamps are persisted Django datetimes.
+    return sorted(
+        [event for event in events if event.get('at') is not None],
+        key=lambda event: event['at'],
+    )
+
+
+@login_required
+@user_passes_test(is_admin)
+def retention_campaign_detail(request, campaign_id):
+    """
+    Full closed-loop view of ONE intervention.
+
+    Important distinction:
+      - campaign.after_score / outcome = the result measured immediately
+        after the campaign-attributed paid return order.
+      - latest_score = the customer's current saved churn state, which may
+        change later because of complaint resolution or other behaviour.
+    """
+    campaign = get_object_or_404(
+        RetentionCampaign.objects
+        .select_related(
+            'customer',
+            'coupon',
+            'notification',
+            'source_score',
+            'recovered_order',
+        )
+        .prefetch_related('recovered_order__items'),
+        pk=campaign_id,
+    )
+
+    latest_score = (
+        ChurnScore.objects
+        .filter(customer=campaign.customer)
+        .order_by('-predicted_at')
+        .first()
+    )
+
+    before_features = (
+        campaign.source_score.features
+        if campaign.source_score and campaign.source_score.features
+        else {}
+    )
+    current_features = (
+        latest_score.features
+        if latest_score and latest_score.features
+        else {}
+    )
+
+    feature_changes = _retention_feature_changes(
+        before_features,
+        current_features,
+    )
+
+    resolved_complaints = list(
+        Complaint.objects
+        .filter(
+            user=campaign.customer,
+            status='RESOLVED',
+            resolved_at__isnull=False,
+            resolved_at__gte=campaign.sent_at,
+        )
+        .order_by('resolved_at')
+    )
+
+    timeline = _retention_campaign_timeline(
+        campaign,
+        resolved_complaints,
+        latest_score,
+    )
+
+    current_score_change = None
+    if latest_score is not None:
+        current_score_change = round(
+            latest_score.score - campaign.before_score,
+            3,
+        )
+
+    campaign_score_change = campaign.score_change
+
+    complaint_feature_change = next(
+        (
+            change for change in feature_changes
+            if change['feature'] == 'Complain'
+            and change['before'] == 1
+            and change['after'] == 0
+        ),
+        None,
+    )
+
+    context = {
+        'campaign': campaign,
+        'latest_score': latest_score,
+        'timeline': timeline,
+        'feature_changes': feature_changes,
+        'resolved_complaints': resolved_complaints,
+        'complaint_feature_change': complaint_feature_change,
+        'campaign_score_change': campaign_score_change,
+        'current_score_change': current_score_change,
+    }
+
+    return render(request, 'churn/retention_detail.html', context)
 
 
 @login_required
