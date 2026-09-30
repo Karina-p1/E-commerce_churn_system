@@ -3,6 +3,7 @@ from decimal import Decimal, ROUND_DOWN
 from django.db import transaction
 
 from apps.orders.models import Order
+from apps.notifications.models import Notification
 
 from .models import (
     LoyaltyAccount,
@@ -23,6 +24,16 @@ class LoyaltyService:
 
     BASE_AMOUNT_PER_POINT = Decimal("10")
     POINTS_PER_RUPEE_REWARD = Decimal("0.5")
+
+    @staticmethod
+    def _create_notification(user, notif_type, title, message):
+        """Create a customer notification for a completed loyalty event."""
+        return Notification.objects.create(
+            recipient=user,
+            notif_type=notif_type,
+            title=title,
+            message=message,
+        )
 
     @staticmethod
     def get_or_create_account(user):
@@ -234,10 +245,12 @@ class LoyaltyService:
         - Review reward can only be awarded once for the order.
         """
 
+        account = LoyaltyService.get_or_create_account(user)
+
         account = (
             LoyaltyAccount.objects
             .select_for_update()
-            .get(user=user)
+            .get(pk=account.pk)
         )
 
         # Prevent duplicate review rewards for the same order.
@@ -329,6 +342,10 @@ class LoyaltyService:
             .get(user=user)
         )
 
+        # Remember the tier before this earning event so we can
+        # notify only when the customer actually moves up.
+        previous_tier = account.current_tier
+
         # Ensure the account has a tier.
         if not account.current_tier_id:
             tier = LoyaltyService.get_tier_for_points(
@@ -370,6 +387,33 @@ class LoyaltyService:
             description=description,
             order=order,
         )
+
+        order_text = f" from Order #{order.id}" if order else ""
+        LoyaltyService._create_notification(
+            user=user,
+            notif_type="POINTS_EARNED",
+            title=f"{points} loyalty points earned",
+            message=(
+                f"You earned {points} loyalty points{order_text}. "
+                f"Your new balance is {account.available_points} points."
+            ),
+        )
+
+        if (
+            new_tier
+            and previous_tier
+            and new_tier.id != previous_tier.id
+            and new_tier.minimum_points > previous_tier.minimum_points
+        ):
+            LoyaltyService._create_notification(
+                user=user,
+                notif_type="TIER_UPGRADE",
+                title=f"Welcome to {new_tier.name}!",
+                message=(
+                    f"You've reached the {new_tier.name} loyalty tier "
+                    f"and unlocked your new benefits."
+                ),
+            )
 
         return account
 
@@ -459,6 +503,19 @@ class LoyaltyService:
             balance_after=account.available_points,
             description=description,
             order=order,
+        )
+
+        reward_value = LoyaltyService.calculate_reward_value(points)
+        order_text = f" on Order #{order.id}" if order else ""
+        LoyaltyService._create_notification(
+            user=user,
+            notif_type="POINTS_REDEEMED",
+            title=f"{points} loyalty points redeemed",
+            message=(
+                f"{points} loyalty points were redeemed{order_text}, "
+                f"saving you Rs. {reward_value:.2f}. "
+                f"Your new balance is {account.available_points} points."
+            ),
         )
 
         return account
@@ -576,10 +633,16 @@ class LoyaltyService:
     @transaction.atomic
     def reverse_order_points(order, description=None):
         """
-        Reverse loyalty points earned from a specific order.
+        Reverse all loyalty effects associated with an order.
 
-        The original PURCHASE transaction is used to determine
-        exactly how many points were awarded.
+        Reverses:
+        - PURCHASE points
+        - FIRST_PURCHASE bonus
+        - Restores redeemed points
+
+        Review points are NOT reversed because the review is a
+        separate customer action and is not automatically invalidated
+        by an order refund/cancellation.
         """
 
         if not order:
@@ -587,40 +650,147 @@ class LoyaltyService:
                 "An order is required for point reversal."
             )
 
-        # Find the original purchase reward
-        purchase_transaction = (
+        account = (
+            LoyaltyAccount.objects
+            .select_for_update()
+            .get(user=order.user)
+        )
+
+        if description is None:
+            description = (
+                f"Loyalty points reversed for Order #{order.id}"
+            )
+
+        # ---------------------------------------------------------
+        # 1. REVERSE PURCHASE + FIRST PURCHASE POINTS
+        # ---------------------------------------------------------
+
+        earned_transactions = (
             LoyaltyTransaction.objects
             .filter(
+                account=account,
                 order=order,
-                transaction_type__in=["PURCHASE", "FIRST_PURCHASE"],
+                transaction_type__in=[
+                    "PURCHASE",
+                    "FIRST_PURCHASE",
+                ],
+                points__gt=0,
+            )
+        )
+
+        total_points_earned = sum(
+            transaction.points
+            for transaction in earned_transactions
+        )
+
+        # Check whether the earned points have already been reversed.
+        reversal_exists = LoyaltyTransaction.objects.filter(
+            account=account,
+            order=order,
+            transaction_type="REFUND_REVERSAL",
+        ).exists()
+
+        if total_points_earned > 0 and not reversal_exists:
+
+            points_to_remove = min(
+                total_points_earned,
+                account.available_points,
+            )
+
+            account.available_points -= points_to_remove
+
+            account.lifetime_points_earned = max(
+                0,
+                account.lifetime_points_earned
+                - total_points_earned,
+            )
+
+            # Recalculate tier after removing earned points.
+            new_tier = LoyaltyService.get_tier_for_points(
+                account.lifetime_points_earned
+            )
+
+            if new_tier:
+                account.current_tier = new_tier
+
+            account.save(
+                update_fields=[
+                    "available_points",
+                    "lifetime_points_earned",
+                    "current_tier",
+                    "updated_at",
+                ]
+            )
+
+            LoyaltyTransaction.objects.create(
+                account=account,
+                transaction_type="REFUND_REVERSAL",
+                points=-total_points_earned,
+                balance_after=account.available_points,
+                description=description,
+                order=order,
+            )
+
+        # ---------------------------------------------------------
+        # 2. RESTORE REDEEMED POINTS
+        # ---------------------------------------------------------
+
+        redemption = (
+            LoyaltyTransaction.objects
+            .filter(
+                account=account,
+                order=order,
+                transaction_type="REDEMPTION",
+                points__lt=0,
             )
             .first()
         )
 
-        # This order never earned purchase points.
-        if not purchase_transaction:
-            return LoyaltyService.get_or_create_account(
-                order.user
-            )
-
-        points_earned = purchase_transaction.points
-
-        if points_earned <= 0:
-            return LoyaltyService.get_or_create_account(
-                order.user
-            )
-
-        if description is None:
-            description = (
-                f"Points reversed for Order #{order.id}"
-            )
-
-        return LoyaltyService.reverse_points(
-            user=order.user,
-            points=points_earned,
-            description=description,
+        redemption_reversal_exists = LoyaltyTransaction.objects.filter(
+            account=account,
             order=order,
-        )
+            transaction_type="REDEMPTION_REVERSAL",
+        ).exists()
+
+        if (
+            redemption
+            and not redemption_reversal_exists
+        ):
+            redeemed_points = abs(redemption.points)
+
+            account.available_points += redeemed_points
+
+            account.save(
+                update_fields=[
+                    "available_points",
+                    "updated_at",
+                ]
+            )
+
+            LoyaltyTransaction.objects.create(
+                account=account,
+                transaction_type="REDEMPTION_REVERSAL",
+                points=redeemed_points,
+                balance_after=account.available_points,
+                description=(
+                    f"Redeemed loyalty points restored "
+                    f"for Order #{order.id}"
+                ),
+                order=order,
+            )
+
+            LoyaltyService._create_notification(
+                user=order.user,
+                notif_type="POINTS_RESTORED",
+                title=f"{redeemed_points} loyalty points restored",
+                message=(
+                    f"{redeemed_points} redeemed loyalty points from "
+                    f"Order #{order.id} were restored. Your balance is "
+                    f"now {account.available_points} points."
+                ),
+            )
+
+        return account
 
     @staticmethod
     def calculate_reward_value(points):

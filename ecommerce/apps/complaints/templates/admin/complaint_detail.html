@@ -65,7 +65,12 @@
   .priority-pill::before, .status-pill::before { content: ""; width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
   .priority-LOW { background: #f0f0f0; color: #6c757d; }
   .priority-MEDIUM { background: #eaf1ff; color: #0d6efd; }
-  .priority-HIGH { background: #f8e3e3; color: #A32D2D; }
+  .priority-HIGH { background: #fff0e6; color: #c2410c; }
+  .priority-URGENT {
+    background: #fee2e2; color: #b91c1c; border: 0.5px solid #fecaca;
+    font-weight: 700;
+  }
+  .priority-URGENT::before { box-shadow: 0 0 0 2px #fecaca; }
   .status-PENDING { background: #fff6e0; color: #b8860b; }
   .status-IN_PROGRESS { background: #e0f6fb; color: #0e7c9c; }
   .status-RESOLVED { background: #e8f3e1; color: #3a8c1c; }
@@ -105,6 +110,28 @@
     background: #f3f4fb; border-radius: 8px; padding: 12px 14px; font-size: 12.5px;
     color: #2931a3; line-height: 1.5; margin-bottom: 12px;
   }
+
+  .loyalty-support {
+    background: #fffbeb; border: 0.5px solid #fde68a; border-radius: 9px;
+    padding: 12px 14px; margin-bottom: 14px;
+  }
+  .loyalty-support-title {
+    display: flex; align-items: center; gap: 6px; margin-bottom: 9px;
+    color: #92400e; font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .loyalty-support-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  }
+  .loyalty-support-item {
+    background: rgba(255,255,255,.65); border-radius: 7px; padding: 8px 10px;
+  }
+  .loyalty-support-item small {
+    display: block; color: #a16207; font-size: 9px; text-transform: uppercase;
+    letter-spacing: .05em; margin-bottom: 2px;
+  }
+  .loyalty-support-item strong { color: #78350f; font-size: 12px; }
+  .loyalty-note { margin: 9px 0 0; color: #92400e; font-size: 10.5px; line-height: 1.45; }
 </style>
 
 <div class="mgmt-page">
@@ -141,7 +168,11 @@
         <div class="info-row">
           <span class="label">Order</span>
           <span class="value">
-            {% if complaint.order %}#{{ complaint.order.id }}{% else %}—{% endif %}
+            {% if complaint.order %}
+              {% with first_item=complaint.order.items.first %}
+                {% if first_item %}{{ first_item.product_name }}{% if complaint.order.items.count > 1 %} + {{ complaint.order.items.count|add:"-1" }} more{% endif %}<br><small style="color:#888;">Order #{{ complaint.order.id }}</small>{% else %}Order #{{ complaint.order.id }}{% endif %}
+              {% endwith %}
+            {% else %}—{% endif %}
           </span>
         </div>
         <div class="info-row">
@@ -184,6 +215,30 @@
     <div>
       <div class="card">
         <h3>Update Complaint</h3>
+
+        {% with loyalty=complaint.user.loyalty_account %}
+          {% if loyalty.current_tier %}
+            <div class="loyalty-support">
+              <div class="loyalty-support-title">
+                <i class="ti ti-crown"></i>
+                Loyalty Support Benefit
+              </div>
+              <div class="loyalty-support-grid">
+                <div class="loyalty-support-item">
+                  <small>Customer Tier</small>
+                  <strong>{{ loyalty.current_tier.name }}</strong>
+                </div>
+                <div class="loyalty-support-item">
+                  <small>Tier Support</small>
+                  <strong>{{ loyalty.current_tier.get_support_priority_display }}</strong>
+                </div>
+              </div>
+              <p class="loyalty-note">
+                Initial complaint priority is assigned automatically from the customer's loyalty-tier support benefit. Staff may override it when required.
+              </p>
+            </div>
+          {% endif %}
+        {% endwith %}
 
         {% if complaint.admin_reply %}
           <div class="existing-reply">

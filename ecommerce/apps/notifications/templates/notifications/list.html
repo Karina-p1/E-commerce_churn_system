@@ -3,9 +3,107 @@
 {% block title %}Notifications{% endblock %}
 
 {% block start %}
-<div style="max-width: 680px; margin: 0 auto;">
+<style>
+.notif-card {
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid #e8eaed;
+  border-radius: 12px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+  transition: transform 0.2s ease, box-shadow 0.2s ease,
+              border-color 0.2s ease;
+}
 
-  <div class="d-flex justify-content-between align-items-center mb-3">
+.notif-card:hover {
+  transform: translateY(-2px);
+  border-color: #cbd5e1;
+  box-shadow: 0 8px 20px rgba(14, 58, 92, 0.1);
+}
+
+.notif-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+
+.notif-card-title,
+.notif-card-message {
+  overflow-wrap: anywhere;
+}
+
+.notif-delete-form {
+  flex-shrink: 0;
+  align-self: center;
+  margin: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.notif-delete-btn {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid #fecaca;
+  border-radius: 9px;
+  background: #fff1f2;
+  color: #dc2626;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.notif-delete-btn:hover {
+  background: #dc2626;
+  color: #fff;
+}
+
+.notif-delete-btn:focus-visible {
+  outline: 2px solid #dc2626;
+  outline-offset: 3px;
+}
+
+/* Hide only when the device supports precise pointer hover. */
+@media (hover: hover) and (pointer: fine) {
+  .notif-delete-form {
+    opacity: 0;
+    transform: translateX(6px);
+    pointer-events: none;
+  }
+
+  .notif-card:hover .notif-delete-form,
+  .notif-card:focus-within .notif-delete-form {
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: auto;
+  }
+}
+
+@media (max-width: 575px) {
+  .notif-card {
+    gap: 9px;
+    padding: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notif-card,
+  .notif-delete-form,
+  .notif-delete-btn {
+    transition: none;
+    transform: none;
+  }
+
+  .notif-card:hover {
+    transform: none;
+  }
+}
+</style>
+
+<div style="max-width: 680px; margin: 0 auto;">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
     <h3 class="fw-bold mb-0" style="color:#0e3a5c;">Notifications</h3>
     {% if unread_notification_count %}
     <a href="{% url 'notifications:mark_all_read' %}"
@@ -36,38 +134,77 @@
   {% if notifications %}
   <div style="display:flex; flex-direction:column; gap:8px;">
     {% for n in notifications %}
-    <div style="display:flex; gap:12px; padding:14px 16px; border-radius:12px;
-                background:{% if not n.is_read %}#f0f9ff{% else %}#fff{% endif %};
-                border:1px solid #e8eaed; box-shadow:0 1px 4px rgba(0,0,0,0.03);">
+    <div class="notif-card"
+         style="background:{% if not n.is_read %}#f0f9ff{% else %}#fff{% endif %};">
       <div style="flex-shrink:0; width:38px; height:38px; border-radius:10px;
                   display:flex; align-items:center; justify-content:center;
                   {% if n.notif_type == 'COUPON' %}background:#e0f2fe; color:#0284c7;
                   {% elif n.notif_type == 'OFFER_EXPIRING' %}background:#fef3c7; color:#b45309;
                   {% elif n.notif_type == 'REFUND' %}background:#dcfce7; color:#16a34a;
+                  {% elif n.notif_type == 'POINTS_EARNED' %}background:#ecfdf5; color:#059669;
+                  {% elif n.notif_type == 'POINTS_REDEEMED' %}background:#eff6ff; color:#2563eb;
+                  {% elif n.notif_type == 'POINTS_RESTORED' %}background:#f0fdf4; color:#16a34a;
+                  {% elif n.notif_type == 'TIER_UPGRADE' %}background:#fef3c7; color:#d97706;
                   {% else %}background:#f3f4f6; color:#6b7280;{% endif %}">
         {% if n.notif_type == 'COUPON' %}
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41L11 3.83V3H4v7h.83l9.58 9.58a2 2 0 002.83 0l3.35-3.35a2 2 0 000-2.82z"/><circle cx="7.5" cy="7.5" r="1.5" fill="currentColor"/></svg>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20.59 13.41L11 3.83V3H4v7h.83l9.58 9.58a2 2 0 002.83 0l3.35-3.35a2 2 0 000-2.82z"/><circle cx="7.5" cy="7.5" r="1.5" fill="currentColor"/></svg>
         {% elif n.notif_type == 'OFFER_EXPIRING' %}
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
         {% elif n.notif_type == 'REFUND' %}
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8 12l2.5 2.5L16 9"/></svg>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12l2.5 2.5L16 9"/></svg>
+        {% elif n.notif_type == 'POINTS_EARNED' %}
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v4c0 1.7 3.1 3 7 3s7-1.3 7-3V6"/><path d="M5 10v4c0 1.7 3.1 3 7 3s7-1.3 7-3v-4"/><path d="M5 14v4c0 1.7 3.1 3 7 3s7-1.3 7-3v-4"/></svg>
+        {% elif n.notif_type == 'POINTS_REDEEMED' %}
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M12 8v13"/><path d="M3 12h18"/><path d="M7.5 8C5.5 8 4 7 4 5.5S5.2 3 6.7 3C9 3 12 8 12 8"/><path d="M16.5 8c2 0 3.5-1 3.5-2.5S18.8 3 17.3 3C15 3 12 8 12 8"/></svg>
+        {% elif n.notif_type == 'POINTS_RESTORED' %}
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg>
+        {% elif n.notif_type == 'TIER_UPGRADE' %}
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v4a5 5 0 01-10 0V4z"/><path d="M7 6H4v2a4 4 0 004 4"/><path d="M17 6h3v2a4 4 0 01-4 4"/></svg>
         {% else %}
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
         {% endif %}
       </div>
+
       <div style="flex:1; min-width:0;">
-        <div class="d-flex justify-content-between">
-          <span style="font-weight:{% if not n.is_read %}700{% else %}600{% endif %}; font-size:14px; color:#1f2937;">
+        <div class="notif-heading">
+          <span class="notif-card-title"
+                style="font-weight:{% if not n.is_read %}700{% else %}600{% endif %}; font-size:14px; color:#1f2937;">
             {% if not n.is_read %}<span class="notif-unread-dot"></span>{% endif %}{{ n.title }}
           </span>
-          <span style="font-size:11.5px; color:#9ca3af; white-space:nowrap; margin-left:10px;">{{ n.created_at|time_ago }}</span>
+          <span style="font-size:11.5px; color:#9ca3af; white-space:nowrap;">
+            {{ n.created_at|time_ago }}
+          </span>
         </div>
-        <div style="font-size:13px; color:#6b7280; margin-top:2px;">{{ n.message }}</div>
+
+        <div class="notif-card-message" style="font-size:13px; color:#6b7280; margin-top:2px;">
+          {{ n.message }}
+        </div>
+
         {% if not n.is_read %}
         <a href="{% url 'notifications:mark_read' n.id %}"
-           style="font-size:12px; font-weight:600; color:#0ea5e9; text-decoration:none;">Mark as read</a>
+           style="font-size:12px; font-weight:600; color:#0ea5e9; text-decoration:none;">
+          Mark as read
+        </a>
         {% endif %}
       </div>
+
+      <form method="post"
+            action="{% url 'notifications:delete' n.id %}"
+            class="notif-delete-form">
+        {% csrf_token %}
+        <input type="hidden" name="filter" value="{{ filter_type|default:'' }}">
+        <button type="submit"
+                class="notif-delete-btn"
+                title="Delete notification"
+                aria-label="Delete notification: {{ n.title }}">
+          <svg width="17" height="17" viewBox="0 0 24 24"
+               fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round"
+               aria-hidden="true" focusable="false">
+            <path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/>
+          </svg>
+        </button>
+      </form>
     </div>
     {% endfor %}
   </div>

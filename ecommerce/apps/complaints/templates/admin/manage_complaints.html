@@ -61,6 +61,8 @@
   }
   .mgmt-table-card tbody tr { border-top: 0.5px solid #f5f5f4; }
   .mgmt-table-card tbody tr:hover { background: #fafafa; }
+  .mgmt-table-card tbody tr.urgent-row { background: #fffafa; }
+  .mgmt-table-card tbody tr.urgent-row:hover { background: #fff5f5; }
   .mgmt-table-card td { padding: 10px 8px 10px 0; font-size: 12px; vertical-align: middle; }
 
   .subject-cell { max-width: 220px; }
@@ -80,7 +82,12 @@
   .priority-pill::before { content: ""; width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
   .priority-LOW { background: #f0f0f0; color: #6c757d; }
   .priority-MEDIUM { background: #eaf1ff; color: #0d6efd; }
-  .priority-HIGH { background: #f8e3e3; color: #A32D2D; }
+  .priority-HIGH { background: #fff0e6; color: #c2410c; }
+  .priority-URGENT {
+    background: #fee2e2; color: #b91c1c; border: 0.5px solid #fecaca;
+    font-weight: 700;
+  }
+  .priority-URGENT::before { box-shadow: 0 0 0 2px #fecaca; }
 
   .status-pill {
     display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px;
@@ -142,6 +149,7 @@
       <option value="low" {% if priority == 'low' %}selected{% endif %}>Low</option>
       <option value="medium" {% if priority == 'medium' %}selected{% endif %}>Medium</option>
       <option value="high" {% if priority == 'high' %}selected{% endif %}>High</option>
+      <option value="urgent" {% if priority == 'urgent' %}selected{% endif %}>Urgent</option>
     </select>
 
     <input type="hidden" name="status" value="{{ status }}">
@@ -169,11 +177,18 @@
       </thead>
       <tbody>
         {% for complaint in page_obj %}
-        <tr>
+        <tr{% if complaint.priority == 'URGENT' %} class="urgent-row"{% endif %}>
           <td>#{{ complaint.id }}</td>
           <td class="subject-cell">
             <span class="subj">{{ complaint.subject|truncatechars:40 }}</span>
-            <span class="cust">{{ complaint.user.username }}{% if complaint.order %} · Order #{{ complaint.order.id }}{% endif %}</span>
+            <span class="cust">
+              {{ complaint.user.username }}
+              {% if complaint.order %}
+                {% with first_item=complaint.order.items.first %}
+                  · {% if first_item %}{{ first_item.product_name }}{% if complaint.order.items.count > 1 %} + {{ complaint.order.items.count|add:"-1" }} more{% endif %} · Order #{{ complaint.order.id }}{% else %}Order #{{ complaint.order.id }}{% endif %}
+                {% endwith %}
+              {% endif %}
+            </span>
           </td>
           <td><span class="type-pill">{{ complaint.get_complaint_type_display }}</span></td>
           <td><span class="priority-pill priority-{{ complaint.priority }}">{{ complaint.get_priority_display }}</span></td>

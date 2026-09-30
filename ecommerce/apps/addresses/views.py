@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
@@ -65,7 +66,8 @@ def add_address(request):
         "addresses/address_form.html",
         {
             "form": form,
-            "title": "Add Address"
+            "title": "Add Address",
+            "mapbox_access_token": settings.MAPBOX_ACCESS_TOKEN,
         }
     )
 
@@ -108,7 +110,8 @@ def edit_address(request, pk):
         "addresses/address_form.html",
         {
             "form": form,
-            "title": "Edit Address"
+            "title": "Edit Address",
+            "mapbox_access_token": settings.MAPBOX_ACCESS_TOKEN,
         }
     )
 

@@ -1,5 +1,5 @@
 {% extends 'admin_base.html' %}
-{% block title %}Order #{{ order.id }} - ShopMart Admin{% endblock %}
+{% block title %}{% with first_item=order.items.first %}{% if first_item %}{{ first_item.product_name }}{% else %}Order{% endif %} - ShopMart Admin{% endwith %}{% endblock %}
 
 {% block start %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
@@ -102,8 +102,16 @@
   <div class="detail-header">
     <a href="{% url 'order_list_admin' %}" class="back-link"><i class="ti ti-arrow-left"></i></a>
     <div>
-      <h1>Order #{{ order.id }}</h1>
-      <div class="order-date">Placed {{ order.created_at|date:"M d, Y, g:i A" }}</div>
+      {% with first_item=order.items.first %}
+      <h1>
+        {% if first_item %}
+          {{ first_item.product_name }}{% if order.items.count > 1 %} <span style="font-weight:400;color:#888;">+ {{ order.items.count|add:"-1" }} more</span>{% endif %}
+        {% else %}
+          Order
+        {% endif %}
+      </h1>
+      {% endwith %}
+      <div class="order-date">Order #{{ order.id }} &middot; Placed {{ order.created_at|date:"M d, Y, g:i A" }}</div>
     </div>
   </div>
 
@@ -149,9 +157,44 @@
               <td class="num">Rs. {{ item.subtotal }}</td>
             </tr>
             {% endfor %}
+            <!-- Full order calculation -->
+            <tr>
+              <td colspan="3" style="text-align:right;color:#888;">Items subtotal</td>
+              <td class="num">Rs. {{ order.items_subtotal|floatformat:2 }}</td>
+            </tr>
+
+            <tr>
+              <td colspan="3" style="text-align:right;color:#888;">Delivery</td>
+              <td class="num">
+                {% if order.shipping_fee == 0 %}
+                  Rs. 0.00 <span style="color:#3a8c1c;font-size:10.5px;font-weight:600;">FREE</span>
+                {% else %}
+                  + Rs. {{ order.shipping_fee|floatformat:2 }}
+                {% endif %}
+              </td>
+            </tr>
+
+            {% if order.discount_amount > 0 %}
+            <tr>
+              <td colspan="3" style="text-align:right;color:#3a8c1c;">
+                Coupon discount{% if order.coupon %} ({{ order.coupon.code }}){% endif %}
+              </td>
+              <td class="num" style="color:#3a8c1c;">− Rs. {{ order.discount_amount|floatformat:2 }}</td>
+            </tr>
+            {% endif %}
+
+            {% if order.loyalty_discount_amount > 0 %}
+            <tr>
+              <td colspan="3" style="text-align:right;color:#7c3aed;">
+                Loyalty points{% if order.loyalty_points_redeemed %} ({{ order.loyalty_points_redeemed }} points){% endif %}
+              </td>
+              <td class="num" style="color:#7c3aed;">− Rs. {{ order.loyalty_discount_amount|floatformat:2 }}</td>
+            </tr>
+            {% endif %}
+
             <tr class="totals-row">
-              <td colspan="3">Total</td>
-              <td class="num">Rs. {{ order.total_price }}</td>
+              <td colspan="3">Grand total</td>
+              <td class="num">Rs. {{ order.payable_amount|floatformat:2 }}</td>
             </tr>
           </tbody>
         </table>

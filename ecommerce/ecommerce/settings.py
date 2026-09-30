@@ -154,7 +154,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "Asia/Kathmandu"
 
 USE_I18N = True
 
@@ -189,7 +189,7 @@ STORAGES = {
 
 # eSewa Payment Config
 ESEWA_PRODUCT_CODE = "EPAYTEST"
-ESEWA_SECRET_KEY = "8gBm/:&EnhH.1/q"
+ESEWA_SECRET_KEY = os.getenv("ESEWA_SECRET_KEY", "")
 ESEWA_PAYMENT_URL = "https://rc-epay.esewa.com.np/api/epay/main/v2/form"
 
 MEDIA_URL = "/media/"
@@ -209,6 +209,8 @@ LOGIN_REDIRECT_URL = "/"
 REDIS_HOST = "127.0.0.1"
 REDIS_PORT = 6379
 
+
+# Celery configuration
 CELERY_BROKER_URL = "redis://127.0.0.1:6379/0"
 
 CELERY_RESULT_BACKEND = "redis://127.0.0.1:6379/0"
@@ -226,13 +228,16 @@ from celery.schedules import crontab
 CELERY_BEAT_SCHEDULE = {
     "close-inactive-sessions": {
         "task": "apps.activity.tasks.close_inactive_sessions",
-        "schedule": 300,   # every 5 minutes
+        "schedule": 300,  # check every 5 minutes
     },
+
     "score-customer-churn-daily": {
         "task": "apps.churn.tasks.score_all_customers_task",
-        "schedule": crontab(hour=2, minute=0),   # every day at 2:00 AM
+        "schedule": crontab(hour=2, minute=0),
     },
 }
+
+MAPBOX_ACCESS_TOKEN = os.getenv("MAPBOX_ACCESS_TOKEN", "")
 
 # Email
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

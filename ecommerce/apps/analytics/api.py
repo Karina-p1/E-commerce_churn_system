@@ -1,559 +1,1753 @@
+from collections import defaultdict
+
+from datetime import datetime, timedelta
+
+from decimal import Decimal
+
 import io
+
 from xml.sax.saxutils import escape
 
-from django.http import HttpResponse
+from django.db.models import Avg, Count, Sum
+
+from django.db.models.functions import TruncDay, TruncMonth, TruncWeek, TruncYear
+
+from django.http import HttpResponse, JsonResponse
+
+from django.utils import timezone
+
 from django.views.decorators.http import require_POST
 
 from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 
-from decimal import Decimal
-from django.http import JsonResponse
-from django.conf import settings
-from .models import RevenueSummary,RevenueSnapshot
-from django.db.models import Sum, F, DecimalField, ExpressionWrapper
-from django.db.models.functions import (
-    TruncDate,
-    TruncDay,
-    TruncWeek,
-    TruncMonth,
-    TruncYear,
-)
-from apps.orders.models import Order, OrderItem
-from django.db.models import Count,Sum
-from apps.orders.models import RefundRequest
-from django.utils import timezone
+from reportlab.lib.pagesizes import A4
+
+from reportlab.lib.styles import getSampleStyleSheet
+
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+
+from apps.orders.models import Order, OrderItem, RefundRequest
+
+from .models import RevenueSnapshot, RevenueSummary
+
+ZERO = Decimal("0.00")
+
+# -----------------------------------------------------------------------------
+
+# Shared filters / helpers
+
+# -----------------------------------------------------------------------------
+
+def _parse_date(value):
+
+    if not value:
+
+        return None
+
+    try:
+
+        return datetime.strptime(value, "%Y-%m-%d").date()
+
+    except (TypeError, ValueError):
+
+        return None
+
+def _period_dates(request):
+
+    """Return (period, start_date, end_date).
+
+    Supported periods:
+
+    today, daily (last 30 days), weekly (last 12 weeks),
+
+    monthly (last 12 months), yearly (last 5 years), custom.
+
+    """
+
+    today = timezone.localdate()
+
+    period = request.GET.get("period", "today").lower()
+
+    if period == "today":
+
+        return period, today, today
+
+    if period == "daily":
+
+        return period, today - timedelta(days=29), today
+
+    if period == "weekly":
+
+        return period, today - timedelta(days=83), today
+
+    if period == "yearly":
+
+        try:
+
+            start = today.replace(year=today.year - 4, month=1, day=1)
+
+        except ValueError:
+
+            start = today.replace(year=today.year - 4, month=1, day=1)
+
+        return period, start, today
+
+    if period == "custom":
+
+        start = _parse_date(request.GET.get("start")) or today
+
+        end = _parse_date(request.GET.get("end")) or today
+
+        if end < start:
+
+            start, end = end, start
+
+        return period, start, end
+
+    # monthly default: last 12 calendar months including current month
+
+    month_start = today.replace(day=1)
+
+    year = month_start.year
+
+    month = month_start.month - 11
+
+    while month <= 0:
+
+        month += 12
+
+        year -= 1
+
+    return "monthly", month_start.replace(year=year, month=month), today
+
+def _paid_orders(request):
+
+    _, start, end = _period_dates(request)
+
+    return Order.objects.filter(
+
+        payment_status="PAID",
+
+        created_at__date__range=(start, end),
+
+    )
+
+def _refund_orders(request, status=None):
+
+    _, start, end = _period_dates(request)
+
+    qs = Order.objects.filter(created_at__date__range=(start, end))
+
+    if status:
+
+        qs = qs.filter(refund_status=status)
+
+    return qs
+
+def _period_meta(request):
+
+    period, start, end = _period_dates(request)
+
+    return {
+
+        "period": period,
+
+        "start": start.isoformat(),
+
+        "end": end.isoformat(),
+
+    }
+
+def _money(value):
+
+    return float(value or ZERO)
+
+def _order_products_count(order_ids):
+
+    return (
+
+        OrderItem.objects.filter(order_id__in=order_ids)
+
+        .aggregate(total=Sum("quantity"))["total"]
+
+        or 0
+
+    )
+
+def _gross_sales(paid_orders):
+
+    agg = paid_orders.aggregate(
+
+        final=Sum("total_price"),
+
+        coupon=Sum("discount_amount"),
+
+        loyalty=Sum("loyalty_discount_amount"),
+
+    )
+
+    final = agg["final"] or ZERO
+
+    coupon = agg["coupon"] or ZERO
+
+    loyalty = agg["loyalty"] or ZERO
+
+    # total_price is the stored final order total. Reconstruct the amount before
+
+    # discounts so coupon/loyalty deductions are not subtracted twice.
+
+    gross = final + coupon + loyalty
+
+    return gross, final, coupon, loyalty
+
+def _trunc_for_period(period):
+
+    if period == "weekly":
+
+        return TruncWeek("created_at")
+
+    if period == "monthly":
+
+        return TruncMonth("created_at")
+
+    if period == "yearly":
+
+        return TruncYear("created_at")
+
+    return TruncDay("created_at")
+
+def _label_for_bucket(value, period):
+
+    if period == "weekly":
+
+        iso = value.isocalendar()
+
+        return f"Week {iso.week} ({iso.year})"
+
+    if period == "monthly":
+
+        return value.strftime("%b %Y")
+
+    if period == "yearly":
+
+        return value.strftime("%Y")
+
+    return value.strftime("%d %b")
+
+# -----------------------------------------------------------------------------
+
+# Summary cards
+
+# -----------------------------------------------------------------------------
+
 def dashboard_summary(request):
 
-    summary = RevenueSummary.objects.first()
+    paid = _paid_orders(request)
 
-    # Today's revenue from the snapshot table (0 if there is no data for today)
-    today = timezone.localdate()
-    today_revenue = (
-        RevenueSnapshot.objects
-        .filter(date=today)
-        .aggregate(total=Sum("total_revenue"))["total"]
-    ) or 0
+    paid_ids = list(paid.values_list("id", flat=True))
+
+    gross, final_revenue, coupon_discount, loyalty_discount = _gross_sales(
+
+        paid)
+
+    order_count = paid.count()
+
+    products_sold = _order_products_count(paid_ids)
+
+    average_order_value = (
+
+        final_revenue / order_count
+
+        if order_count
+
+        else ZERO
+
+    )
+
+    # Refund information is kept for analytics/display only.
+
+    # Do NOT subtract it from revenue again because the Celery
+
+    # revenue workflow already handles completed refunds.
+
+    completed_refunds = _refund_orders(request, "COMPLETED")
+
+    refund_amount = (
+
+        completed_refunds.aggregate(
+
+            total=Sum("total_price")
+
+        )["total"]
+
+        or ZERO
+
+    )
+
+    # Revenue has already been corrected by the refund workflow.
+
+    net_revenue = final_revenue
 
     data = {
-        "total_revenue": float(summary.total_revenue) if summary else 0,
-        "total_orders": summary.total_orders if summary else 0,
-        "average_order_value": float(summary.average_order_value) if summary else 0,
-        "esewa_revenue": float(summary.esewa_revenue) if summary else 0,
-        "cod_revenue": float(summary.cod_revenue) if summary else 0,
-        "today_revenue": float(today_revenue),
+
+        **_period_meta(request),
+
+        # Financial
+
+        "gross_sales": _money(gross),
+
+        "total_revenue": _money(final_revenue),
+
+        "net_revenue": _money(net_revenue),
+
+        # Sales
+
+        "total_orders": order_count,
+
+        "products_sold": products_sold,
+
+        "average_order_value": _money(average_order_value),
+
+        # Discounts
+
+        "coupon_discount": _money(coupon_discount),
+
+        "loyalty_discount": _money(loyalty_discount),
+
+        "total_discounts": _money(
+
+            coupon_discount + loyalty_discount
+
+        ),
+
+        # Refund analytics only — NOT deducted again
+
+        "refund_amount": _money(refund_amount),
+
     }
 
     return JsonResponse(data)
 
-def payment_method_chart(request):
+# -----------------------------------------------------------------------------
 
-    summary = RevenueSummary.objects.first()
+# Combined sales performance: revenue + orders + products sold + AOV
 
-    if not summary:
-        return JsonResponse({
-            "labels": [],
-            "values": [],
-        })
+# -----------------------------------------------------------------------------
 
-    return JsonResponse({
-        "labels": ["eSewa", "Cash On Delivery"],
-        "values": [
-            float(summary.esewa_revenue),
-            float(summary.cod_revenue),
-        ]
-    })
+def sales_performance(request):
 
-# ---------------------------------------
-# Revenue Chart (fixed to properly aggregate)
-# ---------------------------------------
+    period, _, _ = _period_dates(request)
 
-def revenue_chart(request):
+    paid = _paid_orders(request)
 
-    period = request.GET.get("period", "daily")
+    trunc = _trunc_for_period(period)
 
-    base_qs = RevenueSnapshot.objects.all()
+    order_rows = list(
+
+        paid.annotate(bucket=trunc)
+
+        .values("bucket")
+
+        .annotate(
+
+            revenue=Sum("total_price"),
+
+            orders=Count("id"),
+
+        )
+
+        .order_by("bucket")
+
+    )
+
+    # Product quantities must be grouped by the related Order date.
 
     if period == "weekly":
 
-        rows = (
-            base_qs
-            .annotate(period=TruncWeek("date"))
-            .values("period")
-            .annotate(revenue=Sum("total_revenue"))
-            .order_by("period")
-        )
-
-        labels = [
-            f"Week {row['period'].isocalendar().week} ({row['period'].year})"
-            for row in rows
-        ]
-        revenue = [float(row["revenue"]) for row in rows]
+        item_trunc = TruncWeek("order__created_at")
 
     elif period == "monthly":
 
-        rows = (
-            base_qs
-            .annotate(period=TruncMonth("date"))
-            .values("period")
-            .annotate(revenue=Sum("total_revenue"))
-            .order_by("period")
-        )
-
-        labels = [row["period"].strftime("%b %Y") for row in rows]
-        revenue = [float(row["revenue"]) for row in rows]
+        item_trunc = TruncMonth("order__created_at")
 
     elif period == "yearly":
 
-        rows = (
-            base_qs
-            .annotate(period=TruncYear("date"))
-            .values("period")
-            .annotate(revenue=Sum("total_revenue"))
-            .order_by("period")
-        )
-
-        labels = [row["period"].strftime("%Y") for row in rows]
-        revenue = [float(row["revenue"]) for row in rows]
-
-    else:  # daily
-
-        rows = (
-            base_qs
-            .annotate(period=TruncDay("date"))
-            .values("period")
-            .annotate(revenue=Sum("total_revenue"))
-            .order_by("period")
-        )
-
-        labels = [row["period"].strftime("%d %b") for row in rows]
-        revenue = [float(row["revenue"]) for row in rows]
-
-    return JsonResponse({
-        "labels": labels,
-        "revenue": revenue,
-    })
-
-
-# ---------------------------------------
-# Orders Chart (unchanged - already working)
-# ---------------------------------------
-
-def orders_chart_data(request):
-
-    period = request.GET.get("period", "daily")
-
-    snapshots = RevenueSnapshot.objects.all()
-
-    if period == "weekly":
-
-        snapshots = (
-            snapshots
-            .annotate(period=TruncWeek("date"))
-            .values("period")
-            .annotate(orders=Sum("total_orders"))
-            .order_by("period")
-        )
-
-        labels = [
-            f"Week {row['period'].isocalendar().week} ({row['period'].year})"
-            for row in snapshots
-        ]
-        orders = [row["orders"] for row in snapshots]
-
-    elif period == "monthly":
-
-        snapshots = (
-            snapshots
-            .annotate(period=TruncMonth("date"))
-            .values("period")
-            .annotate(orders=Sum("total_orders"))
-            .order_by("period")
-        )
-
-        labels = [row["period"].strftime("%b %Y") for row in snapshots]
-        orders = [row["orders"] for row in snapshots]
-
-    elif period == "yearly":
-
-        snapshots = (
-            snapshots
-            .annotate(period=TruncYear("date"))
-            .values("period")
-            .annotate(orders=Sum("total_orders"))
-            .order_by("period")
-        )
-
-        labels = [row["period"].strftime("%Y") for row in snapshots]
-        orders = [row["orders"] for row in snapshots]
+        item_trunc = TruncYear("order__created_at")
 
     else:
 
-        snapshots = (
-            snapshots
-            .annotate(period=TruncDay("date"))
-            .values("period")
-            .annotate(orders=Sum("total_orders"))
-            .order_by("period")
-        )
+        item_trunc = TruncDay("order__created_at")
 
-        labels = [row["period"].strftime("%d %b") for row in snapshots]
-        orders = [row["orders"] for row in snapshots]
+    item_rows = (
 
-    return JsonResponse({
-        "labels": labels,
-        "orders": orders,
-    })
+        OrderItem.objects.filter(order__in=paid)
 
-def category_sales(request):
-    rows = list(
-        OrderItem.objects
-        .filter(order__payment_status="PAID")
-        .values("product_id", "product__category__name", "product__name")
-        .annotate(qty=Sum("quantity"))
-        .order_by("-qty")
+        .annotate(bucket=item_trunc)
+
+        .values("bucket")
+
+        .annotate(products_sold=Sum("quantity"))
+
+        .order_by("bucket")
+
     )
 
-    # Load the products so we can ask each one for its Cloudinary link
-    Product = OrderItem._meta.get_field("product").related_model
-    product_map = Product.objects.in_bulk({r["product_id"] for r in rows})
+    products_by_bucket = {
 
-    products = {}
-    for r in rows:
-        category = r["product__category__name"] or "Uncategorized"
+        row["bucket"]: row["products_sold"] or 0 for row in item_rows
 
-        image_url = ""
-        product = product_map.get(r["product_id"])
-        if product and product.image:
-            try:
-                image_url = product.image.url
-            except Exception:
-                image_url = ""
+    }
 
-        products.setdefault(category, []).append({
-            "name": r["product__name"],
-            "quantity": r["qty"] or 0,
-            "image": image_url,
+    points = []
+
+    for row in order_rows:
+
+        revenue = row["revenue"] or ZERO
+
+        orders = row["orders"] or 0
+
+        products = products_by_bucket.get(row["bucket"], 0)
+
+        points.append({
+
+            "label": _label_for_bucket(row["bucket"], period),
+
+            "revenue": _money(revenue),
+
+            "orders": orders,
+
+            "products_sold": products,
+
+            "average_order_value": _money(revenue / orders if orders else ZERO),
+
         })
 
-    totals = sorted(
-        ((cat, sum(p["quantity"] for p in items)) for cat, items in products.items()),
-        key=lambda x: x[1],
-        reverse=True,
+    return JsonResponse({
+
+        **_period_meta(request),
+
+        "points": points,
+
+        "labels": [p["label"] for p in points],
+
+        "revenue": [p["revenue"] for p in points],
+
+        "orders": [p["orders"] for p in points],
+
+        "products_sold": [p["products_sold"] for p in points],
+
+        "average_order_value": [p["average_order_value"] for p in points],
+
+    })
+
+# -----------------------------------------------------------------------------
+
+# Backward-compatible chart endpoints
+
+# -----------------------------------------------------------------------------
+
+def revenue_chart(request):
+
+    period, start, end = _period_dates(request)
+
+    snapshots = RevenueSnapshot.objects.filter(date__range=(start, end))
+
+    if period == "weekly":
+
+        rows = snapshots.annotate(bucket=TruncWeek("date")).values("bucket").annotate(
+
+            revenue=Sum("total_revenue")
+
+        ).order_by("bucket")
+
+    elif period == "monthly":
+
+        rows = snapshots.annotate(bucket=TruncMonth("date")).values("bucket").annotate(
+
+            revenue=Sum("total_revenue")
+
+        ).order_by("bucket")
+
+    elif period == "yearly":
+
+        rows = snapshots.annotate(bucket=TruncYear("date")).values("bucket").annotate(
+
+            revenue=Sum("total_revenue")
+
+        ).order_by("bucket")
+
+    else:
+
+        rows = snapshots.annotate(bucket=TruncDay("date")).values("bucket").annotate(
+
+            revenue=Sum("total_revenue")
+
+        ).order_by("bucket")
+
+    labels = [_label_for_bucket(r["bucket"], period) for r in rows]
+
+    values = [_money(r["revenue"]) for r in rows]
+
+    return JsonResponse({"labels": labels, "revenue": values})
+
+def orders_chart_data(request):
+
+    period, start, end = _period_dates(request)
+
+    snapshots = RevenueSnapshot.objects.filter(date__range=(start, end))
+
+    if period == "weekly":
+
+        rows = snapshots.annotate(bucket=TruncWeek("date")).values("bucket").annotate(
+
+            orders=Sum("total_orders")
+
+        ).order_by("bucket")
+
+    elif period == "monthly":
+
+        rows = snapshots.annotate(bucket=TruncMonth("date")).values("bucket").annotate(
+
+            orders=Sum("total_orders")
+
+        ).order_by("bucket")
+
+    elif period == "yearly":
+
+        rows = snapshots.annotate(bucket=TruncYear("date")).values("bucket").annotate(
+
+            orders=Sum("total_orders")
+
+        ).order_by("bucket")
+
+    else:
+
+        rows = snapshots.annotate(bucket=TruncDay("date")).values("bucket").annotate(
+
+            orders=Sum("total_orders")
+
+        ).order_by("bucket")
+
+    labels = [_label_for_bucket(r["bucket"], period) for r in rows]
+
+    values = [r["orders"] or 0 for r in rows]
+
+    return JsonResponse({"labels": labels, "orders": values})
+
+# -----------------------------------------------------------------------------
+
+# Payment method analysis
+
+# -----------------------------------------------------------------------------
+
+def payment_method_chart(request):
+
+    paid = _paid_orders(request)
+
+    rows = (
+
+        paid.values("payment_method")
+
+        .annotate(revenue=Sum("total_price"), orders=Count("id"))
+
+        .order_by("payment_method")
+
     )
 
+    labels = []
+
+    values = []
+
+    orders = []
+
+    for row in rows:
+
+        method = (row["payment_method"] or "Unknown").upper()
+
+        labels.append("eSewa" if method ==
+
+                      "ESEWA" else "Cash On Delivery" if method == "COD" else method)
+
+        values.append(_money(row["revenue"]))
+
+        orders.append(row["orders"] or 0)
+
     return JsonResponse({
-        "labels": [t[0] for t in totals],
-        "quantities": [t[1] for t in totals],
-        "products": products,
+
+        **_period_meta(request),
+
+        "labels": labels,
+
+        "values": values,
+
+        "orders": orders,
+
     })
+
+# -----------------------------------------------------------------------------
+
+# Category + product performance
+
+# -----------------------------------------------------------------------------
+
+def category_sales(request):
+
+    paid = _paid_orders(request)
+
+    completed_refunds = _refund_orders(request, "COMPLETED")
+
+    sold_rows = list(
+
+        OrderItem.objects.filter(order__in=paid)
+
+        .values(
+
+            "product_id",
+
+            "product__category__name",
+
+            "product__name",
+
+        )
+
+        .annotate(
+
+            quantity=Sum("quantity"),
+
+            sales=Sum("order__total_price"),
+
+        )
+
+    )
+
+    refunded_qty = {
+
+        row["product_id"]: row["qty"] or 0
+
+        for row in (
+
+            OrderItem.objects.filter(order__in=completed_refunds)
+
+            .values("product_id")
+
+            .annotate(qty=Sum("quantity"))
+
+        )
+
+    }
+
+    Product = OrderItem._meta.get_field("product").related_model
+
+    product_ids = {r["product_id"] for r in sold_rows if r["product_id"]}
+
+    product_map = Product.objects.in_bulk(product_ids)
+
+    categories = defaultdict(lambda: {
+
+        "quantity": 0,
+
+        "revenue": ZERO,
+
+        "refund_quantity": 0,
+
+        "products": [],
+
+    })
+
+    # Use item historical price for product/category revenue so each item is
+
+    # counted once. Coupon discount is reported separately in finance/coupon APIs.
+
+    item_financial_rows = (
+
+        OrderItem.objects.filter(order__in=paid)
+
+        .values("product_id", "product__category__name", "product__name", "price")
+
+        .annotate(quantity=Sum("quantity"))
+
+    )
+
+    for row in item_financial_rows:
+
+        category = row["product__category__name"] or "Uncategorized"
+
+        qty = row["quantity"] or 0
+
+        revenue = (row["price"] or ZERO) * qty
+
+        refund_qty = refunded_qty.get(row["product_id"], 0)
+
+        product = product_map.get(row["product_id"])
+
+        image_url = ""
+
+        if product and getattr(product, "image", None):
+
+            try:
+
+                image_url = product.image.url
+
+            except Exception:
+
+                image_url = ""
+
+        categories[category]["quantity"] += qty
+
+        categories[category]["revenue"] += revenue
+
+        categories[category]["refund_quantity"] += refund_qty
+
+        categories[category]["products"].append({
+
+            "id": row["product_id"],
+
+            "name": row["product__name"],
+
+            "quantity": qty,
+
+            "revenue": _money(revenue),
+
+            "refunded_quantity": refund_qty,
+
+            "image": image_url,
+
+        })
+
+    ordered = sorted(categories.items(),
+
+                     key=lambda x: x[1]["revenue"], reverse=True)
+
+    return JsonResponse({
+
+        **_period_meta(request),
+
+        "labels": [name for name, _ in ordered],
+
+        "quantities": [data["quantity"] for _, data in ordered],
+
+        "revenues": [_money(data["revenue"]) for _, data in ordered],
+
+        "refund_quantities": [data["refund_quantity"] for _, data in ordered],
+
+        "products": {name: data["products"] for name, data in ordered},
+
+        "categories": [
+
+            {
+
+                "name": name,
+
+                "quantity": data["quantity"],
+
+                "revenue": _money(data["revenue"]),
+
+                "refunded_quantity": data["refund_quantity"],
+
+            }
+
+            for name, data in ordered
+
+        ],
+
+    })
+
+# -----------------------------------------------------------------------------
+
+# Coupon performance
+
+# -----------------------------------------------------------------------------
 
 def coupon_summary(request):
 
-    paid_orders = Order.objects.filter(payment_status="PAID")
+    paid = _paid_orders(request)
 
-    total_discount_given = (
-        paid_orders.aggregate(total=Sum("discount_amount"))["total"] or Decimal("0")
+    total_paid_orders = paid.count()
+
+    coupon_orders = paid.exclude(coupon__isnull=True)
+
+    orders_with_coupon = coupon_orders.count()
+
+    total_discount = paid.aggregate(total=Sum("discount_amount"))[
+
+        "total"] or ZERO
+
+    top = (
+
+        coupon_orders.values("coupon__code", "coupon__coupon_type")
+
+        .annotate(
+
+            times_used=Count("id"),
+
+            revenue_generated=Sum("total_price"),
+
+            discount_given=Sum("discount_amount"),
+
+            average_order_value=Avg("total_price"),
+
+        )
+
+        .order_by("-revenue_generated")[:20]
+
     )
 
-    orders_with_coupon = paid_orders.exclude(coupon__isnull=True).count()
-    total_paid_orders = paid_orders.count()
+    type_breakdown = (
 
-    top_coupons = (
-        paid_orders
-        .exclude(coupon__isnull=True)
-        .values("coupon__code", "coupon__coupon_type")
-        .annotate(
-            times_used=Count("id"),
-            discount_given=Sum("discount_amount"),
-        )
-        .order_by("-discount_given")[:10]
-    )
+        coupon_orders.values("coupon__coupon_type")
 
-    coupon_type_breakdown = (
-        paid_orders
-        .exclude(coupon__isnull=True)
-        .values("coupon__coupon_type")
         .annotate(
+
             times_used=Count("id"),
+
+            revenue_generated=Sum("total_price"),
+
             discount_given=Sum("discount_amount"),
+
         )
-        .order_by("-discount_given")
+
+        .order_by("-revenue_generated")
+
     )
 
     return JsonResponse({
-        "total_discount_given": float(total_discount_given),
+
+        **_period_meta(request),
+
+        "total_discount_given": _money(total_discount),
+
         "orders_with_coupon": orders_with_coupon,
+
         "total_paid_orders": total_paid_orders,
-        "coupon_usage_rate": (
-            round((orders_with_coupon / total_paid_orders) * 100, 1)
-            if total_paid_orders else 0
-        ),
+
+        "coupon_usage_rate": round((orders_with_coupon / total_paid_orders) * 100, 1) if total_paid_orders else 0,
+
         "top_coupons": [
+
             {
+
                 "code": row["coupon__code"],
+
                 "type": row["coupon__coupon_type"],
+
                 "times_used": row["times_used"],
-                "discount_given": float(row["discount_given"] or 0),
+
+                "orders": row["times_used"],
+
+                "revenue_generated": _money(row["revenue_generated"]),
+
+                "discount_given": _money(row["discount_given"]),
+
+                "average_order_value": _money(row["average_order_value"]),
+
             }
-            for row in top_coupons
+
+            for row in top
+
         ],
+
         "coupon_type_breakdown": [
+
             {
+
                 "type": row["coupon__coupon_type"],
+
                 "times_used": row["times_used"],
-                "discount_given": float(row["discount_given"] or 0),
+
+                "revenue_generated": _money(row["revenue_generated"]),
+
+                "discount_given": _money(row["discount_given"]),
+
             }
-            for row in coupon_type_breakdown
+
+            for row in type_breakdown
+
         ],
+
     })
+
+# -----------------------------------------------------------------------------
+
+# Refund analysis
+
+# -----------------------------------------------------------------------------
 
 def refund_summary(request):
 
-    refunded_orders = Order.objects.filter(refund_status="COMPLETED")
+    _, start, end = _period_dates(request)
 
-    # Order.refund_status breakdown (all statuses, not just completed)
-    refund_status_counts = (
-        Order.objects
-        .values("refund_status")
-        .annotate(count=Count("id"))
+    period_orders = Order.objects.filter(
+
+        created_at__date__range=(start, end)
+
     )
 
-    total_refunded_amount = (
-        refunded_orders.aggregate(total=Sum("total_price"))["total"] or Decimal("0")
+    completed = period_orders.filter(refund_status="COMPLETED")
+
+    paid = period_orders.filter(payment_status="PAID")
+
+
+    completed_amount = (
+
+        completed.aggregate(total=Sum("total_price"))["total"]
+
+        or ZERO
+
     )
 
-    pending_refund_amount = (
-        Order.objects
-        .filter(refund_status="PENDING")
-        .aggregate(total=Sum("total_price"))["total"] or Decimal("0")
+
+    refunded_order_count = completed.count()
+
+    paid_order_count = paid.count()
+
+    # ---------------------------------------------------------
+
+    # TOTAL REFUNDED PRODUCT UNITS
+
+    # ---------------------------------------------------------
+
+    refunded_items = (
+
+        OrderItem.objects.filter(order__in=completed)
+
+        .values("product_id", "product_name")
+
+        .annotate(quantity=Sum("quantity"))
+
+        .order_by("-quantity")
+
     )
 
-    total_refunded_orders = refunded_orders.count()
+    total_products_refunded = sum(
 
-    # total individual product units refunded, summed across all
-    # OrderItems belonging to refunded orders
-    total_products_refunded = (
-        OrderItem.objects
-        .filter(order__refund_status="COMPLETED")
-        .aggregate(total=Sum("quantity"))["total"] or 0
+        row["quantity"] or 0
+
+        for row in refunded_items
+
     )
 
-    # RefundRequest is the actual submitted request/ticket queue
-    refund_request_counts = (
-        RefundRequest.objects
-        .values("status")
-        .annotate(count=Count("id"))
-    )
+    # ---------------------------------------------------------
 
-    refund_reason_breakdown = (
-        RefundRequest.objects
-        .values("reason")
-        .annotate(count=Count("id"))
-        .order_by("-count")
-    )
+    # REFUND REASON PER ORDER
 
-    return JsonResponse({
-        "refund_status_breakdown": {
-            row["refund_status"]: row["count"] for row in refund_status_counts
-        },
-        "total_refunded_amount": float(total_refunded_amount),
-        "pending_refund_amount": float(pending_refund_amount),
-        "total_refunded_orders": total_refunded_orders,
-        "total_products_refunded": total_products_refunded,
-        "refund_request_status_breakdown": {
-            row["status"]: row["count"] for row in refund_request_counts
-        },
-        "refund_reason_breakdown": [
-            {"reason": row["reason"], "count": row["count"]}
-            for row in refund_reason_breakdown
-        ],
-    })
+    # ---------------------------------------------------------
 
+    # RefundRequest is order-level, therefore all products
 
-# ---------------------------------------
-# SYNC: rebuild snapshot + summary from paid orders
-# ---------------------------------------
-@require_POST
-def sync_analytics(request):
-    paid = Order.objects.filter(payment_status="PAID")
+    # belonging to that refunded order share the same reason.
 
-    # One snapshot row per day
-    daily = (
-        paid
-        .annotate(day=TruncDate("created_at"))          # CHECK: your order date field
-        .values("day")
-        .annotate(revenue=Sum("total_price"), orders=Count("id"))
-    )
-    for row in daily:
-        RevenueSnapshot.objects.update_or_create(
-            date=row["day"],
-            defaults={
-                "total_revenue": row["revenue"] or 0,
-                "total_orders": row["orders"],
-            },
+    reason_by_order = {
+
+        r["order_id"]: r["reason"]
+
+        for r in RefundRequest.objects.filter(
+
+            order__created_at__date__range=(start, end),
+
+            status="COMPLETED",
+
+        ).values("order_id", "reason")
+
+    }
+
+    # ---------------------------------------------------------
+
+    # COMPLETED REFUNDED ORDERS
+
+    # ---------------------------------------------------------
+
+    # We need the order-level coupon and loyalty discounts
+
+    # because they must be distributed across the products.
+
+    completed_orders_data = {
+
+        row["id"]: {
+
+            "discount_amount": row["discount_amount"] or ZERO,
+
+            "loyalty_discount_amount": (
+
+                row["loyalty_discount_amount"] or ZERO
+
+            ),
+
+        }
+
+        for row in completed.values(
+
+            "id",
+
+            "discount_amount",
+
+            "loyalty_discount_amount",
+
         )
 
-    # Overall summary
-    total = paid.aggregate(t=Sum("total_price"))["t"] or Decimal("0")
+    }
+
+    # ---------------------------------------------------------
+
+    # GET ITEMS FROM COMPLETED REFUNDED ORDERS
+
+    # ---------------------------------------------------------
+
+    completed_item_rows = list(
+
+        OrderItem.objects.filter(
+
+            order__in=completed
+
+        ).values(
+
+            "order_id",
+
+            "product_id",
+
+            "product_name",
+
+            "price",
+
+            "quantity",
+
+        )
+
+    )
+
+    # ---------------------------------------------------------
+
+    # CALCULATE PRODUCT SUBTOTAL FOR EACH ORDER
+
+    # ---------------------------------------------------------
+
+    #
+
+    # Example:
+
+    #
+
+    # Product A = Rs. 4,000
+
+    # Product B = Rs. 6,000
+
+    #
+
+    # Order product subtotal = Rs. 10,000
+
+    #
+
+    # This lets us determine what percentage of the order
+
+    # belongs to each product.
+
+    # ---------------------------------------------------------
+
+    order_product_subtotals = defaultdict(lambda: ZERO)
+
+    for row in completed_item_rows:
+
+        item_total = (
+
+            (row["price"] or ZERO)
+
+            * (row["quantity"] or 0)
+
+        )
+
+        order_product_subtotals[row["order_id"]] += item_total
+
+    # ---------------------------------------------------------
+
+    # PRODUCT REFUND STATISTICS
+
+    # ---------------------------------------------------------
+
+    product_reason_counts = defaultdict(
+
+        lambda: defaultdict(int)
+
+    )
+
+    product_stats = defaultdict(
+
+        lambda: {
+
+            "product_id": None,
+
+            "product_name": "",
+
+            "quantity": 0,
+
+            # This now means:
+
+            # amount actually paid by customer after
+
+            # coupon + loyalty discounts.
+
+            "refund_amount": ZERO,
+
+        }
+
+    )
+
+    for row in completed_item_rows:
+
+        order_id = row["order_id"]
+
+        quantity = row["quantity"] or 0
+
+        price = row["price"] or ZERO
+
+        original_item_total = price * quantity
+
+        # Total value of products in this order
+
+        order_subtotal = order_product_subtotals[order_id]
+
+        # Get the discounts belonging to this order
+
+        order_data = completed_orders_data.get(
+
+            order_id,
+
+            {}
+
+        )
+
+        coupon_discount = (
+
+            order_data.get("discount_amount", ZERO)
+
+            or ZERO
+
+        )
+
+        loyalty_discount = (
+
+            order_data.get(
+
+                "loyalty_discount_amount",
+
+                ZERO
+
+            )
+
+            or ZERO
+
+        )
+
+        total_discount = (
+
+            coupon_discount
+
+            + loyalty_discount
+
+        )
+
+        # -----------------------------------------------------
+
+        # DISTRIBUTE DISCOUNT PROPORTIONALLY
+
+        # -----------------------------------------------------
+
+        if order_subtotal > ZERO:
+
+            item_ratio = (
+
+                original_item_total
+
+                / order_subtotal
+
+            )
+
+            item_discount_share = (
+
+                total_discount
+
+                * item_ratio
+
+            )
+
+        else:
+
+            item_discount_share = ZERO
+
+        # -----------------------------------------------------
+
+        # ACTUAL AMOUNT PAID FOR THIS PRODUCT
+
+        # -----------------------------------------------------
+
+        amount_paid = max(
+
+            original_item_total
+
+            - item_discount_share,
+
+            ZERO
+
+        )
+
+        # -----------------------------------------------------
+
+        # GROUP SAME PRODUCTS TOGETHER
+
+        # -----------------------------------------------------
+
+        key = (
+
+            row["product_id"]
+
+            or row["product_name"]
+
+        )
+
+        stat = product_stats[key]
+
+        stat["product_id"] = row["product_id"]
+
+        stat["product_name"] = row["product_name"]
+
+        stat["quantity"] += quantity
+
+        # IMPORTANT:
+
+        # Store discounted amount instead of original amount.
+
+        stat["refund_amount"] += amount_paid
+
+        # -----------------------------------------------------
+
+        # REFUND REASON
+
+        # -----------------------------------------------------
+
+        reason = reason_by_order.get(
+
+            order_id,
+
+            "OTHER"
+
+        )
+
+        product_reason_counts[key][reason] += quantity
+
+    # ---------------------------------------------------------
+
+    # BUILD MOST REFUNDED PRODUCTS RESPONSE
+
+    # ---------------------------------------------------------
+
+    most_refunded = []
+
+    for key, stat in product_stats.items():
+
+        reasons = product_reason_counts[key]
+
+        main_reason = (
+
+            max(reasons, key=reasons.get)
+
+            if reasons
+
+            else "OTHER"
+
+        )
+
+        most_refunded.append({
+
+            "product_id": stat["product_id"],
+
+            "product_name": stat["product_name"],
+
+            "quantity": stat["quantity"],
+
+            # This is now what the customer actually paid
+
+            # after coupon + loyalty discount.
+
+            "refund_amount": _money(
+
+                stat["refund_amount"]
+
+            ),
+
+            "main_reason": main_reason,
+
+        })
+
+    # Most refunded quantity first
+
+    most_refunded.sort(
+
+        key=lambda x: x["quantity"],
+
+        reverse=True
+
+    )
+
+    # ---------------------------------------------------------
+
+    # REFUND STATUS BREAKDOWN
+
+    # ---------------------------------------------------------
+
+    status_counts = (
+
+        period_orders
+
+        .values("refund_status")
+
+        .annotate(count=Count("id"))
+
+    )
+
+    request_status_counts = (
+
+        RefundRequest.objects.filter(
+
+            order__created_at__date__range=(start, end)
+
+        )
+
+        .values("status")
+
+        .annotate(count=Count("id"))
+
+    )
+
+    # ---------------------------------------------------------
+
+    # REFUND REASON BREAKDOWN
+
+    # ---------------------------------------------------------
+
+    reason_breakdown = (
+
+        RefundRequest.objects.filter(
+
+            order__created_at__date__range=(start, end)
+
+        )
+
+        .values("reason")
+
+        .annotate(count=Count("id"))
+
+        .order_by("-count")
+
+    )
+
+    # ---------------------------------------------------------
+
+    # RESPONSE
+
+    # ---------------------------------------------------------
+
+    return JsonResponse({
+
+        **_period_meta(request),
+
+        "total_refunded_amount": _money(
+
+            completed_amount
+
+        ),
+
+
+        "total_refunded_orders": refunded_order_count,
+
+        "total_products_refunded": (
+
+            total_products_refunded
+
+        ),
+
+        "refund_rate": round(
+
+            (
+
+                refunded_order_count
+
+                / paid_order_count
+
+            ) * 100,
+
+            1
+
+        ) if paid_order_count else 0,
+
+        "refund_status_breakdown": {
+
+            r["refund_status"]: r["count"]
+
+            for r in status_counts
+
+        },
+
+        "refund_request_status_breakdown": {
+
+            r["status"]: r["count"]
+
+            for r in request_status_counts
+
+        },
+
+        "refund_reason_breakdown": [
+
+            {
+
+                "reason": r["reason"],
+
+                "count": r["count"],
+
+            }
+
+            for r in reason_breakdown
+
+        ],
+
+        "most_refunded_products": (
+
+            most_refunded[:15]
+
+        ),
+
+    })
+
+# -----------------------------------------------------------------------------
+
+# Sync snapshots + all-time summary
+
+# -----------------------------------------------------------------------------
+
+@require_POST
+
+def sync_analytics(request):
+
+    paid = Order.objects.filter(payment_status="PAID")
+
+    daily = list(
+
+        paid.annotate(day=TruncDay("created_at"))
+
+        .values("day")
+
+        .annotate(
+
+            revenue=Sum("total_price"),
+
+            orders=Count("id"),
+
+        )
+
+        .order_by("day")
+
+    )
+
+    for row in daily:
+
+        day = row["day"].date() if hasattr(row["day"], "date") else row["day"]
+
+        revenue = row["revenue"] or ZERO
+
+        orders = row["orders"] or 0
+
+        day_orders = paid.filter(created_at__date=day)
+
+        esewa = day_orders.filter(payment_method__iexact="esewa").aggregate(
+
+            t=Sum("total_price"))["t"] or ZERO
+
+        cod = day_orders.filter(payment_method__iexact="cod").aggregate(
+
+            t=Sum("total_price"))["t"] or ZERO
+
+        RevenueSnapshot.objects.update_or_create(
+
+            date=day,
+
+            defaults={
+
+                "total_revenue": revenue,
+
+                "total_orders": orders,
+
+                "average_order_value": revenue / orders if orders else ZERO,
+
+                "esewa_revenue": esewa,
+
+                "cod_revenue": cod,
+
+            },
+
+        )
+
+    total = paid.aggregate(t=Sum("total_price"))["t"] or ZERO
+
     orders = paid.count()
-    esewa = paid.filter(payment_method__iexact="esewa").aggregate(   # CHECK: field and value
-        t=Sum("total_price"))["t"] or Decimal("0")
-    cod = paid.filter(payment_method__iexact="cod").aggregate(       # CHECK: field and value
-        t=Sum("total_price"))["t"] or Decimal("0")
+
+    esewa = paid.filter(payment_method__iexact="esewa").aggregate(
+
+        t=Sum("total_price"))["t"] or ZERO
+
+    cod = paid.filter(payment_method__iexact="cod").aggregate(
+
+        t=Sum("total_price"))["t"] or ZERO
 
     summary = RevenueSummary.objects.first() or RevenueSummary()
+
     summary.total_revenue = total
+
     summary.total_orders = orders
-    summary.average_order_value = (total / orders) if orders else Decimal("0")
+
+    summary.average_order_value = total / orders if orders else ZERO
+
     summary.esewa_revenue = esewa
+
     summary.cod_revenue = cod
+
     summary.save()
 
     return JsonResponse({"ok": True, "days_synced": len(daily)})
 
+# -----------------------------------------------------------------------------
 
-# ---------------------------------------
-# PDF REPORT
-# ---------------------------------------
+# PDF report
+
+# -----------------------------------------------------------------------------
+
 def _table(data, col_widths=None, header=True):
-    t = Table(data, colWidths=col_widths, repeatRows=1 if header else 0)
-    style = [
-        ("GRID", (0, 0), (-1, -1), 0.4, colors.lightgrey),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("FONTSIZE", (0, 0), (-1, -1), 9),
-    ]
-    if header:
-        style += [
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#198754")),
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ]
-    t.setStyle(TableStyle(style))
-    return t
 
+    table = Table(data, colWidths=col_widths, repeatRows=1 if header else 0)
+
+    style = [
+
+        ("GRID", (0, 0), (-1, -1), 0.4, colors.lightgrey),
+
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+
+        ("FONTSIZE", (0, 0), (-1, -1), 8),
+
+    ]
+
+    if header:
+
+        style += [
+
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#198754")),
+
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+
+        ]
+
+    table.setStyle(TableStyle(style))
+
+    return table
 
 def download_report(request):
+
     styles = getSampleStyleSheet()
+
     story = []
-    money = lambda v: f"Rs. {float(v or 0):,.2f}"
 
-    paid = Order.objects.filter(payment_status="PAID")
-    summary = RevenueSummary.objects.first()
-    today = timezone.localdate()
+    def money(value): return f"Rs. {float(value or 0):,.2f}"
 
-    # Title
-    story.append(Paragraph("Revenue Analytics Report", styles["Title"]))
+    period, start, end = _period_dates(request)
+
+    paid = _paid_orders(request)
+
+    paid_ids = list(paid.values_list("id", flat=True))
+
+    gross, revenue, coupon_discount, loyalty_discount = _gross_sales(paid)
+
+    completed_refunds = _refund_orders(request, "COMPLETED")
+
+    refund_amount = completed_refunds.aggregate(
+
+        t=Sum("total_price"))["t"] or ZERO
+
+    net = revenue
+
+    order_count = paid.count()
+
+    products_sold = _order_products_count(paid_ids)
+
+    aov = revenue / order_count if order_count else ZERO
+
+    story.append(
+
+        Paragraph("Financial & Sales Analytics Report", styles["Title"]))
+
     story.append(Paragraph(
-        f"Generated on {timezone.localtime().strftime('%d %b %Y, %I:%M %p')}",
-        styles["Normal"]))
+
+        f"Period: {start:%d %b %Y} - {end:%d %b %Y} ({period.title()})",
+
+        styles["Normal"],
+
+    ))
+
+    story.append(Paragraph(
+
+        f"Generated: {timezone.localtime():%d %b %Y, %I:%M %p}",
+
+        styles["Normal"],
+
+    ))
+
     story.append(Spacer(1, 14))
 
-    # 1. Summary
-    today_revenue = RevenueSnapshot.objects.filter(date=today).aggregate(
-        t=Sum("total_revenue"))["t"] or 0
-    story.append(Paragraph("1. Summary", styles["Heading2"]))
+    story.append(Paragraph("1. Financial Summary", styles["Heading2"]))
+
     story.append(_table([
+
         ["Measure", "Value"],
-        ["Total revenue", money(summary.total_revenue if summary else 0)],
-        ["Paid orders", str(summary.total_orders if summary else 0)],
-        ["Average order value", money(summary.average_order_value if summary else 0)],
-        ["Today's revenue", money(today_revenue)],
-        ["eSewa revenue", money(summary.esewa_revenue if summary else 0)],
-        ["Cash on delivery revenue", money(summary.cod_revenue if summary else 0)],
-    ], col_widths=[250, 200]))
+
+        ["Gross sales before discounts", money(gross)],
+
+        ["Paid revenue", money(revenue)],
+
+        ["Orders", str(order_count)],
+
+        ["Products sold", str(products_sold)],
+
+        ["Average order value", money(aov)],
+
+        ["Coupon discounts", money(coupon_discount)],
+
+        ["Loyalty discounts", money(loyalty_discount)],
+
+        ["Completed refunds", money(refund_amount)],
+
+    ], col_widths=[260, 190]))
+
     story.append(Spacer(1, 14))
 
-    # 2. Last 7 days
-    story.append(Paragraph("2. Last 7 Days", styles["Heading2"]))
-    rows = [["Date", "Revenue", "Orders"]]
-    for s in RevenueSnapshot.objects.order_by("-date")[:7]:
-        rows.append([s.date.strftime("%d %b %Y"), money(s.total_revenue), str(s.total_orders)])
-    if len(rows) == 1:
-        rows.append(["No data", "-", "-"])
-    story.append(_table(rows, col_widths=[150, 200, 100]))
-    story.append(Spacer(1, 14))
+    story.append(Paragraph("2. Coupon Performance", styles["Heading2"]))
 
-    # 3. Products sold by category
-    story.append(Paragraph("3. Products Sold by Category", styles["Heading2"]))
-    items = (
-        OrderItem.objects
-        .filter(order__payment_status="PAID")
-        .values("product__category__name", "product__name")
-        .annotate(qty=Sum("quantity"))
-        .order_by("-qty")
-    )
-    by_cat = {}
-    for r in items:
-        cat = r["product__category__name"] or "Uncategorized"
-        by_cat.setdefault(cat, []).append((r["product__name"], r["qty"] or 0))
+    coupon_rows = [["Coupon", "Type", "Uses", "Revenue", "Discount", "AOV"]]
 
-    cat_rows = [["Category", "Product", "Qty Sold"]]
-    for cat, plist in sorted(by_cat.items(), key=lambda x: -sum(q for _, q in x[1])):
-        for name, qty in plist:
-            cat_rows.append([
-                Paragraph(escape(cat), styles["Normal"]),
-                Paragraph(escape(str(name)), styles["Normal"]),
-                str(qty),
-            ])
-    if len(cat_rows) == 1:
-        cat_rows.append(["No sales yet", "-", "-"])
-    story.append(_table(cat_rows, col_widths=[150, 230, 70]))
-    story.append(Spacer(1, 14))
+    coupons = (
 
-    # 4. Coupons
-    discount = paid.aggregate(t=Sum("discount_amount"))["t"] or 0
-    with_coupon = paid.exclude(coupon__isnull=True).count()
-    total_paid = paid.count()
-    rate = round(with_coupon / total_paid * 100, 1) if total_paid else 0
-
-    story.append(Paragraph("4. Coupon Usage", styles["Heading2"]))
-    story.append(_table([
-        ["Measure", "Value"],
-        ["Total discount given", money(discount)],
-        ["Orders using a coupon", str(with_coupon)],
-        ["Coupon usage rate", f"{rate}%"],
-    ], col_widths=[250, 200]))
-    story.append(Spacer(1, 8))
-
-    top = (
         paid.exclude(coupon__isnull=True)
+
         .values("coupon__code", "coupon__coupon_type")
-        .annotate(used=Count("id"), given=Sum("discount_amount"))
-        .order_by("-given")[:10]
+
+        .annotate(
+
+            uses=Count("id"),
+
+            revenue=Sum("total_price"),
+
+            discount=Sum("discount_amount"),
+
+            aov=Avg("total_price"),
+
+        )
+
+        .order_by("-revenue")[:15]
+
     )
-    coupon_rows = [["Code", "Type", "Used", "Discount Given"]]
-    for r in top:
+
+    for row in coupons:
+
         coupon_rows.append([
-            Paragraph(escape(str(r["coupon__code"])), styles["Normal"]),
-            str(r["coupon__coupon_type"]), str(r["used"]), money(r["given"]),
+
+            Paragraph(escape(str(row["coupon__code"])), styles["Normal"]),
+
+            row["coupon__coupon_type"],
+
+            str(row["uses"]),
+
+            money(row["revenue"]),
+
+            money(row["discount"]),
+
+            money(row["aov"]),
+
         ])
-    if len(coupon_rows) > 1:
-        story.append(_table(coupon_rows, col_widths=[130, 110, 60, 150]))
+
+    if len(coupon_rows) == 1:
+
+        coupon_rows.append(["No coupon usage", "-", "-", "-", "-", "-"])
+
+    story.append(_table(coupon_rows, col_widths=[75, 75, 40, 90, 90, 80]))
+
     story.append(Spacer(1, 14))
 
-    # 5. Refunds
-    refunded = Order.objects.filter(refund_status="COMPLETED")
-    pending = Order.objects.filter(refund_status="PENDING")
-    units = OrderItem.objects.filter(order__refund_status="COMPLETED").aggregate(
-        t=Sum("quantity"))["t"] or 0
+    story.append(Paragraph("3. Refund Analysis", styles["Heading2"]))
 
-    story.append(Paragraph("5. Refunds", styles["Heading2"]))
+    refunded_units = OrderItem.objects.filter(
+
+        order__in=completed_refunds).aggregate(t=Sum("quantity"))["t"] or 0
+
     story.append(_table([
-        ["Measure", "Value"],
-        ["Total refunded", money(refunded.aggregate(t=Sum("total_price"))["t"])],
-        ["Pending refund amount", money(pending.aggregate(t=Sum("total_price"))["t"])],
-        ["Orders refunded", str(refunded.count())],
-        ["Products refunded", str(units)],
-    ], col_widths=[250, 200]))
 
-    # Build the PDF
+        ["Measure", "Value"],
+
+        ["Completed refund amount", money(refund_amount)],
+
+
+        ["Refunded orders", str(completed_refunds.count())],
+
+        ["Refunded product units", str(refunded_units)],
+
+    ], col_widths=[260, 190]))
+
+    story.append(Spacer(1, 14))
+
+    story.append(Paragraph("4. Product Sales", styles["Heading2"]))
+
+    product_rows = [["Product", "Qty Sold", "Sales"]]
+
+    products = (
+
+        OrderItem.objects.filter(order__in=paid)
+
+        .values("product_name", "price")
+
+        .annotate(qty=Sum("quantity"))
+
+        .order_by("-qty")[:30]
+
+    )
+
+    for row in products:
+
+        product_rows.append([
+
+            Paragraph(escape(str(row["product_name"])), styles["Normal"]),
+
+            str(row["qty"] or 0),
+
+            money((row["price"] or ZERO) * (row["qty"] or 0)),
+
+        ])
+
+    if len(product_rows) == 1:
+
+        product_rows.append(["No sales", "-", "-"])
+
+    story.append(_table(product_rows, col_widths=[250, 80, 120]))
+
     buffer = io.BytesIO()
-    SimpleDocTemplate(buffer, pagesize=A4, title="Revenue Analytics Report").build(story)
+
+    SimpleDocTemplate(
+
+        buffer,
+
+        pagesize=A4,
+
+        title="Financial & Sales Analytics Report",
+
+    ).build(story)
 
     response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
+
     response["Content-Disposition"] = (
-        f'attachment; filename="analytics-report-{today}.pdf"'
+
+        f'attachment; filename="analytics-report-{start}-{end}.pdf"'
+
     )
+
     return response

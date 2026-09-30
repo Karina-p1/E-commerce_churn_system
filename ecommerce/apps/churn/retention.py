@@ -35,17 +35,20 @@ def _generate_coupon_code(user):
 
 def trigger_winback(user, source_score=None):
     """
-    Called when a customer newly crosses into high churn risk.
+    Called once, the moment a customer's risk_level newly flips from
+    'low' (or no prior score at all) to 'high'. Creates a real,
+    redeemable coupon and notifies the customer — turning a churn
+    SCORE into an actual retention ACTION instead of a number that
+    just sits on a dashboard.
 
-    Creates:
-      1. a private single-customer coupon,
-      2. an in-app notification,
-      3. a RetentionCampaign record containing the BEFORE churn score.
+    Note on scope: the coupon is locked to this one customer via
+    assigned_user, so nobody else can redeem it even if they learn the
+    code. It is also single-use (max_uses=1) and is only ever shown to
+    this customer, via their notification (and email).
 
-    Returns the created Coupon, or None if the customer is on cooldown
-    or the retention action fails.
-
-    Retention failures never break churn scoring.
+    Returns the created Coupon, or None if something went wrong OR the
+    customer already received a win-back offer recently (never raises —
+    a failed win-back attempt should never break the scoring run itself).
     """
     try:
         cutoff = timezone.now() - timedelta(days=WINBACK_COOLDOWN_DAYS)
@@ -66,12 +69,21 @@ def trigger_winback(user, source_score=None):
         ).exists():
             return None
 
-        if source_score is None:
-            source_score = (
-                user.churn_scores
-                .order_by('-predicted_at')
-                .first()
-            )
+        coupon = Coupon.objects.create(
+            code=_generate_coupon_code(user),
+            coupon_type='STANDARD',
+            discount_type='PERCENTAGE',
+            discount_value=10,
+            min_order_amount=0,
+            max_uses=1,
+            is_active=True,
+            assigned_user=user,  # only this customer can redeem it
+            is_public=False,  # private, targeted offer — must NOT be
+                               # broadcast to every customer (see the
+                               # is_public check in notifications/signals.py)
+            valid_from=timezone.now(),
+            valid_until=timezone.now() + timedelta(days=7),
+        )
 
         if source_score is None:
             logger.warning(

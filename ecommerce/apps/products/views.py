@@ -151,7 +151,18 @@ def product_detail(request, slug):
     reviews_qs = product.reviews.select_related('customer').order_by('-created_at')
     total = reviews_qs.count()
 
-    dist_raw = reviews_qs.values('rating').annotate(count=Count('rating'))
+    # Clear reviews_qs ordering before grouping by rating.
+    # Otherwise the queryset's `-created_at` ordering can leak into the
+    # GROUP BY, producing multiple rows for the same star value. Converting
+    # those rows to a dict then overwrites duplicate ratings and makes the
+    # distribution counts/bars incorrect.
+    dist_raw = (
+        reviews_qs
+        .order_by()
+        .values('rating')
+        .annotate(count=Count('id'))
+        .order_by('rating')
+    )
     dist_map = {d['rating']: d['count'] for d in dist_raw}
 
     rating_distribution = [
@@ -275,10 +286,10 @@ def post_review(request, slug):
                     'Your review has been posted and you earned 50 loyalty points!'
                 )
 
-            except ValueError:
-                messages.success(
+            except ValueError as e:
+                messages.warning(
                     request,
-                    'Your review has been posted.'
+                    f'Your review has been posted, but loyalty points were not awarded: {e}'
                 )
         else:
             messages.success(

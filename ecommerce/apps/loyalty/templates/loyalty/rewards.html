@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+
+{% block title %}Rewards &amp; Redemption - ShopMart{% endblock %}
+
+{% block start %}
+<style>
+.loyalty-rewards {
+    --lr-ink: #171717;
+    --lr-muted: #626262;
+    --lr-border: #e6e6e6;
+    --lr-surface: #f7f7f7;
+    width: calc(100% - 40px);
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 40px 0 64px;
+    color: var(--lr-ink);
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    line-height: 1.5;
+}
+.loyalty-rewards,
+.loyalty-rewards * { box-sizing: border-box; }
+.loyalty-rewards h1,
+.loyalty-rewards h2,
+.loyalty-rewards h3 { color: var(--lr-ink); }
+.loyalty-rewards .lr-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 24px;
+    margin-bottom: 28px;
+}
+.loyalty-rewards .lr-header > div { min-width: 0; }
+.loyalty-rewards .lr-eyebrow {
+    margin: 0 0 8px;
+    color: var(--lr-muted);
+    font-size: 12px;
+    font-weight: 640;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+}
+.loyalty-rewards h1 {
+    margin: 0;
+    font-size: clamp(30px, 4vw, 42px);
+    font-weight: 640;
+    line-height: 1.15;
+    letter-spacing: -.03em;
+}
+.loyalty-rewards .lr-intro {
+    max-width: 600px;
+    margin: 12px 0 0;
+    color: var(--lr-muted);
+    font-size: 15px;
+    line-height: 1.6;
+}
+.loyalty-rewards .lr-back,
+.loyalty-rewards .lr-checkout {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 10px 16px;
+    border: 1px solid var(--lr-ink);
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 640;
+    text-align: center;
+    text-decoration: none;
+}
+.loyalty-rewards .lr-back {
+    flex-shrink: 0;
+    background: #fff;
+    color: var(--lr-ink);
+}
+.loyalty-rewards .lr-back:hover { background: var(--lr-surface); color: var(--lr-ink); }
+.loyalty-rewards .lr-checkout { background: var(--lr-ink); color: #fff; }
+.loyalty-rewards .lr-checkout:hover { background: #333; border-color: #333; color: #fff; }
+.loyalty-rewards .lr-back:focus-visible,
+.loyalty-rewards .lr-checkout:focus-visible { outline: 3px solid #326a98; outline-offset: 4px; }
+.loyalty-rewards .lr-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    margin: 0;
+}
+.loyalty-rewards .lr-card {
+    min-width: 0;
+    padding: 24px;
+    border: 1px solid var(--lr-border);
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 5px 20px rgb(0 0 0 / 4%);
+}
+.loyalty-rewards .lr-card dt { margin-bottom: 10px; color: var(--lr-muted); font-size: 14px; font-weight: 640; }
+.loyalty-rewards .lr-card dd { margin: 0; }
+.loyalty-rewards .lr-value {
+    display: block;
+    font-size: clamp(26px, 3vw, 32px);
+    font-weight: 640;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+.loyalty-rewards .lr-caption { display: block; margin-top: 8px; color: var(--lr-muted); font-size: 13px; }
+.loyalty-rewards .lr-section { margin-top: 40px; }
+.loyalty-rewards .lr-section-heading { margin-bottom: 16px; }
+.loyalty-rewards .lr-section-heading h2 { margin: 0; font-size: 24px; font-weight: 640; line-height: 1.25; letter-spacing: -.02em; }
+.loyalty-rewards .lr-section-heading p { margin: 8px 0 0; color: var(--lr-muted); font-size: 14px; }
+.loyalty-rewards .lr-examples {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.loyalty-rewards .lr-example {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+    padding: 20px;
+    border: 1px solid var(--lr-border);
+    border-radius: 12px;
+    background: #fff;
+}
+.loyalty-rewards .lr-example span { color: var(--lr-muted); font-size: 13px; }
+.loyalty-rewards .lr-example strong { font-size: 20px; font-variant-numeric: tabular-nums; }
+.loyalty-rewards .lr-instructions {
+    padding: 24px;
+    border: 1px solid var(--lr-border);
+    border-radius: 16px;
+    background: var(--lr-surface);
+}
+.loyalty-rewards .lr-steps {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: redemption-step;
+}
+.loyalty-rewards .lr-steps li { min-width: 0; counter-increment: redemption-step; }
+.loyalty-rewards .lr-steps li::before {
+    display: grid;
+    width: 32px;
+    height: 32px;
+    margin-bottom: 12px;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--lr-ink);
+    color: #fff;
+    content: counter(redemption-step);
+    font-size: 14px;
+    font-weight: 640;
+}
+.loyalty-rewards .lr-steps strong { display: block; margin-bottom: 5px; font-size: 15px; }
+.loyalty-rewards .lr-steps p { margin: 0; color: var(--lr-muted); font-size: 14px; }
+.loyalty-rewards .lr-rule-note { margin: 20px 0 0; color: var(--lr-muted); font-size: 13px; }
+.loyalty-rewards .lr-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; margin-top: 28px; }
+.loyalty-rewards .lr-footer p { margin: 0; color: var(--lr-muted); font-size: 13px; }
+@media (max-width: 760px) {
+    .loyalty-rewards .lr-header { align-items: flex-start; flex-direction: column; }
+    .loyalty-rewards .lr-summary { grid-template-columns: minmax(0, 1fr); }
+    .loyalty-rewards .lr-steps { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+}
+@media (max-width: 540px) {
+    .loyalty-rewards { width: calc(100% - 24px); padding: 24px 0 40px; }
+    .loyalty-rewards .lr-card,
+    .loyalty-rewards .lr-instructions { padding: 20px; }
+    .loyalty-rewards .lr-examples { grid-template-columns: minmax(0, 1fr); }
+    .loyalty-rewards .lr-example { flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; }
+    .loyalty-rewards .lr-footer { align-items: stretch; flex-direction: column; }
+}
+</style>
+
+<div class="loyalty-rewards">
+    <header class="lr-header">
+        <div>
+            <p class="lr-eyebrow">ShopMart Loyalty</p>
+            <h1>Rewards &amp; Redemption</h1>
+            <p class="lr-intro">See what your points are worth and how to use them on an eligible order.</p>
+        </div>
+        <a class="lr-back" href="{% url 'loyalty:dashboard' %}">Back to My Loyalty</a>
+    </header>
+
+    <dl class="lr-summary" aria-label="Your rewards balance">
+        <div class="lr-card">
+            <dt>Available Points</dt>
+            <dd>
+                <strong class="lr-value">{{ account.available_points|floatformat:"0g" }}</strong>
+                <span class="lr-caption">Your current loyalty balance</span>
+            </dd>
+        </div>
+        <div class="lr-card">
+            <dt>Redeemable in 100-point blocks</dt>
+            <dd>
+                <strong class="lr-value">{{ redeemable_points|floatformat:"0g" }}</strong>
+                <span class="lr-caption">The portion that fits the checkout rule</span>
+            </dd>
+        </div>
+        <div class="lr-card">
+            <dt>Estimated Reward Value</dt>
+            <dd>
+                <strong class="lr-value">Rs. {{ redeemable_value|floatformat:"2g" }}</strong>
+                <span class="lr-caption">Before the eligible order amount limit</span>
+            </dd>
+        </div>
+    </dl>
+
+    <section class="lr-section" aria-labelledby="lr-examples-heading">
+        <div class="lr-section-heading">
+            <h2 id="lr-examples-heading">Points to rupees</h2>
+            <p>Example redemption blocks, valued with your loyalty service's conversion rate.</p>
+        </div>
+        <ul class="lr-examples">
+            {% for example in redemption_examples %}
+                <li class="lr-example">
+                    <span>{{ example.points|floatformat:"0g" }} points</span>
+                    <strong>Rs. {{ example.value|floatformat:"2g" }}</strong>
+                </li>
+            {% endfor %}
+        </ul>
+    </section>
+
+    <section class="lr-section" aria-labelledby="lr-how-heading">
+        <div class="lr-section-heading">
+            <h2 id="lr-how-heading">How redemption works</h2>
+            <p>Points are applied during checkout as part of an order.</p>
+        </div>
+        <div class="lr-instructions">
+            <ol class="lr-steps">
+                <li>
+                    <strong>Start an eligible checkout</strong>
+                    <p>Add items to your cart and continue to checkout.</p>
+                </li>
+                <li>
+                    <strong>Choose points in 100-point blocks</strong>
+                    <p>For example, redeem 500 points for the value shown above.</p>
+                </li>
+                <li>
+                    <strong>Complete payment</strong>
+                    <p>Your order amount, after coupons, limits how many points can be applied. Points are deducted when the order is paid.</p>
+                </li>
+            </ol>
+            {% if remainder_points %}
+                <p class="lr-rule-note">{{ remainder_points|floatformat:"0g" }} point{{ remainder_points|pluralize }} in your balance don't fit another 100-point block yet.</p>
+            {% endif %}
+        </div>
+    </section>
+
+    <div class="lr-footer">
+        <p>Redemption is processed with your order; this page only shows your current balance and its estimated value.</p>
+        <a class="lr-checkout" href="{% url 'checkout' %}">Go to checkout</a>
+    </div>
+</div>
+{% endblock %}

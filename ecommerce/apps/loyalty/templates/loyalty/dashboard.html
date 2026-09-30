@@ -1,0 +1,452 @@
+{% extends "base.html" %}
+
+{% block title %}My Loyalty - ShopMart{% endblock %}
+
+{% block start %}
+<style>
+/* Scoped to this page so shared header, footer and component styles stay separate. */
+.loyalty-page {
+    --loyalty-text: #171717;
+    --loyalty-muted: #626262;
+    --loyalty-border: #e6e6e6;
+    --loyalty-surface: #f7f7f7;
+    --loyalty-radius: 16px;
+    --loyalty-shadow: 0 5px 20px rgb(0 0 0 / 4%);
+    width: calc(100% - 40px);
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 40px 0 64px;
+    color: var(--loyalty-text);
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    line-height: 1.5;
+}
+.loyalty-page,
+.loyalty-page * { box-sizing: border-box; }
+.loyalty-page h1,
+.loyalty-page h2,
+.loyalty-page h3 { color: var(--loyalty-text); }
+.loyalty-page .loyalty-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 24px;
+    margin-bottom: 28px;
+}
+.loyalty-page .loyalty-header > div { min-width: 0; }
+.loyalty-page .loyalty-eyebrow,
+.loyalty-page .section-label {
+    display: block;
+    margin: 0 0 8px;
+    color: var(--loyalty-muted);
+    font-size: 12px;
+    font-weight: 640;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+}
+.loyalty-page h1 {
+    margin: 0;
+    font-size: clamp(30px, 4vw, 42px);
+    font-weight: 640;
+    line-height: 1.15;
+    letter-spacing: -.03em;
+}
+.loyalty-page .loyalty-intro {
+    max-width: 600px;
+    margin: 12px 0 0;
+    color: var(--loyalty-muted);
+    font-size: 15px;
+    line-height: 1.6;
+}
+.loyalty-page .loyalty-actions {
+    display: flex;
+    max-width: 100%;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+}
+.loyalty-page .tier-badge,
+.loyalty-page .compare-tiers {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 10px 16px;
+    font-size: 14px;
+    font-weight: 640;
+    line-height: 1.4;
+    text-align: center;
+}
+.loyalty-page .tier-badge {
+    max-width: 100%;
+    border: 1px solid var(--loyalty-border);
+    border-radius: 999px;
+    background: var(--loyalty-surface);
+    color: #454545;
+    overflow-wrap: anywhere;
+}
+.loyalty-page .tier-badge[data-tier="bronze"] {
+    border-color: #dfc5b2; background: #fcf4ed; color: #784b2c;
+}
+.loyalty-page .tier-badge[data-tier="silver"] {
+    border-color: #cfd5db; background: #f3f5f7; color: #485360;
+}
+.loyalty-page .tier-badge[data-tier="gold"] {
+    border-color: #e3d39a; background: #fffaf0; color: #80651b;
+}
+.loyalty-page .tier-badge[data-tier="platinum"] {
+    border-color: #d0cde4; background: #f4f2fa; color: #5d537c;
+}
+.loyalty-page .compare-tiers {
+    border: 1px solid var(--loyalty-text);
+    border-radius: 10px;
+    background: var(--loyalty-text);
+    color: #fff;
+    text-decoration: none;
+}
+.loyalty-page .compare-tiers:hover { background: #333; border-color: #333; color: #fff; }
+.loyalty-page .rewards-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 10px 16px;
+    border: 1px solid var(--loyalty-border);
+    border-radius: 10px;
+    background: #fff;
+    color: var(--loyalty-text);
+    font-size: 14px;
+    font-weight: 640;
+    text-align: center;
+    text-decoration: none;
+}
+.loyalty-page .rewards-link:hover { background: var(--loyalty-surface); border-color: var(--loyalty-text); color: var(--loyalty-text); }
+.loyalty-page .rewards-link:focus-visible { outline: 3px solid #326a98; outline-offset: 4px; }
+.loyalty-page .compare-tiers:focus-visible { outline: 3px solid #326a98; outline-offset: 4px; }
+.loyalty-page .loyalty-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    margin: 0;
+}
+.loyalty-page .loyalty-card,
+.loyalty-page .loyalty-tier-card,
+.loyalty-page .transaction-list {
+    min-width: 0;
+    border: 1px solid var(--loyalty-border);
+    border-radius: var(--loyalty-radius);
+    background: #fff;
+    box-shadow: var(--loyalty-shadow);
+}
+.loyalty-page .loyalty-card { padding: 24px; }
+.loyalty-page .card-label {
+    margin: 0 0 12px;
+    color: var(--loyalty-muted);
+    font-size: 14px;
+    font-weight: 640;
+}
+.loyalty-page .loyalty-card dd { margin: 0; }
+.loyalty-page .points-value,
+.loyalty-page .tier-value {
+    display: block;
+    font-size: clamp(26px, 3vw, 32px);
+    font-weight: 640;
+    line-height: 1.2;
+    letter-spacing: -.02em;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+.loyalty-page .card-description {
+    display: block;
+    margin-top: 8px;
+    color: var(--loyalty-muted);
+    font-size: 13px;
+}
+.loyalty-page .loyalty-section { margin-top: 40px; }
+.loyalty-page .section-heading { margin-bottom: 16px; }
+.loyalty-page .section-heading h2 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 640;
+    line-height: 1.25;
+    letter-spacing: -.02em;
+}
+.loyalty-page .loyalty-tier-card { padding: 28px; }
+.loyalty-page .tier-card-header,
+.loyalty-page .tier-progress-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+}
+.loyalty-page .tier-card-header > div { min-width: 0; }
+.loyalty-page .tier-label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--loyalty-muted);
+    font-size: 12px;
+    font-weight: 640;
+    letter-spacing: .08em;
+}
+.loyalty-page .tier-card-header h3 {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 640;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+}
+.loyalty-page .tier-points { text-align: right; }
+.loyalty-page .tier-points strong {
+    display: block;
+    font-size: 24px;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+.loyalty-page .tier-points span {
+    display: block;
+    margin-top: 4px;
+    color: var(--loyalty-muted);
+    font-size: 12px;
+}
+.loyalty-page .tier-progress-info { align-items: flex-end; margin: 28px 0 12px; }
+.loyalty-page .tier-progress-info > div { min-width: 0; }
+.loyalty-page .tier-progress-info span { color: var(--loyalty-muted); font-size: 13px; }
+.loyalty-page .tier-progress-info strong { display: block; margin-top: 4px; font-size: 15px; }
+.loyalty-page .tier-progress-info > span { flex-shrink: 0; font-weight: 640; }
+.loyalty-page .loyalty-progress {
+    display: block;
+    width: 100%;
+    height: 10px;
+    overflow: hidden;
+    appearance: none;
+    -webkit-appearance: none;
+    border: 0;
+    border-radius: 999px;
+    background: #ededed;
+    color: var(--loyalty-text);
+    accent-color: var(--loyalty-text);
+}
+.loyalty-page .loyalty-progress::-webkit-progress-bar { background: #ededed; border-radius: 999px; }
+.loyalty-page .loyalty-progress::-webkit-progress-value { background: var(--loyalty-text); border-radius: 999px; }
+.loyalty-page .loyalty-progress::-moz-progress-bar { background: var(--loyalty-text); border-radius: 999px; }
+.loyalty-page .progress-note { margin: 12px 0 0; color: var(--loyalty-muted); font-size: 13px; }
+.loyalty-page .tier-message {
+    margin-top: 24px;
+    padding: 16px 18px;
+    border-radius: 12px;
+    background: var(--loyalty-surface);
+}
+.loyalty-page .tier-message strong { display: block; margin-bottom: 4px; font-size: 15px; }
+.loyalty-page .tier-message p { margin: 0; color: var(--loyalty-muted); font-size: 14px; }
+.loyalty-page .tier-benefits { margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--loyalty-border); }
+.loyalty-page .tier-benefits h3 { margin: 0 0 16px; font-size: 20px; font-weight: 640; }
+.loyalty-page .benefit-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.loyalty-page .benefit-item { display: flex; align-items: flex-start; gap: 12px; min-width: 0; padding: 16px; border: 1px solid #ececec; border-radius: 12px; background: #fafafa; }
+.loyalty-page .benefit-icon { display: flex; flex: 0 0 36px; align-items: center; justify-content: center; width: 36px; height: 36px; border: 1px solid var(--loyalty-border); border-radius: 9px; background: #fff; font-size: 18px; font-weight: 640; }
+.loyalty-page .benefit-item > div { min-width: 0; overflow-wrap: anywhere; }
+.loyalty-page .benefit-item strong { display: block; margin-bottom: 4px; font-size: 15px; }
+.loyalty-page .benefit-item p { margin: 0; color: var(--loyalty-muted); font-size: 14px; }
+.loyalty-page .transaction-list { margin: 0; padding: 0; list-style: none; overflow: hidden; }
+.loyalty-page .transaction-row { display: flex; justify-content: space-between; align-items: center; gap: 24px; padding: 20px; border-bottom: 1px solid #ececec; }
+.loyalty-page .transaction-row:last-child { border-bottom: 0; }
+.loyalty-page .transaction-details { min-width: 0; overflow-wrap: anywhere; }
+.loyalty-page .transaction-details strong { display: block; margin-bottom: 4px; font-size: 15px; }
+.loyalty-page .transaction-description { margin: 0; color: var(--loyalty-muted); font-size: 14px; }
+.loyalty-page .transaction-date { display: block; margin-top: 6px; color: var(--loyalty-muted); font-size: 12px; }
+.loyalty-page .transaction-points { flex: 0 0 auto; font-size: 15px; font-weight: 640; font-variant-numeric: tabular-nums; text-align: right; }
+.loyalty-page .transaction-points small { display: block; margin-top: 2px; color: var(--loyalty-muted); font-size: 12px; font-weight: 640; }
+.loyalty-page .points-earned { color: #20733e; }
+.loyalty-page .points-spent { color: #a53131; }
+.loyalty-page .points-neutral { color: var(--loyalty-muted); }
+.loyalty-page .empty-state { padding: 40px 20px; text-align: center; }
+.loyalty-page .empty-state h3 { margin: 0 0 8px; font-size: 16px; }
+.loyalty-page .empty-state p { margin: 0; color: var(--loyalty-muted); font-size: 14px; }
+@media (max-width: 960px) {
+    .loyalty-page .loyalty-header { align-items: flex-start; flex-direction: column; }
+    .loyalty-page .loyalty-actions { justify-content: flex-start; }
+}
+@media (max-width: 700px) {
+    .loyalty-page .loyalty-summary,
+    .loyalty-page .benefit-grid { grid-template-columns: minmax(0, 1fr); }
+    .loyalty-page .loyalty-card { padding: 20px; }
+}
+@media (max-width: 480px) {
+    .loyalty-page { width: calc(100% - 24px); padding: 24px 0 40px; }
+    .loyalty-page .loyalty-section { margin-top: 32px; }
+    .loyalty-page .loyalty-tier-card { padding: 20px; }
+    .loyalty-page .tier-card-header { align-items: flex-start; flex-direction: column; gap: 16px; }
+    .loyalty-page .tier-points { text-align: left; }
+    .loyalty-page .tier-progress-info { align-items: flex-start; flex-direction: column; gap: 8px; }
+    .loyalty-page .transaction-row { flex-wrap: wrap; align-items: flex-start; gap: 12px; padding: 16px; }
+    .loyalty-page .transaction-details { flex: 1 1 160px; }
+    .loyalty-page .transaction-points { margin-left: auto; max-width: 100%; overflow-wrap: anywhere; }
+}
+</style>
+
+<div class="loyalty-page">
+    <header class="loyalty-header">
+        <div>
+            <p class="loyalty-eyebrow">ShopMart Loyalty</p>
+            <h1>My Loyalty</h1>
+            <p class="loyalty-intro">Earn points, unlock better benefits, and enjoy more rewards as you shop.</p>
+        </div>
+        <div class="loyalty-actions">
+            {% if current_tier %}
+                <span class="tier-badge" data-tier="{{ current_tier.name|lower }}">{{ current_tier.name }}</span>
+            {% endif %}
+            <a class="compare-tiers" href="{% url 'loyalty:tiers' %}">Compare tiers</a>
+            <a class="rewards-link" href="{% url 'loyalty:rewards' %}">Rewards &amp; Redemption</a>
+        </div>
+    </header>
+
+    <dl class="loyalty-summary" aria-label="Your loyalty summary">
+        <div class="loyalty-card">
+            <dt class="card-label">Available Points</dt>
+            <dd>
+                <strong class="points-value">{{ account.available_points|floatformat:"0g" }}</strong>
+                <span class="card-description">Your balance for rewards</span>
+            </dd>
+        </div>
+        <div class="loyalty-card">
+            <dt class="card-label">Lifetime Points</dt>
+            <dd>
+                <strong class="points-value">{{ account.lifetime_points_earned|floatformat:"0g" }}</strong>
+                <span class="card-description">Total points earned toward tier progress</span>
+            </dd>
+        </div>
+        <div class="loyalty-card">
+            <dt class="card-label">Current Tier</dt>
+            <dd>
+                <strong class="tier-value">{% if current_tier %}{{ current_tier.name }}{% else %}Not assigned yet{% endif %}</strong>
+                <span class="card-description">
+                    {% if current_tier %}{{ current_tier.points_multiplier|floatformat:"2" }}× points multiplier{% else %}Explore the available tiers above{% endif %}
+                </span>
+            </dd>
+        </div>
+    </dl>
+
+    <section class="loyalty-section" aria-labelledby="loyalty-journey-heading">
+        <div class="section-heading">
+            <span class="section-label">Tier Progress</span>
+            <h2 id="loyalty-journey-heading">Your Loyalty Journey</h2>
+        </div>
+        <div class="loyalty-tier-card">
+            <div class="tier-card-header">
+                <div>
+                    <span class="tier-label">CURRENT TIER</span>
+                    <h3>{% if current_tier %}{{ current_tier.name }}{% else %}Not assigned yet{% endif %}</h3>
+                </div>
+                <div class="tier-points">
+                    <strong>{{ account.lifetime_points_earned|floatformat:"0g" }}</strong>
+                    <span>Lifetime Points</span>
+                </div>
+            </div>
+
+            {% if next_tier %}
+                <div class="tier-progress-info">
+                    <div>
+                        <span id="loyalty-progress-label">Progress to {{ next_tier.name }}</span>
+                        <strong id="loyalty-progress-description">{{ points_to_next_tier|floatformat:"0g" }} point{{ points_to_next_tier|pluralize }} to go</strong>
+                    </div>
+                    <span aria-hidden="true">{{ progress_percentage|floatformat:"-1" }}%</span>
+                </div>
+                <progress class="loyalty-progress"
+                          value="{{ progress_percentage|floatformat:'1u' }}"
+                          max="100"
+                          aria-labelledby="loyalty-progress-label"
+                          aria-describedby="loyalty-progress-description">{{ progress_percentage|floatformat:"-1" }}%</progress>
+                <p class="progress-note">Tier progress is based on your lifetime points earned.</p>
+            {% elif current_tier %}
+                <div class="tier-message">
+                    <strong>You've reached all currently available point milestones.</strong>
+                    <p>Explore your current benefits below, or compare the available tiers.</p>
+                </div>
+            {% else %}
+                <div class="tier-message">
+                    <strong>Your loyalty tier has not been assigned yet.</strong>
+                    <p>You can still review your points and compare the available tiers.</p>
+                </div>
+            {% endif %}
+
+            {% if current_tier %}
+                <section class="tier-benefits" aria-labelledby="loyalty-benefits-heading">
+                    <h3 id="loyalty-benefits-heading">Your Benefits</h3>
+                    <ul class="benefit-grid">
+                        <li class="benefit-item">
+                            <span class="benefit-icon" aria-hidden="true">×</span>
+                            <div>
+                                <strong>{{ current_tier.points_multiplier|floatformat:"2" }}× Points Multiplier</strong>
+                                <p>Your tier's earning multiplier for purchase points.</p>
+                            </div>
+                        </li>
+                        {% if current_tier.free_shipping %}
+                            <li class="benefit-item">
+                                <span class="benefit-icon" aria-hidden="true">✓</span>
+                                <div><strong>Free Shipping</strong><p>Enjoy free delivery on eligible orders.</p></div>
+                            </li>
+                        {% endif %}
+                        {% if current_tier.exclusive_offers %}
+                            <li class="benefit-item">
+                                <span class="benefit-icon" aria-hidden="true">★</span>
+                                <div><strong>Exclusive Offers</strong><p>Access special offers available to your tier.</p></div>
+                            </li>
+                        {% endif %}
+                        {% if current_tier.early_access_hours %}
+                            <li class="benefit-item">
+                                <span class="benefit-icon" aria-hidden="true">◷</span>
+                                <div><strong>Early Access</strong><p>Get {{ current_tier.early_access_hours }} hour{{ current_tier.early_access_hours|pluralize }} of early access.</p></div>
+                            </li>
+                        {% endif %}
+                        {% if current_tier.discount_percentage > 0 %}
+                            <li class="benefit-item">
+                                <span class="benefit-icon" aria-hidden="true">%</span>
+                                <div><strong>Tier Discount</strong><p>{{ current_tier.discount_percentage|floatformat:"-2" }}% tier discount.</p></div>
+                            </li>
+                        {% endif %}
+                        <li class="benefit-item">
+                            <span class="benefit-icon" aria-hidden="true">♛</span>
+                            <div><strong>Support Priority</strong><p>{{ current_tier.get_support_priority_display }} support priority.</p></div>
+                        </li>
+                    </ul>
+                </section>
+            {% endif %}
+        </div>
+    </section>
+
+    <section class="loyalty-section" aria-labelledby="loyalty-activity-heading">
+        <div class="section-heading">
+            <span class="section-label">Activity</span>
+            <h2 id="loyalty-activity-heading">Recent Loyalty Activity</h2>
+        </div>
+        <ul class="transaction-list">
+            {% for transaction in recent_transactions %}
+                <li class="transaction-row">
+                    <div class="transaction-details">
+                        <strong>{{ transaction.get_transaction_type_display }}</strong>
+                        {% if transaction.description %}<p class="transaction-description">{{ transaction.description }}</p>{% endif %}
+                        <time class="transaction-date" datetime="{{ transaction.created_at|date:'c' }}">{{ transaction.created_at|date:"M j, Y" }} · {{ transaction.created_at|date:"g:i A" }}</time>
+                    </div>
+                    <div class="transaction-points {% if transaction.points > 0 %}points-earned{% elif transaction.points < 0 %}points-spent{% else %}points-neutral{% endif %}">
+                        {% if transaction.points > 0 %}+{% endif %}{{ transaction.points|floatformat:"0g" }}
+                        <small>point{{ transaction.points|pluralize }}</small>
+                    </div>
+                </li>
+            {% empty %}
+                <li class="empty-state">
+                    <h3>No loyalty activity yet</h3>
+                    <p>Start shopping to begin earning points.</p>
+                </li>
+            {% endfor %}
+        </ul>
+    </section>
+</div>
+{% endblock %}

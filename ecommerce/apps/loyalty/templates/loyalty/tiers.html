@@ -1,0 +1,359 @@
+{% extends 'base.html' %}
+
+{% block title %}Loyalty Tiers{% endblock %}
+
+{% block start %}
+<style>
+.loyalty-tiers {
+    --lt-ink: #171717;
+    --lt-muted: #626262;
+    --lt-border: #e6e6e6;
+    --lt-surface: #f7f7f7;
+    --lt-radius: 16px;
+    --lt-shadow: 0 5px 20px rgb(0 0 0 / 4%);
+    width: calc(100% - 40px);
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 40px 0 64px;
+    color: var(--lt-ink);
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    line-height: 1.5;
+}
+.loyalty-tiers,
+.loyalty-tiers * { box-sizing: border-box; }
+.loyalty-tiers h1,
+.loyalty-tiers h2,
+.loyalty-tiers h3 { color: var(--lt-ink); }
+
+.loyalty-tiers .lt-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 24px;
+    margin-bottom: 28px;
+}
+.loyalty-tiers .lt-header > div { min-width: 0; }
+.loyalty-tiers .lt-eyebrow {
+    margin: 0 0 8px;
+    color: var(--lt-muted);
+    font-size: 12px;
+    font-weight: 640;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+}
+.loyalty-tiers h1 {
+    margin: 0;
+    font-size: clamp(30px, 4vw, 42px);
+    font-weight: 640;
+    line-height: 1.15;
+    letter-spacing: -.03em;
+}
+.loyalty-tiers .lt-intro {
+    max-width: 600px;
+    margin: 12px 0 0;
+    color: var(--lt-muted);
+    font-size: 15px;
+    line-height: 1.6;
+}
+.loyalty-tiers .lt-back {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 10px 16px;
+    border: 1px solid var(--lt-border);
+    border-radius: 10px;
+    background: #fff;
+    color: var(--lt-ink);
+    font-size: 14px;
+    font-weight: 640;
+    text-align: center;
+    text-decoration: none;
+}
+.loyalty-tiers .lt-back:hover {
+    background: var(--lt-surface);
+    border-color: var(--lt-ink);
+    color: var(--lt-ink);
+}
+.loyalty-tiers .lt-back:focus-visible { outline: 3px solid #326a98; outline-offset: 4px; }
+
+.loyalty-tiers .lt-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    margin: 0 0 40px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+}
+.loyalty-tiers .lt-summary > div {
+    min-width: 0;
+    padding: 24px;
+    border: 1px solid var(--lt-border);
+    border-radius: var(--lt-radius);
+    background: #fff;
+    box-shadow: var(--lt-shadow);
+}
+.loyalty-tiers .lt-summary dt {
+    margin-bottom: 12px;
+    color: var(--lt-muted);
+    font-size: 14px;
+    font-weight: 640;
+}
+.loyalty-tiers .lt-summary dd {
+    margin: 0;
+    font-size: clamp(26px, 3vw, 32px);
+    font-weight: 640;
+    line-height: 1.2;
+    letter-spacing: -.02em;
+    overflow-wrap: anywhere;
+}
+.loyalty-tiers .lt-summary small {
+    display: block;
+    margin-top: 8px;
+    color: var(--lt-muted);
+    font-size: 13px;
+    font-weight: 640;
+    letter-spacing: normal;
+}
+
+.loyalty-tiers .lt-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+}
+.loyalty-tiers .lt-card {
+    --lt-accent: #8c8c8c;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: 24px;
+    border: 1px solid var(--lt-border);
+    border-top: 4px solid var(--lt-accent);
+    border-radius: var(--lt-radius);
+    background: #fff;
+    box-shadow: var(--lt-shadow);
+}
+.loyalty-tiers .lt-card[data-tier="bronze"] { --lt-accent: #ad7547; }
+.loyalty-tiers .lt-card[data-tier="silver"] { --lt-accent: #8b9ba8; }
+.loyalty-tiers .lt-card[data-tier="gold"] { --lt-accent: #b39338; }
+.loyalty-tiers .lt-card[data-tier="platinum"] { --lt-accent: #68769b; }
+.loyalty-tiers .lt-card--current {
+    border-color: var(--lt-ink);
+    border-top-color: var(--lt-accent);
+    box-shadow: 0 0 0 1px var(--lt-ink), 0 8px 24px rgb(0 0 0 / 7%);
+}
+.loyalty-tiers .lt-card-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    min-height: 60px;
+    margin-bottom: 16px;
+}
+.loyalty-tiers .lt-card h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 640;
+    line-height: 1.25;
+    letter-spacing: -.02em;
+    overflow-wrap: anywhere;
+}
+.loyalty-tiers .lt-current {
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: var(--lt-ink);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 640;
+}
+.loyalty-tiers .lt-threshold { margin: 0 0 24px; }
+.loyalty-tiers .lt-threshold strong {
+    display: block;
+    font-size: 30px;
+    font-weight: 640;
+    line-height: 1.2;
+    letter-spacing: -.02em;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+.loyalty-tiers .lt-threshold span {
+    display: block;
+    margin-top: 4px;
+    color: var(--lt-muted);
+    font-size: 12px;
+}
+.loyalty-tiers .lt-benefits { margin: 0; }
+.loyalty-tiers .lt-benefits > div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 0;
+    border-top: 1px solid #ececec;
+    font-size: 13px;
+}
+.loyalty-tiers .lt-benefits dt { color: var(--lt-muted); font-weight: 640; }
+.loyalty-tiers .lt-benefits dd {
+    margin: 0;
+    color: var(--lt-ink);
+    font-weight: 640;
+    text-align: right;
+    overflow-wrap: anywhere;
+}
+.loyalty-tiers .lt-description {
+    margin: 16px 0;
+    color: var(--lt-muted);
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+.loyalty-tiers .lt-card-footer { margin-top: auto; padding-top: 20px; }
+.loyalty-tiers .lt-status {
+    margin: 0;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--lt-surface);
+    color: var(--lt-muted);
+    font-size: 12px;
+    text-align: center;
+}
+.loyalty-tiers .lt-card--current .lt-status {
+    background: var(--lt-surface);
+    color: var(--lt-ink);
+    font-weight: 640;
+}
+.loyalty-tiers .lt-note { margin: 24px 0 0; color: var(--lt-muted); font-size: 13px; }
+.loyalty-tiers .lt-empty {
+    padding: 40px 20px;
+    border: 1px solid var(--lt-border);
+    border-radius: var(--lt-radius);
+    background: #fff;
+    box-shadow: var(--lt-shadow);
+    text-align: center;
+}
+.loyalty-tiers .lt-empty h2 { margin: 0 0 8px; font-size: 20px; font-weight: 640; }
+.loyalty-tiers .lt-empty p { margin: 0; color: var(--lt-muted); font-size: 14px; }
+
+@media (max-width: 1100px) {
+    .loyalty-tiers .lt-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+    .loyalty-tiers .lt-header { align-items: flex-start; flex-direction: column; }
+    .loyalty-tiers .lt-summary { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 540px) {
+    .loyalty-tiers { width: calc(100% - 24px); padding: 24px 0 40px; }
+    .loyalty-tiers .lt-summary { margin-bottom: 32px; }
+    .loyalty-tiers .lt-summary > div,
+    .loyalty-tiers .lt-card { padding: 20px; }
+    .loyalty-tiers .lt-grid { grid-template-columns: minmax(0, 1fr); }
+    .loyalty-tiers .lt-card-heading { min-height: 0; }
+}
+</style>
+
+<section class="loyalty-tiers" aria-labelledby="loyalty-tiers-title">
+  <header class="lt-header">
+    <div>
+      <p class="lt-eyebrow">Your loyalty journey</p>
+      <h1 id="loyalty-tiers-title">Loyalty tiers</h1>
+      <p class="lt-intro">Earn more. Discover the benefits at every level.</p>
+    </div>
+    <a class="lt-back" href="{% url 'loyalty:dashboard' %}">Back to my loyalty</a>
+  </header>
+
+  <dl class="lt-summary">
+    <div>
+      <dt>Your current tier</dt>
+      <dd>{% if current_tier %}{{ current_tier.name }}{% else %}Not assigned yet{% endif %}</dd>
+    </div>
+    <div>
+      <dt>Lifetime points earned</dt>
+      <dd>{{ account.lifetime_points_earned|floatformat:"0g" }}</dd>
+    </div>
+    <div>
+      <dt>Next milestone</dt>
+      <dd>
+        {% if next_tier %}
+          {{ next_tier.name }}
+          <small>{{ points_to_next_tier|floatformat:"0g" }} more lifetime point{{ points_to_next_tier|pluralize }}</small>
+        {% elif tier_cards %}
+          All listed thresholds reached
+        {% else %}
+          Check back soon
+        {% endif %}
+      </dd>
+    </div>
+  </dl>
+
+  {% if tier_cards %}
+    <div class="lt-grid">
+      {% for card in tier_cards %}
+        {% with tier=card.tier %}
+          <article class="lt-card{% if card.is_current %} lt-card--current{% endif %}"
+                   data-tier="{{ tier.name|lower }}"
+                   aria-labelledby="loyalty-tier-{{ tier.pk }}">
+            <div class="lt-card-heading">
+              <h2 id="loyalty-tier-{{ tier.pk }}">{{ tier.name }}</h2>
+              {% if card.is_current %}<span class="lt-current">Current tier</span>{% endif %}
+            </div>
+
+            <p class="lt-threshold">
+              <strong>{{ tier.minimum_points|floatformat:"0g" }}</strong>
+              <span>Lifetime points to qualify</span>
+            </p>
+
+            <dl class="lt-benefits">
+              <div>
+                <dt>Points multiplier</dt>
+                <dd>{{ tier.points_multiplier|floatformat:"2" }}×</dd>
+              </div>
+              <div>
+                <dt>Shipping</dt>
+                <dd>{% if tier.free_shipping %}Free{% else %}Standard{% endif %}</dd>
+              </div>
+              <div>
+                <dt>Exclusive offers</dt>
+                <dd>{% if tier.exclusive_offers %}Included{% else %}Not included{% endif %}</dd>
+              </div>
+              <div>
+                <dt>Early access</dt>
+                <dd>{% if tier.early_access_hours %}{{ tier.early_access_hours }} hour{{ tier.early_access_hours|pluralize }}{% else %}Not included{% endif %}</dd>
+              </div>
+              <div>
+                <dt>Tier discount</dt>
+                <dd>{{ tier.discount_percentage|floatformat:"-2" }}%</dd>
+              </div>
+              <div>
+                <dt>Support priority</dt>
+                <dd>{{ tier.get_support_priority_display }}</dd>
+              </div>
+            </dl>
+
+            {% if tier.description %}<p class="lt-description">{{ tier.description }}</p>{% endif %}
+
+            <div class="lt-card-footer">
+              <p class="lt-status">
+                {% if card.is_current %}
+                  Your current tier
+                {% elif card.points_remaining %}
+                  {{ card.points_remaining|floatformat:"0g" }} more point{{ card.points_remaining|pluralize }} to qualify
+                {% else %}
+                  Points threshold reached
+                {% endif %}
+              </p>
+            </div>
+          </article>
+        {% endwith %}
+      {% endfor %}
+    </div>
+
+    <p class="lt-note">Tier progress uses your lifetime points earned. Your available points balance shows what you can use for rewards.</p>
+  {% else %}
+    <div class="lt-empty">
+      <h2>Tier details are coming soon</h2>
+      <p>Check back later to explore the available loyalty benefits.</p>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}
