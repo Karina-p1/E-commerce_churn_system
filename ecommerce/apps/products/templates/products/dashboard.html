@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 {% block extra_head %}
 {% load product_extras %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/responsive_select.css' %}">
+<script src="{% static 'js/responsive_select.js' %}" defer></script>
 <style>
 
   /* ── OFFER SLIDER ─────────────────────────────────── */
@@ -801,7 +804,7 @@
 
       <div class="filter-group">
         <label class="filter-group-label" for="sidebar-sort">Sort products</label>
-        <select class="filter-select" id="sidebar-sort" name="sort">
+        <select class="filter-select" id="sidebar-sort" name="sort" data-responsive-select>
           <option value="" {% if not request.GET.sort %}selected{% endif %}>Recommended</option>
           <option value="price_low" {% if request.GET.sort == 'price_low' %}selected{% endif %}>Price: low to high</option>
           <option value="price_high" {% if request.GET.sort == 'price_high' %}selected{% endif %}>Price: high to low</option>
@@ -849,7 +852,7 @@
         {% endif %}
         <div class="results-actions">
           <span class="results-count">{{ products|length }} item{{ products|length|pluralize }}</span>
-          <select class="sort-select" id="resultsSort" aria-label="Sort products">
+          <select class="sort-select" id="resultsSort" aria-label="Sort products" data-responsive-select>
             <option value="" {% if not request.GET.sort %}selected{% endif %}>Recommended</option>
             <option value="price_low" {% if request.GET.sort == 'price_low' %}selected{% endif %}>Price ↑</option>
             <option value="price_high" {% if request.GET.sort == 'price_high' %}selected{% endif %}>Price ↓</option>

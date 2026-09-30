@@ -1,6 +1,13 @@
 {% extends "base.html" %} 
 
+{% load static %}
+
 {% block title %}Request Refund{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/responsive_select.css' %}">
+<script src="{% static 'js/responsive_select.js' %}" defer></script>
+{% endblock %}
 
 {% block start %}
 
@@ -16,7 +23,7 @@
             approval.
           </p>
 
-          <form method="POST">
+          <form method="POST" data-responsive-select>
             {% csrf_token %}
 
             <div class="mb-3">
