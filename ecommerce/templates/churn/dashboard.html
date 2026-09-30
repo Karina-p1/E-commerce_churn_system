@@ -253,6 +253,9 @@
       <p>Customer retention risk overview</p>
     </div>
     <div class="header-actions">
+      <a href="{% url 'churn:retention_dashboard' %}" class="export-btn">
+        <i class="ti ti-heart-handshake"></i> Retention campaigns
+      </a>
       <a href="{% url 'churn:export_high_risk_csv' %}" class="export-btn">
         <i class="ti ti-download"></i> Export high risk (CSV)
       </a>

@@ -3,12 +3,12 @@ from django.contrib.auth import get_user_model
 from apps.churn.models import ChurnScore
 from apps.churn.features import extract_features
 from apps.churn.predictor import predict_churn
-from apps.churn.retention import trigger_winback
+from apps.churn.retention import trigger_winback, expire_retention_campaigns
 
 User = get_user_model()
 
 
-def score_customer(user, debug=False, log=None):
+def score_customer(user, debug=False, log=None, allow_winback=True):
     """
     Scores ONE customer and saves a new ChurnScore row for them.
 
@@ -39,7 +39,7 @@ def score_customer(user, debug=False, log=None):
     # history per customer rather than overwriting the one
     # existing row — the dashboard's "latest per customer"
     # query and the score-history chart both depend on this.
-    ChurnScore.objects.create(
+    score_row = ChurnScore.objects.create(
         customer=user,
         score=result['score'],
         risk_level=result['risk_level'],
@@ -53,7 +53,7 @@ def score_customer(user, debug=False, log=None):
     )
 
     coupon = None
-    if result['risk_level'] == 'high':
+    if allow_winback and result['risk_level'] == 'high':
         # Only trigger a win-back offer the MOMENT someone crosses
         # into high risk — not every single day they remain high,
         # or they'd get a new coupon every day forever.
@@ -61,7 +61,7 @@ def score_customer(user, debug=False, log=None):
             previous is None or previous.risk_level != 'high'
         )
         if just_became_high:
-            coupon = trigger_winback(user)
+            coupon = trigger_winback(user, source_score=score_row)
             if coupon:
                 _log(f"    \U0001F381 Win-back coupon sent: {coupon.code}")
 
@@ -111,6 +111,9 @@ def score_all_customers(debug=False, log=None):
     def _log(msg):
         if log:
             log(msg)
+
+    # Keep campaign statuses current as part of the same daily workflow.
+    expire_retention_campaigns()
 
     users = User.objects.filter(
         is_staff=False,

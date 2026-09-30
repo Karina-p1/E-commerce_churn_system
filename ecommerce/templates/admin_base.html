@@ -451,15 +451,21 @@
     <div class="nav-dropdown">
       <div class="nav-item nav-dropdown-toggle
         {% if request.resolver_match.namespace == 'churn' %}active{% endif %}">
-        <i class="ti ti-alert-triangle"></i>
-        <span>Churn</span>
+        <i class="ti ti-heart-handshake"></i>
+        <span>Churn & Retention</span>
         <i class="ti ti-chevron-right dropdown-arrow"></i>
       </div>
       <div class="nav-submenu">
         <a href="{% url 'churn:dashboard' %}"
           class="nav-subitem {% if request.resolver_match.url_name == 'dashboard' and request.resolver_match.namespace == 'churn' %}active{% endif %}">
           <i class="ti ti-chart-pie"></i>
-          Dashboard
+          Churn Risk
+        </a>
+
+        <a href="{% url 'churn:retention_dashboard' %}"
+          class="nav-subitem {% if request.resolver_match.url_name == 'retention_dashboard' and request.resolver_match.namespace == 'churn' %}active{% endif %}">
+          <i class="ti ti-heart-dollar"></i>
+          Retention Campaigns
         </a>
       </div>
     </div>

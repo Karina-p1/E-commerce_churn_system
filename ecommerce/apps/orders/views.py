@@ -979,6 +979,13 @@ def esewa_success(request):
                 lambda: paid_order_created.delay(order.id)
             )
 
+            # Retention attribution happens only after a real paid order.
+            # It records product names/revenue and re-scores the customer.
+            from apps.churn.tasks import process_retention_order_task
+            transaction.on_commit(
+                lambda oid=order.id: process_retention_order_task.delay(oid)
+            )
+
             # Update coupon usage
             if order.coupon:
                 Coupon.objects.filter(
@@ -1360,10 +1367,17 @@ def order_update_status(request, pk):
                 and order.payment_status != "PAID"
             ):
                 order.payment_status = "PAID"
-                order.save(update_fields=["payment_status"])
+                order.paid_at = timezone.now()
+                order.save(update_fields=["payment_status", "paid_at"])
 
                 transaction.on_commit(
                     lambda: paid_order_created.delay(order.id)
+                )
+
+                # COD is a real retention recovery only after delivery/payment.
+                from apps.churn.tasks import process_retention_order_task
+                transaction.on_commit(
+                    lambda oid=order.id: process_retention_order_task.delay(oid)
                 )
 
             messages.success(
