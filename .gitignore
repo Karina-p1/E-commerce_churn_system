@@ -36,4 +36,8 @@ db.sqlite3-shm
 db.sqlite3-wal
 
 # Local database backups
+<<<<<<< HEAD
 backups/
+=======
+backups/
+>>>>>>> 1b21337e89bbc605e16dd41223b7088029cc664f
