@@ -1,4 +1,3 @@
-<<<<<<< Updated upstream
 # Virtual environment
 venv/
 env/
@@ -6,9 +5,7 @@ env/
 myenv/
 
 # Python
-=======
 venv/
->>>>>>> Stashed changes
 __pycache__/
 *.pyc
 *.pyo
@@ -40,3 +37,4 @@ db.sqlite3-wal
 
 # Local database backups
 backups/
+
