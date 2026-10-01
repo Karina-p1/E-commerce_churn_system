@@ -11,7 +11,12 @@
         Please wait. Do not refresh or close this page.
     </p>
 
-    <form id="esewaForm" action="{{ esewa_payment_url }}" method="POST">
+    {% comment %}
+        This form carries server-generated eSewa parameters and is submitted
+        automatically on load, so it must never be held up by client-side
+        validation.
+    {% endcomment %}
+    <form id="esewaForm" action="{{ esewa_payment_url }}" method="POST" data-no-validate>
         {% for key, value in esewa_data.items %}
             <input type="hidden" name="{{ key }}" value="{{ value }}">
         {% endfor %}

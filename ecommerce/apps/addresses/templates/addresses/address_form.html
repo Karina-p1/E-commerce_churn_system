@@ -117,50 +117,103 @@
       <form method="post">
         {% csrf_token %}
 
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger" role="alert">
+          {% for error in form.non_field_errors %}
+            <div>{{ error }}</div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
         <div class="row">
           <div class="col-md-6 mb-3">
             <label class="form-label">Label</label>
             {{ form.label }}
+            {% if form.label.errors %}
+              {% for error in form.label.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+              {% endfor %}
+            {% endif %}
           </div>
 
           <div class="col-md-6 mb-3">
             <label class="form-label">Full Name</label>
             {{ form.full_name }}
+            {% if form.full_name.errors %}
+              {% for error in form.full_name.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+              {% endfor %}
+            {% endif %}
           </div>
 
           <div class="col-md-6 mb-3">
             <label class="form-label">Phone</label>
             {{ form.phone }}
+            {% if form.phone.errors %}
+              {% for error in form.phone.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+              {% endfor %}
+            {% endif %}
           </div>
 
           <div class="col-md-6 mb-3">
             <label class="form-label">Province</label>
             {{ form.province }}
+            {% if form.province.errors %}
+              {% for error in form.province.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+              {% endfor %}
+            {% endif %}
           </div>
 
           <div class="col-md-6 mb-3">
             <label class="form-label">District</label>
             {{ form.district }}
+            {% if form.district.errors %}
+              {% for error in form.district.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+              {% endfor %}
+            {% endif %}
           </div>
 
           <div class="col-md-6 mb-3">
             <label class="form-label">City</label>
             {{ form.city }}
+            {% if form.city.errors %}
+              {% for error in form.city.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+              {% endfor %}
+            {% endif %}
           </div>
 
           <div class="col-md-6 mb-3">
             <label class="form-label">Ward</label>
             {{ form.ward }}
+            {% if form.ward.errors %}
+              {% for error in form.ward.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+              {% endfor %}
+            {% endif %}
           </div>
 
           <div class="col-md-6 mb-3">
             <label class="form-label">Street</label>
             {{ form.street }}
+            {% if form.street.errors %}
+              {% for error in form.street.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+              {% endfor %}
+            {% endif %}
           </div>
 
           <div class="col-12 mb-3">
             <label class="form-label">Landmark</label>
             {{ form.landmark }}
+            {% if form.landmark.errors %}
+              {% for error in form.landmark.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+              {% endfor %}
+            {% endif %}
           </div>
         </div>
 

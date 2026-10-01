@@ -38,6 +38,7 @@
                   name="address"
                   value="{{ address.id }}"
                   {% if address.is_default %}checked{% endif %}
+                  required
                 />
 
                 <div class="form-check-label w-100">
@@ -114,7 +115,8 @@
                             type="radio"
                             name="payment_method"
                             value="ESEWA"
-                            {% if not payment_method %}checked{% endif %}>
+                            {% if not payment_method %}checked{% endif %}
+                            required>
                         <div style="width:36px; height:36px; overflow:hidden; border-radius:6px; flex-shrink:0;" class="me-3">
                         <img
                             src="https://esewa.com.np/common/images/esewa_logo.png"
@@ -140,7 +142,8 @@
                             class="form-check-input me-3"
                             type="radio"
                             name="payment_method"
-                            value="COD">
+                            value="COD"
+                            required>
 
                         <div style="font-size:32px" class="me-3">
                             💵

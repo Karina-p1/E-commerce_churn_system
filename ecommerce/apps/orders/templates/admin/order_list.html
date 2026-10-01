@@ -298,11 +298,15 @@
                             Reference ID
                         </label>
 
-                        <input
-                            id="referenceId"
-                            name="reference_id"
-                            class="form-control"
-                            required>
+                    <input
+                        id="referenceId"
+                        name="reference_id"
+                        class="form-control"
+                        data-fv-label="Reference ID"
+                        minlength="3"
+                        maxlength="100"
+                        required>
+
 
                     </div>
 
@@ -316,6 +320,7 @@
                             id="refundNotes"
                             name="notes"
                             rows="3"
+                            maxlength="1000"
                             class="form-control"></textarea>
 
                     </div>

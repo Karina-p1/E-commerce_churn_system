@@ -37,14 +37,28 @@
 
                         {% csrf_token %}
 
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger" role="alert">
+                            {% for error in form.non_field_errors %}
+                                <div>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
                         <div class="mb-3">
                             <label class="form-label">Rating</label>
                             {{ form.customer_rating }}
+                            {% for error in form.customer_rating.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label">Feedback</label>
                             {{ form.customer_feedback }}
+                            {% for error in form.customer_feedback.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
                         </div>
 
                         <button class="btn btn-success">

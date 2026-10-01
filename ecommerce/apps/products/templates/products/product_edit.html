@@ -194,18 +194,18 @@
           <i class="ti ti-upload"></i>
           <div class="dz-text"><strong>Click to upload</strong> or drag image here</div>
           <div class="dz-filename" id="dzFilename"></div>
-          <input type="file" id="image" name="image" accept="image/*">
+          <input type="file" id="image" name="image" accept="image/jpeg,image/png,image/gif,image/webp" data-fv-max-size="5">
         </div>
       </div>
 
       <div class="form-row">
         <label for="name">Product name</label>
-        <input type="text" id="name" name="name" value="{{ product.name }}" required>
+        <input type="text" id="name" name="name" value="{{ product.name }}" minlength="2" maxlength="255" required>
       </div>
 
       <div class="form-row">
         <label for="description">Description <span class="char-count" id="descCount">0 characters</span></label>
-        <textarea id="description" name="description">{{ product.description }}</textarea>
+        <textarea id="description" name="description" minlength="10" maxlength="10000" required>{{ product.description }}</textarea>
       </div>
 
       <div class="form-grid-2">
@@ -272,7 +272,7 @@
         <label for="price">Price</label>
         <div class="price-input">
           <span>Rs.</span>
-          <input type="number" step="0.01" id="price" name="price" value="{{ product.price }}" required>
+          <input type="number" step="0.01" min="0.01" id="price" name="price" value="{{ product.price }}" required>
         </div>
       </div>
 
@@ -305,7 +305,7 @@
 
       <div class="form-row">
         <label for="stock">Stock</label>
-        <input type="number" id="stock" name="stock" value="{{ product.stock }}" required>
+        <input type="number" min="0" id="stock" name="stock" value="{{ product.stock }}" required>
       </div>
 
       <div class="form-row checkbox-row" id="activeRow">

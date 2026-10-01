@@ -274,6 +274,7 @@
     font-size: 14.5px; font-weight: 700;
     color: #0e3a5c; margin: 0 0 6px;
     line-height: 1.3;
+    min-height: calc(2 * 1.3em);
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
@@ -741,7 +742,7 @@
 {% endif %}
 
 <div class="quick-filters" aria-label="Quick product filters">
-  <a class="quick-chip {% if not request.GET.stock and not request.GET.discounted %}active{% endif %}"
+  <a class="quick-chip {% if not request.GET.stock and not request.GET.discounted and not request.GET.min_rating and not request.GET.min_price and not request.GET.max_price and not request.GET.sort and not request.GET.brand and not request.GET.category and not request.GET.q %}active{% endif %}"
      href="{% url 'products:view_products' %}">✦ All products</a>
   <a class="quick-chip {% if request.GET.stock == 'in' %}active{% endif %}"
      href="?stock=in">✓ In stock</a>
@@ -852,13 +853,6 @@
         {% endif %}
         <div class="results-actions">
           <span class="results-count">{{ products|length }} item{{ products|length|pluralize }}</span>
-          <select class="sort-select" id="resultsSort" aria-label="Sort products" data-responsive-select>
-            <option value="" {% if not request.GET.sort %}selected{% endif %}>Recommended</option>
-            <option value="price_low" {% if request.GET.sort == 'price_low' %}selected{% endif %}>Price ↑</option>
-            <option value="price_high" {% if request.GET.sort == 'price_high' %}selected{% endif %}>Price ↓</option>
-            <option value="rating" {% if request.GET.sort == 'rating' %}selected{% endif %}>Top rated</option>
-            <option value="newest" {% if request.GET.sort == 'newest' %}selected{% endif %}>Newest</option>
-          </select>
         </div>
       </div>
     </div>
@@ -986,16 +980,6 @@
       mobileFilterToggle.setAttribute("aria-expanded", open ? "true" : "false");
       const marker = mobileFilterToggle.querySelector("span:last-child");
       if (marker) marker.textContent = open ? "−" : "＋";
-    });
-  }
-
-  const resultsSort = document.getElementById("resultsSort");
-  if (resultsSort) {
-    resultsSort.addEventListener("change", function () {
-      const url = new URL(window.location.href);
-      if (this.value) url.searchParams.set("sort", this.value);
-      else url.searchParams.delete("sort");
-      window.location.href = url.toString();
     });
   }
 

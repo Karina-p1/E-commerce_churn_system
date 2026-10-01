@@ -126,18 +126,18 @@
           <i class="ti ti-upload"></i>
           <div class="dz-text"><strong>Click to upload</strong> or drag logo here</div>
           <div class="dz-filename" id="dzFilename"></div>
-          <input type="file" id="image" name="logo" accept="image/*">
+          <input type="file" id="image" name="logo" accept="image/jpeg,image/png,image/gif,image/webp" data-fv-max-size="5">
         </div>
       </div>
 
       <div class="form-row">
         <label for="name">Brand name</label>
-        <input type="text" id="name" name="name" value="{{ brand.name }}" required>
+        <input type="text" id="name" name="name" value="{{ brand.name }}" minlength="2" maxlength="100" required>
       </div>
 
       <div class="form-row">
         <label for="description">Description <span class="char-count" id="descCount">0 characters</span></label>
-        <textarea id="description" name="description">{{ brand.description }}</textarea>
+        <textarea id="description" name="description" maxlength="2000">{{ brand.description }}</textarea>
       </div>
 
       <div class="form-actions">

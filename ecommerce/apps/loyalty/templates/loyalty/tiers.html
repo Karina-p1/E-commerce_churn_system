@@ -317,14 +317,6 @@
                 <dd>{% if tier.exclusive_offers %}Included{% else %}Not included{% endif %}</dd>
               </div>
               <div>
-                <dt>Early access</dt>
-                <dd>{% if tier.early_access_hours %}{{ tier.early_access_hours }} hour{{ tier.early_access_hours|pluralize }}{% else %}Not included{% endif %}</dd>
-              </div>
-              <div>
-                <dt>Tier discount</dt>
-                <dd>{{ tier.discount_percentage|floatformat:"-2" }}%</dd>
-              </div>
-              <div>
                 <dt>Support priority</dt>
                 <dd>{{ tier.get_support_priority_display }}</dd>
               </div>

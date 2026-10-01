@@ -187,7 +187,7 @@ class LoyaltyService:
             user=user,
             points=points,
             transaction_type="PURCHASE",
-            description=f"Points earned from Order #{order.id}",
+            description=f"Points earned from {order.items_summary}",
             order=order,
         )
     
@@ -228,7 +228,7 @@ class LoyaltyService:
             user=user,
             points=200,
             transaction_type="FIRST_PURCHASE",
-            description=f"First purchase bonus for Order #{order.id}",
+            description=f"First purchase bonus for {order.items_summary}",
             order=order,
         )
         
@@ -388,7 +388,9 @@ class LoyaltyService:
             order=order,
         )
 
-        order_text = f" from Order #{order.id}" if order else ""
+        order_text = (
+            f" from {order.items_summary}" if order else ""
+        )
         LoyaltyService._create_notification(
             user=user,
             notif_type="POINTS_EARNED",
@@ -506,7 +508,7 @@ class LoyaltyService:
         )
 
         reward_value = LoyaltyService.calculate_reward_value(points)
-        order_text = f" on Order #{order.id}" if order else ""
+        order_text = f" on {order.items_summary}" if order else ""
         LoyaltyService._create_notification(
             user=user,
             notif_type="POINTS_REDEEMED",
@@ -658,7 +660,7 @@ class LoyaltyService:
 
         if description is None:
             description = (
-                f"Loyalty points reversed for Order #{order.id}"
+                f"Loyalty points reversed for {order.items_summary}"
             )
 
         # ---------------------------------------------------------
@@ -774,7 +776,7 @@ class LoyaltyService:
                 balance_after=account.available_points,
                 description=(
                     f"Redeemed loyalty points restored "
-                    f"for Order #{order.id}"
+                    f"for {order.items_summary}"
                 ),
                 order=order,
             )
@@ -785,7 +787,7 @@ class LoyaltyService:
                 title=f"{redeemed_points} loyalty points restored",
                 message=(
                     f"{redeemed_points} redeemed loyalty points from "
-                    f"Order #{order.id} were restored. Your balance is "
+                    f"{order.items_summary} were restored. Your balance is "
                     f"now {account.available_points} points."
                 ),
             )

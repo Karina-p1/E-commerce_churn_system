@@ -57,6 +57,7 @@
                             name="reason"
                             id="reasonSelect"
                             data-responsive-select
+                            data-fv-label="Cancellation reason"
                             required
                         >
 
@@ -64,27 +65,27 @@
                                 Select a reason
                             </option>
 
-                            <option value="mistake">
+                            <option value="mistake" {% if reason == 'mistake' %}selected{% endif %}>
                                 Ordered by mistake
                             </option>
 
-                            <option value="cheaper">
+                            <option value="cheaper" {% if reason == 'cheaper' %}selected{% endif %}>
                                 Found cheaper elsewhere
                             </option>
 
-                            <option value="delivery">
+                            <option value="delivery" {% if reason == 'delivery' %}selected{% endif %}>
                                 Delivery takes too long
                             </option>
 
-                            <option value="changed">
+                            <option value="changed" {% if reason == 'changed' %}selected{% endif %}>
                                 Changed my mind
                             </option>
 
-                            <option value="payment">
+                            <option value="payment" {% if reason == 'payment' %}selected{% endif %}>
                                 Payment issue
                             </option>
 
-                            <option value="other">
+                            <option value="other" {% if reason == 'other' %}selected{% endif %}>
                                 Other
                             </option>
 
@@ -104,10 +105,15 @@
 
                         <textarea
                             name="note"
+                            id="cancelNote"
                             class="form-control"
                             rows="4"
                             placeholder="Tell us why you're cancelling..."
-                        ></textarea>
+                            data-fv-label="Reason detail"
+                            data-fv-required-when="reason:other"
+                            minlength="10"
+                            maxlength="1000"
+                        >{{ note|default:'' }}</textarea>
 
                     </div>
 
@@ -144,16 +150,21 @@
 const reasonSelect = document.getElementById("reasonSelect");
 const noteBox = document.getElementById("noteBox");
 
-reasonSelect.addEventListener("change", function(){
+/*
+   "Other" is the only reason that needs an explanation, so the note box
+   is shown for it and the textarea is marked required to match the
+   server-side rule in cancel_order().
+*/
+function syncNoteBox(){
+    noteBox.style.display = (reasonSelect.value === "other") ? "block" : "none";
+}
 
-    if(this.value === "other"){
-        noteBox.style.display = "block";
-    }
-    else{
-        noteBox.style.display = "none";
-    }
+reasonSelect.addEventListener("change", syncNoteBox);
 
-});
+/* Re-render after a validation error comes back with the reason already
+   chosen, so the box has to be shown immediately rather than waiting for
+   another change event. */
+syncNoteBox();
 
 </script>
 
