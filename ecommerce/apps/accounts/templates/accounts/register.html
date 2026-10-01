@@ -1,7 +1,11 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block title %}Register — ShopMart{% endblock %}
 
 {% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/responsive_select.css' %}">
+<script src="{% static 'js/responsive_select.js' %}" defer></script>
+
 <style>
   .brand-strip-wrapper, .cat-bar { display: none !important; }
   body { padding-top: 60px !important; }
@@ -159,7 +163,7 @@
       <div class="auth-alert-error">{{ message }}</div>
       {% endfor %}
 
-      <form method="post" novalidate>
+      <form method="post" novalidate data-responsive-select>
         {% csrf_token %}
 
         <div class="f-row">
