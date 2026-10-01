@@ -476,6 +476,9 @@
           class="form-control mb-3"
           rows="3"
           placeholder="Share your experience..."
+          data-fv-label="Review"
+          minlength="10"
+          maxlength="2000"
           required></textarea>
 
         <button type="submit" class="btn-buy px-4 py-2">Post review</button>
@@ -620,6 +623,11 @@
 
       document.getElementById('ratingInput').value = selectedRating;
 
+      /* Clear the "pick a star" message once the customer has. */
+      const ratingError = document.getElementById('ratingError');
+
+      if (ratingError) ratingError.remove();
+
       stars.forEach(function(x) {
         x.classList.toggle('lit', Number(x.dataset.v) <= selectedRating);
       });
@@ -633,6 +641,35 @@
       stars.forEach(function(x) {
         x.classList.toggle('lit', Number(x.dataset.v) <= selectedRating);
       });
+    });
+  }
+
+  /*
+     The star rating lives in a hidden input, so it can't carry a
+     `required` attribute (the browser would refuse to submit without
+     showing anything). Check it here instead and point at the stars.
+  */
+  const reviewForm = document.getElementById('ratingInput').closest('form');
+
+  if (reviewForm) {
+    reviewForm.addEventListener('submit', function(event) {
+      if (document.getElementById('ratingInput').value) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      let error = document.getElementById('ratingError');
+
+      if (!error) {
+        error = document.createElement('div');
+        error.id = 'ratingError';
+        error.className = 'invalid-feedback d-block mb-3';
+        starSelect.parentNode.insertBefore(error, starSelect.nextSibling);
+      }
+
+      error.textContent = 'Please pick a star rating before posting your review.';
+
+      starSelect.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
   }
 </script>

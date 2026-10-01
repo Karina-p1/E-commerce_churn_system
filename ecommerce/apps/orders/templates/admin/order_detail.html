@@ -272,7 +272,7 @@
         <form method="post" action="{% url 'order_update_status' order.pk %}">
           {% csrf_token %}
           <div class="status-update-row">
-            <select name="status" class="status-select">
+            <select name="status" class="status-select" data-fv-label="Status" required>
               {% for value, label in order.STATUS_CHOICES %}
                 {% if value != 'cancelled' %}
                   <option value="{{ value }}" {% if order.status == value %}selected{% endif %}>{{ label }}</option>
@@ -280,7 +280,7 @@
               {% endfor %}
             </select>
           </div>
-          <input type="text" name="note" class="note-input" placeholder="Optional note (e.g. tracking number, courier)">
+          <input type="text" name="note" class="note-input" data-fv-label="Note" maxlength="1000" placeholder="Optional note (e.g. tracking number, courier)">
           <button type="submit" class="btn btn-primary" style="width:100%;margin-top:10px;">Update status</button>
         </form>
 

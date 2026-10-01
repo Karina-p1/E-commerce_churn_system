@@ -303,7 +303,7 @@
             {% if current_tier %}
                 <span class="tier-badge" data-tier="{{ current_tier.name|lower }}">{{ current_tier.name }}</span>
             {% endif %}
-            <a class="compare-tiers" href="{% url 'loyalty:tiers' %}">Compare tiers</a>
+            <a class="rewards-link" href="{% url 'loyalty:tiers' %}">Compare tiers</a>
             <a class="rewards-link" href="{% url 'loyalty:rewards' %}">Rewards &amp; Redemption</a>
         </div>
     </header>
@@ -398,18 +398,6 @@
                             <li class="benefit-item">
                                 <span class="benefit-icon" aria-hidden="true">★</span>
                                 <div><strong>Exclusive Offers</strong><p>Access special offers available to your tier.</p></div>
-                            </li>
-                        {% endif %}
-                        {% if current_tier.early_access_hours %}
-                            <li class="benefit-item">
-                                <span class="benefit-icon" aria-hidden="true">◷</span>
-                                <div><strong>Early Access</strong><p>Get {{ current_tier.early_access_hours }} hour{{ current_tier.early_access_hours|pluralize }} of early access.</p></div>
-                            </li>
-                        {% endif %}
-                        {% if current_tier.discount_percentage > 0 %}
-                            <li class="benefit-item">
-                                <span class="benefit-icon" aria-hidden="true">%</span>
-                                <div><strong>Tier Discount</strong><p>{{ current_tier.discount_percentage|floatformat:"-2" }}% tier discount.</p></div>
                             </li>
                         {% endif %}
                         <li class="benefit-item">

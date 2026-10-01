@@ -26,14 +26,28 @@
           <form method="POST" data-responsive-select>
             {% csrf_token %}
 
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger" role="alert">
+              {% for error in form.non_field_errors %}
+                <div>{{ error }}</div>
+              {% endfor %}
+            </div>
+            {% endif %}
+
             <div class="mb-3">
               <label class="form-label">Reason</label>
               {{ form.reason }}
+              {% for error in form.reason.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+              {% endfor %}
             </div>
 
             <div class="mb-3" id="otherReason">
               <label class="form-label">Other Reason</label>
               {{ form.other_reason }}
+              {% for error in form.other_reason.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+              {% endfor %}
             </div>
 
             <hr class="my-4" />
@@ -43,26 +57,41 @@
             <div class="mb-3">
               <label class="form-label">Bank Name</label>
               {{ form.bank_name }}
+              {% for error in form.bank_name.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+              {% endfor %}
             </div>
 
             <div class="mb-3">
               <label class="form-label">Account Holder</label>
               {{ form.account_holder }}
+              {% for error in form.account_holder.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+              {% endfor %}
             </div>
 
             <div class="mb-3">
               <label class="form-label">Account Number</label>
               {{ form.account_number }}
+              {% for error in form.account_number.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+              {% endfor %}
             </div>
 
             <div class="mb-3">
               <label class="form-label">Branch</label>
               {{ form.branch }}
+              {% for error in form.branch.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+              {% endfor %}
             </div>
 
             <div class="mb-4">
               <label class="form-label">Phone Number</label>
               {{ form.phone }}
+              {% for error in form.phone.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+              {% endfor %}
             </div>
 
             <button class="btn btn-danger px-4">Submit Refund Request</button>

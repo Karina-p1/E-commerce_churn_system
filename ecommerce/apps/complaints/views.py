@@ -6,6 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 
 from apps.orders.models import Order
+from ecommerce.validators import parse_choice, parse_text
 from .forms import ComplaintFeedbackForm, ComplaintForm
 from .models import Complaint
 from django.core.paginator import Paginator
@@ -289,20 +290,47 @@ def complaint_detail_admin(request, pk):
     if request.method == 'POST':
         old_status = complaint.status
 
-        complaint.status = request.POST.get(
+        # `status` and `priority` are model choices and `admin_reply` is
+        # the reply the customer reads. All three used to be written
+        # straight from request.POST, so a mistyped or crafted value could
+        # store a status that isn't in STATUS_CHOICES and quietly break
+        # every status filter and badge that reads it.
+        status, status_error = parse_choice(
+            request.POST.get('status') or complaint.status,
             'status',
-            complaint.status
+            Complaint.STATUS_CHOICES,
+            default=complaint.status,
         )
 
-        complaint.priority = request.POST.get(
+        priority, priority_error = parse_choice(
+            request.POST.get('priority') or complaint.priority,
             'priority',
-            complaint.priority
+            Complaint.PRIORITY_CHOICES,
+            default=complaint.priority,
         )
 
-        complaint.admin_reply = request.POST.get(
-            'admin_reply',
-            complaint.admin_reply
-        ).strip()
+        admin_reply, reply_error = parse_text(
+            request.POST.get('admin_reply'),
+            'Reply',
+            required=False,
+            max_length=5000,
+        )
+
+        errors = [
+            error
+            for error in (status_error, priority_error, reply_error)
+            if error
+        ]
+
+        if errors:
+            for error in errors:
+                messages.error(request, error)
+
+            return redirect('complaints:complaint_detail', pk=complaint.pk)
+
+        complaint.status = status
+        complaint.priority = priority
+        complaint.admin_reply = admin_reply
 
         if complaint.status == 'RESOLVED' and complaint.resolved_at is None:
             complaint.resolved_at = timezone.now()
