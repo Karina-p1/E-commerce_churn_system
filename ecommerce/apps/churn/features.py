@@ -62,7 +62,7 @@ def _extract_features_and_metadata(user):
     )
 
     hours_on_app = round(
-        min((total_active_seconds / 3600) / lookback_days, 5.0),
+        (total_active_seconds / 3600) / lookback_days,
         2
     )
 
