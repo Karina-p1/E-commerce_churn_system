@@ -1,0 +1,35 @@
+/* ==========================================
+   FORM VALIDATION — MESSAGE STYLING
+   Bootstrap's .invalid-feedback already does
+   most of the work; this only keeps the
+   messages from being clipped by the custom
+   dropdown wrappers and the hand-rolled
+   admin layouts, which set their own
+   overflow and positioning.
+   ========================================== */
+
+.invalid-feedback.d-block {
+    display: block;
+    font-size: 0.85rem;
+    line-height: 1.35;
+    margin-top: 4px;
+}
+
+/* An error message must never be hidden behind a custom dropdown's
+   absolutely positioned menu. */
+.rs-wrapper .invalid-feedback {
+    position: static;
+    z-index: 5;
+}
+
+/* The admin forms use their own .form-row spacing, so keep the message
+   from pushing the next row off the card. */
+.form-row .invalid-feedback {
+    margin-bottom: 10px;
+}
+
+/* While a form is being corrected, mark the page so a long list of
+   messages is easy to scan. */
+.form-has-errors {
+    scroll-margin-top: 140px;
+}

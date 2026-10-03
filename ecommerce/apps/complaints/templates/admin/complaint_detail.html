@@ -251,7 +251,7 @@
 
           <div class="form-group">
             <label for="status">Status</label>
-            <select name="status" id="status">
+            <select name="status" id="status" data-fv-label="Status" required>
               {% for value, label in complaint.STATUS_CHOICES %}
                 <option value="{{ value }}" {% if complaint.status == value %}selected{% endif %}>{{ label }}</option>
               {% endfor %}
@@ -260,7 +260,7 @@
 
           <div class="form-group">
             <label for="priority">Priority</label>
-            <select name="priority" id="priority">
+            <select name="priority" id="priority" data-fv-label="Priority" required>
               {% for value, label in complaint.PRIORITY_CHOICES %}
                 <option value="{{ value }}" {% if complaint.priority == value %}selected{% endif %}>{{ label }}</option>
               {% endfor %}
@@ -269,7 +269,7 @@
 
           <div class="form-group">
             <label for="admin_reply">Reply to customer</label>
-            <textarea name="admin_reply" id="admin_reply" placeholder="Write a response...">{{ complaint.admin_reply }}</textarea>
+            <textarea name="admin_reply" id="admin_reply" data-fv-label="Reply" maxlength="5000" placeholder="Write a response...">{{ complaint.admin_reply }}</textarea>
           </div>
 
           <button type="submit" class="save-btn">Save changes</button>

@@ -685,6 +685,42 @@ class Order(models.Model):
             "processing",
         ]
 
+    # Longest label used in customer-facing text: the loyalty transaction
+    # description is a 255-char column and Notification.message is 300.
+    ITEMS_SUMMARY_MAX = 80
+
+    @property
+    def items_summary(self):
+        """
+        Short, customer-friendly label for an order's contents.
+
+        Uses the first product name, plus a "+n more" tail when the order
+        holds more than one line item, e.g. "Wireless Earbuds + 2 more".
+        Order numbers are not exposed here: customers recognise their orders
+        by what they bought, not by an id they never see.
+        """
+        items = list(self.items.all())
+
+        if not items:
+            return f"Order #{self.id}"
+
+        first_name = (items[0].product_name or "").strip()
+
+        if len(items) > 1:
+            extra = f" + {len(items) - 1} more"
+        else:
+            extra = ""
+
+        if not first_name:
+            return f"your order{extra}"
+
+        budget = self.ITEMS_SUMMARY_MAX - len(extra)
+
+        if len(first_name) > budget:
+            first_name = first_name[: max(budget - 1, 1)].rstrip() + "\u2026"
+
+        return f"{first_name}{extra}"
+
     @property
     def items_subtotal(self):
         """Price of the products before delivery and discounts."""

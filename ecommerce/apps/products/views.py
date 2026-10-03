@@ -1,6 +1,6 @@
 from datetime import timedelta
+from decimal import Decimal, InvalidOperation
 from django.contrib.admin.views.decorators import staff_member_required
-from django.utils.dateparse import parse_datetime
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -18,6 +18,19 @@ from apps.activity.models import UserEvent
 
 from apps.orders.models import Order, OrderItem
 from apps.loyalty.services import LoyaltyService
+from ecommerce.validators import (
+    MAX_IMAGE_BYTES,
+    parse_choice,
+    parse_datetime_input,
+    parse_decimal,
+    parse_image,
+    parse_int,
+    parse_text,
+)
+
+# Admin uploads. 5 MB is generous for a product photo and small enough
+# that a fat-fingered 40 MP phone shot can't quietly fill the media root.
+MAX_UPLOAD_IMAGE_BYTES = MAX_IMAGE_BYTES
 
 def view_products(request):
     categories = Category.objects.all()
@@ -33,7 +46,7 @@ def view_products(request):
         'brand'
     )
 
-    # Special offer products: discount 30% or more and available in stock
+    # Special offers: active, in stock, and at least 20% off.
     all_active_products = Product.objects.filter(
         is_active=True,
         stock__gt=0
@@ -45,30 +58,21 @@ def view_products(request):
     special_offers = [
         product
         for product in all_active_products
-        if product.is_offer_active
+        if product.is_offer_active and product.discount_percent >= 20
     ]
 
-    # Filter by brand
-    brand_slug = request.GET.get('brand')
+    # Brand
+    brand_slug = request.GET.get('brand', '').strip()
     if brand_slug:
         products = products.filter(brand__slug=brand_slug)
 
-    # Filter by category
-    category_slug = request.GET.get('category')
+    # Category
+    category_slug = request.GET.get('category', '').strip()
     if category_slug:
         products = products.filter(category__slug=category_slug)
 
-    # Get wishlist product IDs for current user
-    wishlist_ids = set()
-    if request.user.is_authenticated:
-        wishlist_ids = set(
-            Wishlist.objects.filter(
-                user=request.user
-            ).values_list('product_id', flat=True)
-        )
-
-    # Search by name, brand name, category name, and description
-    q = request.GET.get('q')
+    # Search
+    q = request.GET.get('q', '').strip()
     if q:
         products = products.filter(
             Q(name__icontains=q) |
@@ -77,39 +81,75 @@ def view_products(request):
             Q(category__name__icontains=q)
         )
 
-    # Filter by price range. Filters on the base `price` field, not
-    # `effective_price` — that's a computed property (discount applied
-    # at read time), not a real column, so it can't be filtered in a
-    # database query directly. A product on sale might therefore show
-    # up just outside a price band based on its list price even though
-    # its discounted price would fit — a reasonable simplification, but
-    # worth knowing.
+    # Price range uses the stored/base price because effective_price is a Python property.
     min_price = request.GET.get('min_price', '').strip()
     max_price = request.GET.get('max_price', '').strip()
+
     if min_price:
         try:
-            products = products.filter(price__gte=float(min_price))
-        except ValueError:
+            products = products.filter(price__gte=Decimal(min_price))
+        except (InvalidOperation, ValueError):
             min_price = ''
+
     if max_price:
         try:
-            products = products.filter(price__lte=float(max_price))
-        except ValueError:
+            products = products.filter(price__lte=Decimal(max_price))
+        except (InvalidOperation, ValueError):
             max_price = ''
 
-    # Filter by minimum rating. `rating` is also a computed property
-    # (averages Review.rating in Python), so instead we annotate an
-    # average rating computed IN THE DATABASE from the related reviews,
-    # and filter on that. Products with zero reviews get avg_rating=None
-    # and are correctly excluded from any "X stars and up" filter.
+    # Rating
     min_rating = request.GET.get('min_rating', '').strip()
+    sort = request.GET.get('sort', '').strip()
+
+    # Annotate once when either rating filtering or rating sorting needs it.
+    if min_rating or sort == 'rating':
+        products = products.annotate(
+            avg_rating=Avg('reviews__rating')
+        )
+
     if min_rating:
         try:
-            products = products.annotate(
-                avg_rating=Avg('reviews__rating')
-            ).filter(avg_rating__gte=float(min_rating))
+            products = products.filter(avg_rating__gte=float(min_rating))
         except ValueError:
             min_rating = ''
+
+    # Availability
+    stock = request.GET.get('stock', '').strip()
+    if stock == 'in':
+        products = products.filter(stock__gt=0)
+
+    # Active discounted products
+    discounted = request.GET.get('discounted', '').strip()
+    if discounted == '1':
+        now = timezone.now()
+        products = products.filter(
+            discount_percentage__gt=0
+        ).filter(
+            Q(offer_start__isnull=True) | Q(offer_start__lte=now)
+        ).filter(
+            Q(offer_end__isnull=True) | Q(offer_end__gte=now)
+        )
+
+    # Single sorting control: the sidebar dropdown.
+    if sort == 'price_low':
+        products = products.order_by('price', 'name')
+    elif sort == 'price_high':
+        products = products.order_by('-price', 'name')
+    elif sort == 'rating':
+        products = products.order_by('-avg_rating', 'name')
+    elif sort == 'newest':
+        products = products.order_by('-created_at')
+    else:
+        products = products.order_by('-created_at')
+
+    # Wishlist IDs for current user
+    wishlist_ids = set()
+    if request.user.is_authenticated:
+        wishlist_ids = set(
+            Wishlist.objects.filter(
+                user=request.user
+            ).values_list('product_id', flat=True)
+        )
 
     return render(request, "products/dashboard.html", {
         "products": products,
@@ -124,7 +164,6 @@ def view_products(request):
         "max_price": max_price,
         "min_rating": min_rating,
     })
-
 
 def build_stars(rating):
     return [i < round(rating) for i in range(5)]
@@ -210,12 +249,18 @@ def post_review(request, slug):
             )
 
         rating = request.POST.get('rating')
-        comment = request.POST.get('comment', '').strip()
+        comment, comment_error = parse_text(
+            request.POST.get('comment'),
+            'Review',
+            min_length=10,
+            max_length=2000,
+        )
 
-        if not rating or not comment:
+        if not rating or comment_error:
             messages.error(
                 request,
-                'Please provide both a rating and a comment.'
+                comment_error
+                or 'Please provide both a rating and a comment.'
             )
             return redirect(
                 'products:product_detail',
@@ -425,18 +470,53 @@ def category_edit(request, pk):
     category = get_object_or_404(Category, pk=pk)
 
     if request.method == 'POST':
-        name        = request.POST.get('name', '').strip()
-        description = request.POST.get('description', '').strip()
-        image       = request.FILES.get('image')
+        name, name_error = parse_text(
+            request.POST.get('name'),
+            'Category name',
+            min_length=2,
+            max_length=100,
+        )
 
-        if not name:
-            messages.error(request, 'Category name is required.')
-            return redirect('products:category_edit', pk=pk)
+        description, description_error = parse_text(
+            request.POST.get('description'),
+            'Description',
+            required=False,
+            max_length=2000,
+        )
 
-        category.name        = name
+        image, image_error = parse_image(
+            request.FILES.get('image'),
+            'Category image',
+            MAX_UPLOAD_IMAGE_BYTES,
+        )
+
+        errors = [
+            error
+            for error in (name_error, description_error, image_error)
+            if error
+        ]
+
+        if not errors and Category.objects.filter(
+            name__iexact=name
+        ).exclude(pk=category.pk).exists():
+            errors.append(f"A category named '{name}' already exists.")
+
+        if errors:
+            for error in errors:
+                messages.error(request, error)
+
+            # Re-render instead of redirecting so the admin's typing isn't
+            # thrown away.
+            return render(request, 'products/category_edit.html', {
+                'category': unsaved_category_from_post(request, category),
+            })
+
+        category.name = name
         category.description = description
+
         if image:
             category.image = image
+
         category.save()
 
         messages.success(request, f"'{category.name}' updated.")
@@ -505,20 +585,68 @@ def brand_edit(request, pk):
     brand = get_object_or_404(Brand, pk=pk)
 
     if request.method == 'POST':
-        name        = request.POST.get('name', '').strip()
-        description = request.POST.get('description', '').strip()
-        logo        = request.FILES.get('logo')
-        order       = request.POST.get('order', '0').strip()
+        name, name_error = parse_text(
+            request.POST.get('name'),
+            'Brand name',
+            min_length=2,
+            max_length=100,
+        )
 
-        if not name:
-            messages.error(request, 'Brand name is required.')
-            return redirect('products:brand_edit', pk=pk)
+        description, description_error = parse_text(
+            request.POST.get('description'),
+            'Description',
+            required=False,
+            max_length=2000,
+        )
 
-        brand.name        = name
+        order, order_error = parse_int(
+            request.POST.get('order', '0'),
+            'Display order',
+            required=False,
+            min_value=0,
+            max_value=9999,
+            default=0,
+        )
+
+        logo, logo_error = parse_image(
+            request.FILES.get('logo'),
+            'Brand logo',
+            MAX_UPLOAD_IMAGE_BYTES,
+        )
+
+        errors = [
+            error
+            for error in (
+                name_error,
+                description_error,
+                order_error,
+                logo_error,
+            )
+            if error
+        ]
+
+        if not errors and Brand.objects.filter(
+            name__iexact=name
+        ).exclude(pk=brand.pk).exists():
+            errors.append(f"A brand named '{name}' already exists.")
+
+        if errors:
+            for error in errors:
+                messages.error(request, error)
+
+            # Re-render instead of redirecting so the admin's typing isn't
+            # thrown away, and hand the form the values it can still show.
+            return render(request, 'products/brand_edit.html', {
+                'brand': unsaved_brand_from_post(request, brand),
+            })
+
+        brand.name = name
         brand.description = description
-        brand.order       = int(order) if order.isdigit() else 0
+        brand.order = order
+
         if logo:
             brand.logo = logo
+
         brand.save()
 
         messages.success(request, f"'{brand.name}' updated.")
@@ -560,17 +688,264 @@ def parse_offer_datetime(value):
     Parses a datetime-local input value ('YYYY-MM-DDTHH:MM') into an
     aware datetime, or returns None if empty/invalid.
     """
-    if not value:
-        return None
+    parsed, error = parse_datetime_input(value, 'Offer date')
 
-    dt = parse_datetime(value)
-    if dt is None:
-        return None
+    return parsed
 
-    if timezone.is_naive(dt):
-        dt = timezone.make_aware(dt, timezone.get_current_timezone())
 
-    return dt
+def unsaved_category_from_post(request, original):
+    """
+    An unsaved Category carrying the submitted values, so
+    category_edit.html can re-render the admin's input after a validation
+    error.
+    """
+    category = Category(pk=original.pk, image=original.image)
+
+    category.name = (request.POST.get('name') or '').strip() or None
+    category.description = (
+        request.POST.get('description') or ''
+    ).strip() or None
+
+    return category
+
+
+def is_pk(value):
+    """
+    True when `value` can be used in a `pk=` lookup.
+
+    `Category.objects.filter(pk="abc")` raises ValueError instead of
+    returning nothing, so a hand-edited or tampered form would 500 rather
+    than report a validation error.
+    """
+    try:
+        int(value)
+    except (TypeError, ValueError):
+        return False
+
+    return True
+
+
+def unsaved_brand_from_post(request, original):
+    """
+    An unsaved Brand carrying the submitted values, so brand_edit.html can
+    re-render the admin's input after a validation error.
+    """
+    brand = Brand(pk=original.pk, logo=original.logo)
+
+    brand.name = (request.POST.get('name') or '').strip() or None
+    brand.description = (
+        request.POST.get('description') or ''
+    ).strip() or None
+
+    try:
+        brand.order = int((request.POST.get('order') or '').strip() or 0)
+    except ValueError:
+        brand.order = 0
+
+    return brand
+
+
+def validate_product_post(request):
+    """
+    Validate the product form shared by product_add and product_edit.
+
+    Returns (values, errors). The gaps this closes are the ones that used
+    to surface as a 500 rather than a message: a negative price, a negative
+    stock count, and a category/brand id that doesn't exist (the FK is NOT
+    NULL, so a bogus id failed on save).
+    """
+    values = {}
+    errors = []
+
+    name, name_error = parse_text(
+        request.POST.get('name'),
+        'Product name',
+        min_length=2,
+        max_length=255,
+    )
+
+    if name_error:
+        errors.append(name_error)
+    else:
+        values['name'] = name
+
+    description, description_error = parse_text(
+        request.POST.get('description'),
+        'Description',
+        min_length=10,
+        max_length=10000,
+    )
+
+    if description_error:
+        errors.append(description_error)
+    else:
+        values['description'] = description
+
+    # ---------------------------------------------------------
+    # PRICE
+    # ---------------------------------------------------------
+    # A zero or negative price is not a discount, it is a free product.
+    price, price_error = parse_decimal(
+        request.POST.get('price'),
+        'Price',
+        default=None,
+    )
+
+    if price_error is None and price is not None and price <= 0:
+        price_error = 'Price must be greater than 0.'
+
+    if price_error:
+        errors.append(price_error)
+    else:
+        values['price'] = price
+
+    # ---------------------------------------------------------
+    # DISCOUNT / OFFER WINDOW
+    # ---------------------------------------------------------
+    discount_percentage, discount_error = parse_int(
+        request.POST.get('discount_percentage', '0'),
+        'Discount percentage',
+        required=False,
+        min_value=0,
+        max_value=100,
+        default=0,
+    )
+
+    if discount_error:
+        errors.append(discount_error)
+    else:
+        values['discount_percentage'] = discount_percentage
+
+    offer_start, offer_start_error = parse_datetime_input(
+        request.POST.get('offer_start'),
+        'Offer start date',
+    )
+
+    if offer_start_error:
+        errors.append(offer_start_error)
+
+    offer_end, offer_end_error = parse_datetime_input(
+        request.POST.get('offer_end'),
+        'Offer end date',
+    )
+
+    if offer_end_error:
+        errors.append(offer_end_error)
+
+    if offer_start and offer_end and offer_end <= offer_start:
+        errors.append('Offer end must be after offer start.')
+
+    values['offer_start'] = offer_start
+    values['offer_end'] = offer_end
+
+    # ---------------------------------------------------------
+    # STOCK
+    # ---------------------------------------------------------
+    stock, stock_error = parse_int(
+        request.POST.get('stock'),
+        'Stock',
+        min_value=0,
+        default=0,
+    )
+
+    if stock_error:
+        errors.append(stock_error)
+    else:
+        values['stock'] = stock
+
+    # ---------------------------------------------------------
+    # CATEGORY / BRAND
+    # ---------------------------------------------------------
+    category_id = (request.POST.get('category') or '').strip()
+
+    if not category_id:
+        errors.append('Category is required.')
+    elif not is_pk(category_id):
+        errors.append('Category is required.')
+    elif not Category.objects.filter(pk=category_id).exists():
+        errors.append('The selected category does not exist.')
+    else:
+        values['category_id'] = category_id
+
+    brand_id = (request.POST.get('brand') or '').strip()
+
+    if brand_id and not is_pk(brand_id):
+        errors.append('The selected brand does not exist.')
+    elif brand_id and not Brand.objects.filter(pk=brand_id).exists():
+        errors.append('The selected brand does not exist.')
+    else:
+        values['brand_id'] = brand_id or None
+
+    # ---------------------------------------------------------
+    # IMAGE
+    # ---------------------------------------------------------
+    image, image_error = parse_image(
+        request.FILES.get('image'),
+        'Product image',
+        MAX_UPLOAD_IMAGE_BYTES,
+    )
+
+    if image_error:
+        errors.append(image_error)
+    elif image is not None:
+        values['image'] = image
+
+    values['is_active'] = request.POST.get('is_active') == 'on'
+
+    return values, errors
+
+
+def product_form_preview(request, product):
+    """
+    Reflect submitted values back onto `product` without saving, so
+    product_edit.html re-renders with the admin's input instead of the
+    stored row. The existing image is left in place so the preview <img>
+    still resolves.
+
+    The numbers are coerced back to Decimal/int, not left as the raw POST
+    strings: the template calls `product.effective_price`, which does
+    `self.price * (Decimal("1") - discount)`. That raises TypeError on a
+    string, so a string would 500 the very page the error message is
+    supposed to appear on.
+    """
+    preview = product
+
+    preview.name = (request.POST.get('name') or '').strip() or None
+    preview.description = (request.POST.get('description') or '').strip() or None
+
+    try:
+        preview.price = Decimal(
+            (request.POST.get('price') or '').strip() or "0"
+        )
+    except (InvalidOperation, ValueError):
+        preview.price = Decimal("0")
+
+    try:
+        preview.discount_percentage = int(
+            (request.POST.get('discount_percentage') or '').strip() or 0
+        )
+    except ValueError:
+        preview.discount_percentage = 0
+
+    try:
+        preview.stock = int((request.POST.get('stock') or '').strip() or 0)
+    except ValueError:
+        preview.stock = 0
+
+    offer_start, _ = parse_datetime_input(
+        request.POST.get('offer_start'),
+        'Offer start date',
+    )
+    offer_end, _ = parse_datetime_input(
+        request.POST.get('offer_end'),
+        'Offer end date',
+    )
+
+    preview.offer_start = offer_start
+    preview.offer_end = offer_end
+    preview.is_active = request.POST.get('is_active') == 'on'
+
+    return preview
 
 @login_required
 @staff_member_required
@@ -619,71 +994,22 @@ def product_edit(request, pk):
     brands     = Brand.objects.order_by('order', 'name')
 
     if request.method == 'POST':
-        name                = request.POST.get('name', '').strip()
-        description         = request.POST.get('description', '').strip()
-        price               = request.POST.get('price', '').strip()
-        discount_percentage = request.POST.get('discount_percentage', '0').strip()
-        offer_start_raw     = request.POST.get('offer_start', '').strip()
-        offer_end_raw       = request.POST.get('offer_end', '').strip()
-        stock               = request.POST.get('stock', '').strip()
-        category_id         = request.POST.get('category')
-        brand_id            = request.POST.get('brand')
-        is_active           = request.POST.get('is_active') == 'on'
-        image               = request.FILES.get('image')
-
-        errors = []
-        if not name:
-            errors.append('Product name is required.')
-        if not category_id:
-            errors.append('Category is required.')
-
-        try:
-            price = float(price)
-        except ValueError:
-            errors.append('Price must be a valid number.')
-            price = None
-
-        try:
-            discount_percentage = int(discount_percentage) if discount_percentage else 0
-            if not (0 <= discount_percentage <= 100):
-                raise ValueError
-        except ValueError:
-            errors.append('Discount percentage must be a whole number between 0 and 100.')
-            discount_percentage = 0
-
-        offer_start = parse_offer_datetime(offer_start_raw)
-        offer_end = parse_offer_datetime(offer_end_raw)
-
-        if offer_start_raw and offer_start is None:
-            errors.append('Offer start date is invalid.')
-        if offer_end_raw and offer_end is None:
-            errors.append('Offer end date is invalid.')
-        if offer_start and offer_end and offer_end <= offer_start:
-            errors.append('Offer end must be after offer start.')
-
-        try:
-            stock = int(stock)
-        except ValueError:
-            errors.append('Stock must be a whole number.')
-            stock = None
+        values, errors = validate_product_post(request)
 
         if errors:
-            for e in errors:
-                messages.error(request, e)
-            return redirect('products:product_edit', pk=pk)
+            for error in errors:
+                messages.error(request, error)
 
-        product.name                = name
-        product.description         = description
-        product.price               = price
-        product.discount_percentage = discount_percentage
-        product.offer_start         = offer_start
-        product.offer_end           = offer_end
-        product.stock               = stock
-        product.category_id         = category_id
-        product.brand_id            = brand_id or None
-        product.is_active           = is_active
-        if image:
-            product.image = image
+            return render(request, 'products/product_edit.html', {
+                'product':    product_form_preview(request, product),
+                'categories': categories,
+                'brands':     brands,
+                'form_data':  request.POST,
+            })
+
+        for field, value in values.items():
+            setattr(product, field, value)
+
         product.save()
 
         messages.success(request, f"'{product.name}' updated.")
@@ -797,19 +1123,47 @@ def user_delete_confirm(request, pk):
 @staff_member_required
 def category_add(request):
     if request.method == 'POST':
-        name        = request.POST.get('name', '').strip()
-        description = request.POST.get('description', '').strip()
-        image       = request.FILES.get('image')
+        name, name_error = parse_text(
+            request.POST.get('name'),
+            'Category name',
+            min_length=2,
+            max_length=100,
+        )
 
-        if not name:
-            messages.error(request, 'Category name is required.')
-            return redirect('products:category_add')
+        description, description_error = parse_text(
+            request.POST.get('description'),
+            'Description',
+            required=False,
+            max_length=2000,
+        )
 
-        if Category.objects.filter(name__iexact=name).exists():
-            messages.error(request, f"A category named '{name}' already exists.")
-            return redirect('products:category_add')
+        image, image_error = parse_image(
+            request.FILES.get('image'),
+            'Category image',
+            MAX_UPLOAD_IMAGE_BYTES,
+        )
 
-        category = Category.objects.create(name=name, description=description)
+        errors = [
+            error
+            for error in (name_error, description_error, image_error)
+            if error
+        ]
+
+        if not errors and Category.objects.filter(name__iexact=name).exists():
+            errors.append(f"A category named '{name}' already exists.")
+
+        if errors:
+            for error in errors:
+                messages.error(request, error)
+            return render(request, 'products/category_add.html', {
+                'form_data': request.POST,
+            })
+
+        category = Category.objects.create(
+            name=name,
+            description=description,
+        )
+
         if image:
             category.image = image
             category.save()
@@ -817,31 +1171,69 @@ def category_add(request):
         messages.success(request, f"'{category.name}' created.")
         return redirect('products:category_list')
 
-    return render(request, 'products/category_add.html')
+    return render(request, 'products/category_add.html', {'form_data': {}})
 
 
 @login_required
 @staff_member_required
 def brand_add(request):
     if request.method == 'POST':
-        name        = request.POST.get('name', '').strip()
-        description = request.POST.get('description', '').strip()
-        logo        = request.FILES.get('logo')
-        order       = request.POST.get('order', '0').strip()
+        name, name_error = parse_text(
+            request.POST.get('name'),
+            'Brand name',
+            min_length=2,
+            max_length=100,
+        )
 
-        if not name:
-            messages.error(request, 'Brand name is required.')
-            return redirect('products:brand_add')
+        description, description_error = parse_text(
+            request.POST.get('description'),
+            'Description',
+            required=False,
+            max_length=2000,
+        )
 
-        if Brand.objects.filter(name__iexact=name).exists():
-            messages.error(request, f"A brand named '{name}' already exists.")
-            return redirect('products:brand_add')
+        order, order_error = parse_int(
+            request.POST.get('order', '0'),
+            'Display order',
+            required=False,
+            min_value=0,
+            max_value=9999,
+            default=0,
+        )
+
+        logo, logo_error = parse_image(
+            request.FILES.get('logo'),
+            'Brand logo',
+            MAX_UPLOAD_IMAGE_BYTES,
+        )
+
+        errors = [
+            error
+            for error in (
+                name_error,
+                description_error,
+                order_error,
+                logo_error,
+            )
+            if error
+        ]
+
+        if not errors and Brand.objects.filter(name__iexact=name).exists():
+            errors.append(f"A brand named '{name}' already exists.")
+
+        if errors:
+            for error in errors:
+                messages.error(request, error)
+            return render(request, 'products/brand_add.html', {
+                'form_data': request.POST,
+            })
 
         brand = Brand.objects.create(
             name=name,
             description=description,
-            order=int(order) if order.isdigit() else 0,
+            order=order,
         )
+
         if logo:
             brand.logo = logo
             brand.save()
@@ -849,7 +1241,7 @@ def brand_add(request):
         messages.success(request, f"'{brand.name}' created.")
         return redirect('products:brand_list')
 
-    return render(request, 'products/brand_add.html')
+    return render(request, 'products/brand_add.html', {'form_data': {}})
 
 
 @login_required
@@ -859,78 +1251,19 @@ def product_add(request):
     brands     = Brand.objects.order_by('order', 'name')
 
     if request.method == 'POST':
-        name                = request.POST.get('name', '').strip()
-        description         = request.POST.get('description', '').strip()
-        price               = request.POST.get('price', '').strip()
-        discount_percentage = request.POST.get('discount_percentage', '0').strip()
-        offer_start_raw     = request.POST.get('offer_start', '').strip()
-        offer_end_raw       = request.POST.get('offer_end', '').strip()
-        stock               = request.POST.get('stock', '').strip()
-        category_id         = request.POST.get('category')
-        brand_id            = request.POST.get('brand')
-        is_active           = request.POST.get('is_active') == 'on'
-        image               = request.FILES.get('image')
-
-        errors = []
-        if not name:
-            errors.append('Product name is required.')
-        if not category_id:
-            errors.append('Category is required.')
-
-        try:
-            price = float(price)
-        except ValueError:
-            errors.append('Price must be a valid number.')
-            price = None
-
-        try:
-            discount_percentage = int(discount_percentage) if discount_percentage else 0
-            if not (0 <= discount_percentage <= 100):
-                raise ValueError
-        except ValueError:
-            errors.append('Discount percentage must be a whole number between 0 and 100.')
-            discount_percentage = 0
-
-        offer_start = parse_offer_datetime(offer_start_raw)
-        offer_end = parse_offer_datetime(offer_end_raw)
-
-        if offer_start_raw and offer_start is None:
-            errors.append('Offer start date is invalid.')
-        if offer_end_raw and offer_end is None:
-            errors.append('Offer end date is invalid.')
-        if offer_start and offer_end and offer_end <= offer_start:
-            errors.append('Offer end must be after offer start.')
-
-        try:
-            stock = int(stock) if stock else 0
-        except ValueError:
-            errors.append('Stock must be a whole number.')
-            stock = None
+        values, errors = validate_product_post(request)
 
         if errors:
-            for e in errors:
-                messages.error(request, e)
+            for error in errors:
+                messages.error(request, error)
+
             return render(request, 'products/product_add.html', {
                 'categories': categories,
                 'brands':     brands,
                 'form_data':  request.POST,
             })
 
-        product = Product.objects.create(
-            name=name,
-            description=description,
-            price=price,
-            discount_percentage=discount_percentage,
-            offer_start=offer_start,
-            offer_end=offer_end,
-            stock=stock,
-            category_id=category_id,
-            brand_id=brand_id or None,
-            is_active=is_active,
-        )
-        if image:
-            product.image = image
-            product.save()
+        product = Product.objects.create(**values)
 
         messages.success(request, f"'{product.name}' created.")
         return redirect('products:product_list')

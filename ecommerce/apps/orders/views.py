@@ -3,6 +3,7 @@ import base64
 import hashlib
 import hmac
 import json
+import re
 import uuid
 from decimal import Decimal
 from django.contrib.admin.views.decorators import staff_member_required
@@ -22,6 +23,13 @@ from apps.activity.models import UserEvent
 from apps.addresses.models import Address
 from apps.notifications.models import Notification
 from apps.orders.task import send_payment_reminder
+from ecommerce.validators import (
+    parse_choice,
+    parse_datetime_input,
+    parse_decimal,
+    parse_int,
+    parse_text,
+)
 from .forms import RefundRequestForm
 
 from .models import Cart, CartItem, Order, OrderItem, Coupon
@@ -29,6 +37,7 @@ from django.core.paginator import Paginator
 from django.db.models import Q
 SESSION_COUPON_KEY = 'applied_coupon_code'
 ORDER_STATUS_SEQUENCE = ['pending', 'processing', 'shipped', 'delivered']
+PAYMENT_METHOD_CHOICES = [('ESEWA', 'eSewa'), ('COD', 'Cash on Delivery')]
 
 from apps.loyalty.models import LoyaltyAccount
 from apps.loyalty.services import LoyaltyService
@@ -362,6 +371,25 @@ def checkout_view(request):
             "Please add a delivery address first."
         )
         return redirect("addresses:add_address")
+
+    # ---------------------------------------------------------
+    # PAYMENT METHOD
+    # ---------------------------------------------------------
+    # This is a plain radio group, not a Django form, so an unrecognised
+    # or missing value used to be written straight onto the order. An
+    # unknown value then fell through the `if payment_method == "COD"`
+    # branch below and sent the customer to an eSewa checkout for an
+    # order they never chose.
+    if request.method == "POST":
+        payment_method, payment_method_error = parse_choice(
+            payment_method,
+            "payment method",
+            PAYMENT_METHOD_CHOICES,
+        )
+
+        if payment_method_error:
+            messages.error(request, payment_method_error)
+            return redirect("checkout")
 
     # ---------------------------------------------------------
     # GET REQUEST
@@ -1181,8 +1209,47 @@ def cancel_order(request, order_id):
 
     if request.method == "POST":
 
-        reason = request.POST.get("reason")
-        note = request.POST.get("note")
+        # `reason` is a model choice and `note` is a free-text explanation
+        # that the customer only sees when "other" is picked. Both arrive
+        # from a hand-built template, so they are checked here rather than
+        # by a Django form.
+        reason, reason_error = parse_choice(
+            request.POST.get("reason"),
+            "cancellation reason",
+            Order.CANCEL_REASON_CHOICES,
+        )
+
+        note, note_error = parse_text(
+            request.POST.get("note"),
+            "Please tell us more",
+            required=False,
+            min_length=10,
+            max_length=1000,
+        )
+
+        if reason == "other" and not note:
+            note_error = (
+                "Please tell us why you are cancelling your order."
+            )
+
+        errors = [error for error in (reason_error, note_error) if error]
+
+        if errors:
+            for error in errors:
+                messages.error(request, error)
+
+            # Re-render rather than redirect so the customer keeps the
+            # order they were looking at instead of landing back on the
+            # list with a message and no form.
+            return render(
+                request,
+                "orders/cancel_order.html",
+                {
+                    "order": order,
+                    "reason": request.POST.get("reason", ""),
+                    "note": request.POST.get("note", ""),
+                }
+            )
 
         order.cancel_reason = reason
         order.cancel_note = note
@@ -1331,7 +1398,21 @@ def order_update_status(request, pk):
     if request.method == "POST":
 
         new_status = request.POST.get("status")
-        note = request.POST.get("note", "").strip() or None
+
+        note, note_error = parse_text(
+            request.POST.get("note"),
+            "Note",
+            required=False,
+            max_length=1000,
+        )
+
+        if note_error:
+            messages.error(request, note_error)
+            return redirect(
+                request.META.get("HTTP_REFERER", "order_list_admin")
+            )
+
+        note = note or None
 
         valid_statuses = [
             choice[0]
@@ -1410,10 +1491,25 @@ def process_refund(request, pk):
     if request.method != "POST":
         return redirect('order_list_admin')
 
-    reference = request.POST.get("reference_id")
-    notes = request.POST.get("notes")
+    reference, reference_error = parse_text(
+        request.POST.get("reference_id"),
+        "Reference ID",
+        min_length=3,
+        max_length=100,
+    )
 
-    if not reference:
+    notes, notes_error = parse_text(
+        request.POST.get("notes"),
+        "Notes",
+        required=False,
+        max_length=1000,
+    )
+
+    errors = [error for error in (reference_error, notes_error) if error]
+
+    if errors:
+        for error in errors:
+            messages.error(request, error)
         return redirect('order_list_admin')
 
     # Guard against double-processing a refund (double-click, retry, etc.)
@@ -1422,6 +1518,11 @@ def process_refund(request, pk):
     if order.payment_status == "REFUNDED":
         return redirect('order_list_admin')
 
+    # NOTE: the Order model has no refund_reference / refund_notes columns,
+    # so these two lines set throwaway attributes and the values are not
+    # persisted. It predates the validation work and needs a decision:
+    # either add the columns, or drop the inputs from the refund modal.
+    # The reference does reach the customer through the notification below.
     order.refund_reference = reference
     order.refund_notes = notes
     order.payment_status = "REFUNDED"
@@ -1448,6 +1549,264 @@ def process_refund(request, pk):
 # ---------------------------------------------------------------------------
 # COUPON
 # ---------------------------------------------------------------------------
+
+# Coupon codes end up in URLs, session keys and printed on banners, so they
+# are restricted to a safe, copy-pasteable character set instead of whatever
+# the admin happened to type.
+COUPON_CODE_RE = re.compile(r'^[A-Z0-9_-]+$')
+
+
+def validate_coupon_post(request, coupon=None):
+    """
+    Validate the coupon form shared by coupon_add and coupon_edit.
+
+    Returns (values, errors). These views used to read `request.POST`
+    straight into DecimalField / PositiveIntegerField / DateTimeField
+    columns, so a typo in a number or a date raised ValueError inside
+    `save()` and returned a 500 instead of a form error.
+
+    `coupon` is the instance being edited, used to skip the "code already
+    exists" check against the coupon's own row.
+    """
+    values = {}
+    errors = []
+
+    # ---------------------------------------------------------
+    # CODE
+    # ---------------------------------------------------------
+    code, code_error = parse_text(
+        request.POST.get('code', '').strip().upper(),
+        'Coupon code',
+        min_length=3,
+        max_length=50,
+    )
+
+    if code_error:
+        errors.append(code_error)
+    elif not COUPON_CODE_RE.match(code):
+        errors.append(
+            'Coupon code can only contain letters, numbers, "-" and "_".'
+        )
+    else:
+        duplicates = Coupon.objects.filter(code__iexact=code)
+
+        if coupon is not None:
+            duplicates = duplicates.exclude(pk=coupon.pk)
+
+        if duplicates.exists():
+            errors.append(f"A coupon with code '{code}' already exists.")
+        else:
+            values['code'] = code
+
+    # ---------------------------------------------------------
+    # TYPES
+    # ---------------------------------------------------------
+    coupon_type, type_error = parse_choice(
+        request.POST.get('coupon_type') or 'STANDARD',
+        'coupon type',
+        Coupon.COUPON_TYPE_CHOICES,
+        default='STANDARD',
+    )
+
+    if type_error:
+        errors.append(type_error)
+    else:
+        values['coupon_type'] = coupon_type
+
+    discount_type, discount_type_error = parse_choice(
+        request.POST.get('discount_type') or 'PERCENTAGE',
+        'discount type',
+        Coupon.DISCOUNT_TYPE_CHOICES,
+        default='PERCENTAGE',
+    )
+
+    if discount_type_error:
+        errors.append(discount_type_error)
+    else:
+        values['discount_type'] = discount_type
+
+    # ---------------------------------------------------------
+    # DISCOUNT VALUE
+    # ---------------------------------------------------------
+    # Ignored for BUY_X_GET_Y (the discount comes from
+    # get_discount_percent), but that column is NOT NULL, so it still has
+    # to be given a number.
+    needs_discount_value = coupon_type != 'BUY_X_GET_Y'
+
+    discount_value, discount_value_error = parse_decimal(
+        request.POST.get('discount_value'),
+        'Discount value',
+        required=needs_discount_value,
+        min_value=None if needs_discount_value else 0,
+        default=Decimal('0'),
+    )
+
+    if discount_value_error is None and needs_discount_value:
+        if discount_value <= 0:
+            discount_value_error = 'Discount value must be greater than 0.'
+        elif discount_type == 'PERCENTAGE' and discount_value > 100:
+            discount_value_error = (
+                'A percentage discount cannot be greater than 100.'
+            )
+
+    if discount_value_error:
+        errors.append(discount_value_error)
+    else:
+        values['discount_value'] = discount_value
+
+    # ---------------------------------------------------------
+    # MINIMUM ORDER AMOUNT
+    # ---------------------------------------------------------
+    min_order_amount, min_order_error = parse_decimal(
+        request.POST.get('min_order_amount', '0'),
+        'Minimum order amount',
+        required=False,
+        min_value=0,
+        default=Decimal('0'),
+    )
+
+    if min_order_error:
+        errors.append(min_order_error)
+    else:
+        values['min_order_amount'] = min_order_amount
+
+    # ---------------------------------------------------------
+    # MIN_QUANTITY
+    # ---------------------------------------------------------
+    min_quantity, min_quantity_error = parse_int(
+        request.POST.get('min_quantity'),
+        'Minimum items in cart',
+        required=(coupon_type == 'MIN_QUANTITY'),
+        min_value=1,
+        default=None,
+    )
+
+    if min_quantity_error:
+        errors.append(min_quantity_error)
+    else:
+        values['min_quantity'] = min_quantity
+
+    # ---------------------------------------------------------
+    # BUY X GET Y
+    # ---------------------------------------------------------
+    needs_buy_get = coupon_type == 'BUY_X_GET_Y'
+
+    buy_quantity, buy_quantity_error = parse_int(
+        request.POST.get('buy_quantity'),
+        'Buy quantity',
+        required=needs_buy_get,
+        min_value=1,
+        default=None,
+    )
+
+    if buy_quantity_error:
+        errors.append(buy_quantity_error)
+    else:
+        values['buy_quantity'] = buy_quantity
+
+    get_quantity, get_quantity_error = parse_int(
+        request.POST.get('get_quantity'),
+        'Get quantity',
+        required=needs_buy_get,
+        min_value=1,
+        default=None,
+    )
+
+    if get_quantity_error:
+        errors.append(get_quantity_error)
+    else:
+        values['get_quantity'] = get_quantity
+
+    get_discount_percent, get_discount_error = parse_int(
+        request.POST.get('get_discount_percent', '100'),
+        'Discount on "get" items',
+        required=False,
+        min_value=1,
+        max_value=100,
+        default=100,
+    )
+
+    if get_discount_error:
+        errors.append(get_discount_error)
+    else:
+        values['get_discount_percent'] = get_discount_percent
+
+    # ---------------------------------------------------------
+    # MAX USES
+    # ---------------------------------------------------------
+    max_uses, max_uses_error = parse_int(
+        request.POST.get('max_uses'),
+        'Max uses',
+        required=False,
+        min_value=1,
+        default=None,
+    )
+
+    if max_uses_error:
+        errors.append(max_uses_error)
+    else:
+        values['max_uses'] = max_uses
+
+    # ---------------------------------------------------------
+    # VALIDITY WINDOW
+    # ---------------------------------------------------------
+    valid_from, valid_from_error = parse_datetime_input(
+        request.POST.get('valid_from'),
+        'Valid from',
+    )
+
+    if valid_from_error:
+        errors.append(valid_from_error)
+
+    valid_until, valid_until_error = parse_datetime_input(
+        request.POST.get('valid_until'),
+        'Valid until',
+    )
+
+    if valid_until_error:
+        errors.append(valid_until_error)
+
+    if valid_from and valid_until and valid_until <= valid_from:
+        errors.append('Valid until must be after valid from.')
+
+    values['valid_from'] = valid_from
+    values['valid_until'] = valid_until
+
+    values['is_active'] = request.POST.get('is_active') == 'on'
+
+    return values, errors
+
+
+def unsaved_coupon_from_post(request, original=None):
+    """
+    Build an unsaved Coupon from the submitted values.
+
+    coupon_edit.html reads every input from `coupon.*`, so re-rendering it
+    with an unsaved instance is what keeps the admin's input on screen
+    after a validation error instead of silently reverting the form. This
+    view used to redirect on error, which threw the input away entirely.
+    """
+    coupon = Coupon(used_count=getattr(original, 'used_count', 0) or 0)
+
+    for field in (
+        'code',
+        'coupon_type',
+        'discount_type',
+        'discount_value',
+        'min_order_amount',
+        'min_quantity',
+        'buy_quantity',
+        'get_quantity',
+        'get_discount_percent',
+        'max_uses',
+    ):
+        setattr(coupon, field, request.POST.get(field, ''))
+
+    coupon.valid_from = request.POST.get('valid_from', '').strip() or None
+    coupon.valid_until = request.POST.get('valid_until', '').strip() or None
+    coupon.is_active = request.POST.get('is_active') == 'on'
+
+    return coupon
 
 
 @login_required
@@ -1483,64 +1842,19 @@ def coupon_list(request):
 @staff_member_required
 def coupon_add(request):
     if request.method == 'POST':
-        code = request.POST.get('code', '').strip().upper()
-        coupon_type = request.POST.get('coupon_type', 'STANDARD')
-        discount_type = request.POST.get('discount_type', 'PERCENTAGE')
-        discount_value = request.POST.get('discount_value', '').strip()
-        min_order_amount = request.POST.get('min_order_amount', '0').strip()
-        min_quantity = request.POST.get('min_quantity', '').strip()
-        buy_quantity = request.POST.get('buy_quantity', '').strip()
-        get_quantity = request.POST.get('get_quantity', '').strip()
-        get_discount_percent = request.POST.get(
-            'get_discount_percent', '100').strip()
-        max_uses = request.POST.get('max_uses', '').strip()
-        is_active = request.POST.get('is_active') == 'on'
-        valid_from = request.POST.get('valid_from', '').strip()
-        valid_until = request.POST.get('valid_until', '').strip()
-
-        errors = []
-        if not code:
-            errors.append('Coupon code is required.')
-        elif Coupon.objects.filter(code__iexact=code).exists():
-            errors.append(f"A coupon with code '{code}' already exists.")
-
-        try:
-            discount_value = float(discount_value) if discount_value else 0
-        except ValueError:
-            errors.append('Discount value must be a valid number.')
-            discount_value = 0
-
-        if coupon_type == 'MIN_QUANTITY' and not min_quantity:
-            errors.append('Minimum quantity is required for this coupon type.')
-
-        if coupon_type == 'BUY_X_GET_Y' and (not buy_quantity or not get_quantity):
-            errors.append(
-                'Buy quantity and get quantity are required for this coupon type.')
+        values, errors = validate_coupon_post(request)
 
         if errors:
-            for e in errors:
-                messages.error(request, e)
+            for error in errors:
+                messages.error(request, error)
+
             return render(request, 'admin/coupon_add.html', {
                 'form_data': request.POST,
             })
 
-        Coupon.objects.create(
-            code=code,
-            coupon_type=coupon_type,
-            discount_type=discount_type,
-            discount_value=discount_value,
-            min_order_amount=min_order_amount or 0,
-            min_quantity=min_quantity or None,
-            buy_quantity=buy_quantity or None,
-            get_quantity=get_quantity or None,
-            get_discount_percent=get_discount_percent or 100,
-            max_uses=max_uses or None,
-            is_active=is_active,
-            valid_from=valid_from or None,
-            valid_until=valid_until or None,
-        )
+        Coupon.objects.create(**values)
 
-        messages.success(request, f"Coupon '{code}' created.")
+        messages.success(request, f"Coupon '{values['code']}' created.")
         return redirect('coupon_list')
 
     return render(request, 'admin/coupon_add.html', {'form_data': {}})
@@ -1552,58 +1866,19 @@ def coupon_edit(request, pk):
     coupon = get_object_or_404(Coupon, pk=pk)
 
     if request.method == 'POST':
-        code = request.POST.get('code', '').strip().upper()
-        coupon_type = request.POST.get('coupon_type', 'STANDARD')
-        discount_type = request.POST.get('discount_type', 'PERCENTAGE')
-        discount_value = request.POST.get('discount_value', '').strip()
-        min_order_amount = request.POST.get('min_order_amount', '0').strip()
-        min_quantity = request.POST.get('min_quantity', '').strip()
-        buy_quantity = request.POST.get('buy_quantity', '').strip()
-        get_quantity = request.POST.get('get_quantity', '').strip()
-        get_discount_percent = request.POST.get(
-            'get_discount_percent', '100').strip()
-        max_uses = request.POST.get('max_uses', '').strip()
-        is_active = request.POST.get('is_active') == 'on'
-        valid_from = request.POST.get('valid_from', '').strip()
-        valid_until = request.POST.get('valid_until', '').strip()
-
-        errors = []
-        if not code:
-            errors.append('Coupon code is required.')
-        elif Coupon.objects.filter(code__iexact=code).exclude(pk=pk).exists():
-            errors.append(f"A coupon with code '{code}' already exists.")
-
-        try:
-            discount_value = float(discount_value) if discount_value else 0
-        except ValueError:
-            errors.append('Discount value must be a valid number.')
-            discount_value = 0
-
-        if coupon_type == 'MIN_QUANTITY' and not min_quantity:
-            errors.append('Minimum quantity is required for this coupon type.')
-
-        if coupon_type == 'BUY_X_GET_Y' and (not buy_quantity or not get_quantity):
-            errors.append(
-                'Buy quantity and get quantity are required for this coupon type.')
+        values, errors = validate_coupon_post(request, coupon=coupon)
 
         if errors:
-            for e in errors:
-                messages.error(request, e)
-            return redirect('coupon_edit', pk=pk)
+            for error in errors:
+                messages.error(request, error)
 
-        coupon.code = code
-        coupon.coupon_type = coupon_type
-        coupon.discount_type = discount_type
-        coupon.discount_value = discount_value
-        coupon.min_order_amount = min_order_amount or 0
-        coupon.min_quantity = min_quantity or None
-        coupon.buy_quantity = buy_quantity or None
-        coupon.get_quantity = get_quantity or None
-        coupon.get_discount_percent = get_discount_percent or 100
-        coupon.max_uses = max_uses or None
-        coupon.is_active = is_active
-        coupon.valid_from = valid_from or None
-        coupon.valid_until = valid_until or None
+            return render(request, 'admin/coupon_edit.html', {
+                'coupon': unsaved_coupon_from_post(request, coupon),
+            })
+
+        for field, value in values.items():
+            setattr(coupon, field, value)
+
         coupon.save()
 
         messages.success(request, f"Coupon '{coupon.code}' updated.")

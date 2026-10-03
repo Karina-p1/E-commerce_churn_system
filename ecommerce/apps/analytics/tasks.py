@@ -15,7 +15,7 @@ def paid_order_created(order_id):
         LoyaltyService.redeem_points(
             user=order.user,
             points=order.loyalty_points_redeemed,
-            description=f"Loyalty points redeemed for Order #{order.id}",
+            description=f"Loyalty points redeemed for {order.items_summary}",
             order=order,
         )
 
@@ -36,7 +36,10 @@ def paid_order_cancelled(order_id):
 
     LoyaltyService.reverse_order_points(
         order=order,
-        description=f"Loyalty points reversed for cancelled Order #{order.id}",
+        description=(
+            f"Loyalty points reversed for cancelled "
+            f"{order.items_summary}"
+        ),
     )
 
     print(
@@ -52,7 +55,10 @@ def order_refunded(order_id):
 
     LoyaltyService.reverse_order_points(
         order=order,
-        description=f"Loyalty points reversed for refunded Order #{order.id}",
+        description=(
+            f"Loyalty points reversed for refunded "
+            f"{order.items_summary}"
+        ),
     )
 
     print(

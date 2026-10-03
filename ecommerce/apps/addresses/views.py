@@ -25,14 +25,11 @@ def address_list(request):
 
 @login_required
 def add_address(request):
-    print(request.method)
     if request.method == "POST":
 
         form = AddressForm(request.POST)
 
         if form.is_valid():
-
-            print("FORM IS VALID")
 
             address = form.save(commit=False)
 
@@ -43,19 +40,12 @@ def add_address(request):
 
             address.save()
 
-            print("ADDRESS SAVED:", address.id)
-
             messages.success(
                 request,
                 "Address added successfully."
             )
 
             return redirect("addresses:address_list")
-
-        else:
-
-            print("FORM ERRORS:")
-            print(form.errors)
 
     else:
 
